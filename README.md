@@ -1,4 +1,3 @@
-[Uploading README.md…]()
 # 人生有迹 API / MCP
 
 > 让支持 MCP 或 OpenAPI 的模型，用它自己的能力生成一张“人生有迹”选手卡。
