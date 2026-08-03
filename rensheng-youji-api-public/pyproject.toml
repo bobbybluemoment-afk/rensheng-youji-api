@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rensheng-youji-mcp"
+version = "0.1.0"
+description = "Public MCP adapter for the private 人生有迹 API"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = ["mcp>=1.10,<2"]
+
+[project.scripts]
+rensheng-youji-mcp = "mcp_server.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["mcp_server"]
+
