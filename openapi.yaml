@@ -1,0 +1,210 @@
+openapi: 3.1.0
+info:
+  title: 人生有迹 API
+  version: 1.0.0
+  description: >-
+    使用调用方自己的模型生成人生有迹卡片文案。API 负责确定性排盘、
+    单个日柱固定内容匹配和私有卡片渲染，不调用生成模型。
+servers:
+  - url: https://{host}
+    variables:
+      host:
+        default: api.example.com
+        description: 人生有迹私有 API 域名
+security:
+  - ApiKeyAuth: []
+paths:
+  /v1/prepare:
+    post:
+      operationId: prepareBirthCard
+      summary: 准备出生配置与写作上下文
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrepareRequest'
+      responses:
+        '200':
+          description: 确定性排盘、当前日柱固定内容及一次性草稿令牌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrepareResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+  /v1/render:
+    post:
+      operationId: renderBirthCard
+      summary: 校验调用方模型文案并渲染卡片
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenderRequest'
+      responses:
+        '200':
+          description: 1242×1660 PNG 卡片
+          content:
+            image/png:
+              schema:
+                type: string
+                contentEncoding: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '410':
+          description: draft_token 无效、过期或已被消费
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  responses:
+    Unauthorized:
+      description: API key 缺失或无效
+    InvalidInput:
+      description: 输入、时间口径或文案版式校验失败
+  schemas:
+    PrepareRequest:
+      type: object
+      required:
+        - birth_datetime
+        - gender
+        - birth_city
+        - country
+      properties:
+        name:
+          type: string
+          maxLength: 32
+          default: ''
+          description: 姓名可选；不填时卡片留空
+        birth_datetime:
+          type: string
+          pattern: '^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$'
+          example: '1999-01-22 17:45'
+        gender:
+          type: string
+          enum: [male, female]
+        birth_city:
+          type: string
+          example: 泉州
+        country:
+          type: string
+          example: 中国
+        time_basis:
+          type: string
+          enum: [local_legal_time, true_solar_adjusted]
+          default: local_legal_time
+        timezone:
+          type: [string, 'null']
+          description: IANA 时区，例如 Asia/Shanghai
+        longitude:
+          type: [number, 'null']
+          minimum: -180
+          maximum: 180
+    PrepareResponse:
+      type: object
+      required: [draft_token, expires_at, chart, player, writing_brief]
+      properties:
+        draft_token:
+          type: string
+          description: 短期、一次性渲染令牌
+        expires_at:
+          type: string
+          format: date-time
+        chart:
+          $ref: '#/components/schemas/Chart'
+        player:
+          $ref: '#/components/schemas/Player'
+        writing_brief:
+          type: object
+          additionalProperties: true
+          description: 供调用方模型生成卡片文案的约束和本盘事实
+    Chart:
+      type: object
+      required:
+        - final_datetime
+        - time_basis
+        - lunar_date
+        - pillars
+        - day_master
+        - luck_direction
+        - luck_start_local_time
+        - da_yun
+      properties:
+        final_datetime:
+          type: string
+        time_basis:
+          type: string
+          enum: [true_solar_adjusted]
+        adjustment_minutes:
+          type: [number, 'null']
+        lunar_date:
+          type: string
+        pillars:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            type: string
+        day_master:
+          type: string
+        luck_direction:
+          type: string
+          enum: [forward, reverse]
+        luck_start_local_time:
+          type: string
+        da_yun:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    Player:
+      type: object
+      required: [day_pillar, player_type, talent_description]
+      properties:
+        day_pillar:
+          type: string
+        player_type:
+          type: string
+        talent_description:
+          type: string
+    RenderRequest:
+      type: object
+      required:
+        - draft_token
+        - core_mystic
+        - core_plain
+        - main_task
+        - quote
+        - quote_source
+      properties:
+        draft_token:
+          type: string
+          minLength: 32
+        core_mystic:
+          type: string
+          maxLength: 90
+        core_plain:
+          type: array
+          minItems: 1
+          maxItems: 2
+          items:
+            type: string
+            maxLength: 60
+        main_task:
+          type: string
+          description: 20—36 个汉字，并应能在卡片中单行显示
+        quote:
+          type: string
+          maxLength: 60
+        quote_source:
+          type: string
+          maxLength: 60
+
