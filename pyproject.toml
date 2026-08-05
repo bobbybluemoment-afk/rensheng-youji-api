@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rensheng-youji-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "Public MCP adapter for the private 人生有迹 API"
 readme = "README.md"
 requires-python = ">=3.11"

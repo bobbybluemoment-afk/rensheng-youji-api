@@ -1,41 +1,37 @@
 openapi: 3.1.0
 info:
   title: 人生有迹 API
-  version: 1.0.0
+  version: 0.3.0
   description: >-
-    使用调用方自己的模型生成人生有迹卡片文案。API 负责确定性排盘、
-    单个日柱固定内容匹配和私有卡片渲染，不调用生成模型。
+    调用方自己的模型生成人生有迹卡片文案；API负责确定性排盘、
+    单个日柱固定内容匹配、字段校验和私有卡片渲染。
 servers:
-  - url: https://{host}
-    variables:
-      host:
-        default: api.example.com
-        description: 人生有迹私有 API 域名
+  - url: https://rensheng-youji-ap-454189475786.asia-east1.run.app
 security:
   - ApiKeyAuth: []
 paths:
-  /v1/prepare:
+  /generate:
     post:
       operationId: prepareBirthCard
-      summary: 准备出生配置与写作上下文
+      summary: 排盘并准备写作事实层
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PrepareRequest'
+              $ref: '#/components/schemas/BirthRequest'
       responses:
         '200':
-          description: 确定性排盘、当前日柱固定内容及一次性草稿令牌
+          description: 四柱、日柱固定角色、初始天赋和全盘事实层
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PrepareResponse'
+                $ref: '#/components/schemas/GenerateResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '422':
           $ref: '#/components/responses/InvalidInput'
-  /v1/render:
+  /render-card:
     post:
       operationId: renderBirthCard
       summary: 校验调用方模型文案并渲染卡片
@@ -47,7 +43,7 @@ paths:
               $ref: '#/components/schemas/RenderRequest'
       responses:
         '200':
-          description: 1242×1660 PNG 卡片
+          description: 1242×1660 PNG卡片
           content:
             image/png:
               schema:
@@ -55,8 +51,6 @@ paths:
                 contentEncoding: binary
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '410':
-          description: draft_token 无效、过期或已被消费
         '422':
           $ref: '#/components/responses/InvalidInput'
 components:
@@ -67,144 +61,109 @@ components:
       name: X-API-Key
   responses:
     Unauthorized:
-      description: API key 缺失或无效
+      description: API Key缺失或无效
     InvalidInput:
-      description: 输入、时间口径或文案版式校验失败
+      description: 输入、时间口径、城市或文案版式校验失败
   schemas:
-    PrepareRequest:
+    BirthRequest:
       type: object
-      required:
-        - birth_datetime
-        - gender
-        - birth_city
-        - country
+      required: [birth, city, gender]
       properties:
         name:
           type: string
-          maxLength: 32
+          maxLength: 50
           default: ''
-          description: 姓名可选；不填时卡片留空
-        birth_datetime:
+          description: 姓名可选；不填时卡片自动收起姓名行
+        birth:
           type: string
           pattern: '^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$'
           example: '1999-01-22 17:45'
-        gender:
-          type: string
-          enum: [male, female]
-        birth_city:
+        city:
           type: string
           example: 泉州
         country:
           type: string
-          example: 中国
+          default: 中国
+        gender:
+          type: string
+          enum: [male, female]
         time_basis:
           type: string
-          enum: [local_legal_time, true_solar_adjusted]
-          default: local_legal_time
+          enum: [local_civil, true_solar_adjusted]
+          default: local_civil
         timezone:
           type: [string, 'null']
-          description: IANA 时区，例如 Asia/Shanghai
+          description: 未收录城市提供IANA时区，例如Asia/Shanghai
         longitude:
           type: [number, 'null']
           minimum: -180
           maximum: 180
-    PrepareResponse:
+    GenerateResponse:
       type: object
-      required: [draft_token, expires_at, chart, player, writing_brief]
+      required: [version, gender, birthplace, time, bazi, profile, warnings, disclaimer]
       properties:
-        draft_token:
+        version:
           type: string
-          description: 短期、一次性渲染令牌
-        expires_at:
+        name:
           type: string
-          format: date-time
-        chart:
-          $ref: '#/components/schemas/Chart'
-        player:
-          $ref: '#/components/schemas/Player'
-        writing_brief:
+        gender:
+          type: string
+        birthplace:
+          type: string
+        time:
           type: object
           additionalProperties: true
-          description: 供调用方模型生成卡片文案的约束和本盘事实
-    Chart:
-      type: object
-      required:
-        - final_datetime
-        - time_basis
-        - lunar_date
-        - pillars
-        - day_master
-        - luck_direction
-        - luck_start_local_time
-        - da_yun
-      properties:
-        final_datetime:
-          type: string
-        time_basis:
-          type: string
-          enum: [true_solar_adjusted]
-        adjustment_minutes:
-          type: [number, 'null']
-        lunar_date:
-          type: string
-        pillars:
+        bazi:
+          type: object
+          additionalProperties: true
+          description: 包含四柱、日主、大运及analysis_context事实层
+        profile:
+          type: object
+          required: [day_pillar, player_type, talent_description]
+          properties:
+            day_pillar:
+              type: string
+            player_type:
+              type: string
+            talent_description:
+              type: string
+        warnings:
           type: array
-          minItems: 4
-          maxItems: 4
           items:
             type: string
-        day_master:
-          type: string
-        luck_direction:
-          type: string
-          enum: [forward, reverse]
-        luck_start_local_time:
-          type: string
-        da_yun:
-          type: array
-          items:
-            type: object
-            additionalProperties: true
-    Player:
-      type: object
-      required: [day_pillar, player_type, talent_description]
-      properties:
-        day_pillar:
-          type: string
-        player_type:
-          type: string
-        talent_description:
+        disclaimer:
           type: string
     RenderRequest:
-      type: object
-      required:
-        - draft_token
-        - core_mystic
-        - core_plain
-        - main_task
-        - quote
-        - quote_source
-      properties:
-        draft_token:
-          type: string
-          minLength: 32
-        core_mystic:
-          type: string
-          maxLength: 90
-        core_plain:
-          type: array
-          minItems: 1
-          maxItems: 2
-          items:
-            type: string
-            maxLength: 60
-        main_task:
-          type: string
-          description: 20—36 个汉字，并应能在卡片中单行显示
-        quote:
-          type: string
-          maxLength: 60
-        quote_source:
-          type: string
-          maxLength: 60
+      allOf:
+        - $ref: '#/components/schemas/BirthRequest'
+        - type: object
+          required: [core_mystic, core_plain, main_task, quote, quote_source]
+          properties:
+            core_mystic:
+              type: string
+              minLength: 8
+              maxLength: 90
+              description: 一句命理事实，包含月令、根气、透干及一至两个关键关系
+            core_plain:
+              type: array
+              minItems: 1
+              maxItems: 2
+              items:
+                type: string
+                maxLength: 34
+            main_task:
+              type: string
+              minLength: 20
+              maxLength: 36
+              description: 20—36个汉字，并应能在卡片中单行显示
+            quote:
+              type: string
+              minLength: 10
+              maxLength: 30
+              description: 已联网核对的真实古诗文或经典原句
+            quote_source:
+              type: string
+              minLength: 2
+              maxLength: 50
+              description: 准确篇名和出处
 
