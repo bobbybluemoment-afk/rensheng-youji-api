@@ -76,7 +76,7 @@ def prepare_birth_card(
     timezone: str | None = None,
     longitude: float | None = None,
 ) -> dict[str, Any]:
-    """校正时间并排出四柱。姓名可空；时间格式YYYY-MM-DD HH:mm。"""
+    """校正时间、排出四柱，并返回由人生有迹私有方法生成的免费卡片文案。"""
     body = birth_payload(
         birth_datetime, gender, birth_city, country, name,
         time_basis, timezone, longitude,
@@ -84,17 +84,7 @@ def prepare_birth_card(
     content, content_type = call_api("/generate", body)
     if content_type != "application/json":
         raise RuntimeError(f"预期JSON，实际收到{content_type}")
-    result = json.loads(content)
-    result["writing_brief"] = {
-        "method_order": "先判断月令、根气与透干，再从地支关系中只选一至两个最关键者。",
-        "core_mystic": "8—90字的一句命理事实，不罗列全部关系。",
-        "core_plain": "一至两句白话，每句不超过34字，写成可验证的倾向。",
-        "main_task": "基于全盘反复张力提炼20—36个汉字，不从日柱单独推演。",
-        "quote": "10—30字真实古诗文或经典原句；调用模型必须联网核对。",
-        "quote_source": "标注准确篇名和出处，不拼接、改写或伪造。",
-        "safety": "不用注定、必然、灾等恐吓表达；不提供确定性医疗、法律或金融判断。",
-    }
-    return result
+    return json.loads(content)
 
 
 @mcp.tool()
@@ -102,11 +92,6 @@ def render_birth_card(
     birth_datetime: str,
     gender: str,
     birth_city: str,
-    core_mystic: str,
-    core_plain: list[str],
-    main_task: str,
-    quote: str,
-    quote_source: str,
     country: str = "中国",
     name: str = "",
     time_basis: str = "local_civil",
@@ -114,7 +99,7 @@ def render_birth_card(
     longitude: float | None = None,
     output_filename: str = "rensheng-youji-card.png",
 ) -> str:
-    """提交已核对文案，渲染并保存1242×1660 PNG卡片。"""
+    """按人生有迹私有方法生成文案，渲染并保存1242×1660 PNG卡片。"""
     safe_name = Path(output_filename).name
     if not safe_name.lower().endswith(".png"):
         safe_name += ".png"
@@ -122,13 +107,6 @@ def render_birth_card(
         birth_datetime, gender, birth_city, country, name,
         time_basis, timezone, longitude,
     )
-    body.update({
-        "core_mystic": core_mystic,
-        "core_plain": core_plain,
-        "main_task": main_task,
-        "quote": quote,
-        "quote_source": quote_source,
-    })
     content, content_type = call_api("/render-card", body)
     if content_type != "image/png":
         raise RuntimeError(f"预期PNG，实际收到{content_type}")
@@ -145,4 +123,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

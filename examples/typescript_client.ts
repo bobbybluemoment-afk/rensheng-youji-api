@@ -28,17 +28,6 @@ const birth = {
 const prepared = await (await postJson("/generate", birth)).json();
 console.log(prepared);
 
-// 让调用方自己的模型根据prepared.bazi.analysis_context生成文案，并联网核对引文。
-const rendered = await postJson("/render-card", {
-  ...birth,
-  core_mystic: "甲木生丑月，寅为根，乙劫、癸印透出；丑戌见刑，酉官坐实。",
-  core_plain: [
-    "你习惯在现实限制中先找到立足点，再逐步扩展。",
-    "让短期成果服务长期方向，责任与资源才会成为支点。",
-  ],
-  main_task: "在现实压力中建立长期结构，把责任与资源变成持续生长的支点。",
-  quote: "合抱之木，生于毫末；九层之台，起于累土。",
-  quote_source: "《道德经》第六十四章",
-});
+// /generate 已包含由人生有迹私有方法生成的 card_copy。
+const rendered = await postJson("/render-card", birth);
 await writeFile("rensheng-youji-card.png", Buffer.from(await rendered.arrayBuffer()));
-

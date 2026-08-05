@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
   title: 人生有迹 API
-  version: 0.3.0
+  version: 0.4.0
   description: >-
-    调用方自己的模型生成人生有迹卡片文案；API负责确定性排盘、
-    单个日柱固定内容匹配、字段校验和私有卡片渲染。
+    API负责确定性排盘、固定内容匹配、私有方法文案生成与卡片渲染；
+    调用方模型只负责收集输入和展示结果。
 servers:
   - url: https://rensheng-youji-ap-454189475786.asia-east1.run.app
 security:
@@ -13,7 +13,7 @@ paths:
   /generate:
     post:
       operationId: prepareBirthCard
-      summary: 排盘并准备写作事实层
+      summary: 排盘并生成免费卡片文案
       requestBody:
         required: true
         content:
@@ -22,7 +22,7 @@ paths:
               $ref: '#/components/schemas/BirthRequest'
       responses:
         '200':
-          description: 四柱、日柱固定角色、初始天赋和全盘事实层
+          description: 四柱、日柱固定角色、初始天赋和服务器生成的卡片文案
           content:
             application/json:
               schema:
@@ -34,13 +34,13 @@ paths:
   /render-card:
     post:
       operationId: renderBirthCard
-      summary: 校验调用方模型文案并渲染卡片
+      summary: 使用私有方法文案渲染卡片
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RenderRequest'
+              $ref: '#/components/schemas/BirthRequest'
       responses:
         '200':
           description: 1242×1660 PNG卡片
@@ -100,7 +100,7 @@ components:
           maximum: 180
     GenerateResponse:
       type: object
-      required: [version, gender, birthplace, time, bazi, profile, warnings, disclaimer]
+      required: [version, gender, birthplace, time, bazi, profile, card_copy, warnings, disclaimer]
       properties:
         version:
           type: string
@@ -127,43 +127,30 @@ components:
               type: string
             talent_description:
               type: string
-        warnings:
-          type: array
-          items:
-            type: string
-        disclaimer:
-          type: string
-    RenderRequest:
-      allOf:
-        - $ref: '#/components/schemas/BirthRequest'
-        - type: object
-          required: [core_mystic, core_plain, main_task, quote, quote_source]
+        card_copy:
+          type: object
+          required: [core_mystic, core_plain, main_task, quote, quote_source, reading_note]
+          description: 由人生有迹私有方法确定性生成；调用方不应自行改写后再提交
           properties:
             core_mystic:
               type: string
-              minLength: 8
-              maxLength: 90
-              description: 一句命理事实，包含月令、根气、透干及一至两个关键关系
             core_plain:
               type: array
               minItems: 1
               maxItems: 2
               items:
                 type: string
-                maxLength: 34
             main_task:
               type: string
-              minLength: 20
-              maxLength: 36
-              description: 20—36个汉字，并应能在卡片中单行显示
             quote:
               type: string
-              minLength: 10
-              maxLength: 30
-              description: 已联网核对的真实古诗文或经典原句
             quote_source:
               type: string
-              minLength: 2
-              maxLength: 50
-              description: 准确篇名和出处
-
+            reading_note:
+              type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        disclaimer:
+          type: string

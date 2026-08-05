@@ -37,19 +37,7 @@ prepared_bytes, _ = post("/generate", birth)
 prepared = json.loads(prepared_bytes)
 print(json.dumps(prepared, ensure_ascii=False, indent=2))
 
-# 用你自己的模型根据prepared.bazi.analysis_context生成以下字段，并联网核对引文。
-card_request = {
-    **birth,
-    "core_mystic": "甲木生丑月，寅为根，乙劫、癸印透出；丑戌见刑，酉官坐实。",
-    "core_plain": [
-        "你习惯在现实限制中先找到立足点，再逐步扩展。",
-        "让短期成果服务长期方向，责任与资源才会成为支点。",
-    ],
-    "main_task": "在现实压力中建立长期结构，把责任与资源变成持续生长的支点。",
-    "quote": "合抱之木，生于毫末；九层之台，起于累土。",
-    "quote_source": "《道德经》第六十四章",
-}
-card_bytes, content_type = post("/render-card", card_request)
+# /generate 已包含由人生有迹私有方法生成的 card_copy；渲染时只需同一份出生信息。
+card_bytes, content_type = post("/render-card", birth)
 assert content_type == "image/png"
 Path("rensheng-youji-card.png").write_bytes(card_bytes)
-
