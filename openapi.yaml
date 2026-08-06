@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: 人生有迹 API
-  version: 0.4.0
+  version: 0.6.0
   description: >-
     API负责确定性排盘、固定内容匹配、私有方法文案生成与卡片渲染；
     调用方模型只负责收集输入和展示结果。
