@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rensheng-youji-mcp"
-version = "0.3.0"
-description = "Public MCP adapter for the private 人生有迹 API"
+version = "0.8.0"
+description = "One-time-code MCP adapter for the private 人生有迹 card service"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

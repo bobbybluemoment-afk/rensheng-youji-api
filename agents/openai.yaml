@@ -1,0 +1,14 @@
+interface:
+  display_name: 人生有迹免费卡片
+  short_description: 使用一次性体验码生成带20年K线的人生有迹卡片
+  default_prompt: Use $rensheng-youji-card to generate my free 人生有迹 card from my birth
+    information.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  allow_implicit_invocation: true
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas

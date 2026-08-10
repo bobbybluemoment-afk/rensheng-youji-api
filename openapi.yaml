@@ -1,19 +1,20 @@
 openapi: 3.1.0
 info:
-  title: 人生有迹 API
-  version: 0.6.0
+  title: 人生有迹免费卡片 API
+  version: 0.8.0
   description: >-
-    API负责确定性排盘、固定内容匹配、私有方法文案生成与卡片渲染；
-    调用方模型只负责收集输入和展示结果。
+    API负责出生时间处理、确定性排盘、私有分析、20年连续人生K线、当前课题和PNG卡片渲染。
+    一次性体验码在准备阶段被预占，成功返回PNG后永久核销；未出图的失败允许重试。
 servers:
   - url: https://rensheng-youji-ap-454189475786.asia-east1.run.app
 security:
-  - ApiKeyAuth: []
+  - ExperienceCode: []
 paths:
   /generate:
     post:
       operationId: prepareBirthCard
-      summary: 排盘并生成免费卡片文案
+      summary: 准备新版免费卡片
+      description: 校正出生时间、排盘，准备人生K线与当前课题，并预占一次性体验码，不永久核销。
       requestBody:
         required: true
         content:
@@ -22,7 +23,7 @@ paths:
               $ref: '#/components/schemas/BirthRequest'
       responses:
         '200':
-          description: 四柱、日柱固定角色、初始天赋和服务器生成的卡片文案
+          description: 出生事实、私有服务结果与警告
           content:
             application/json:
               schema:
@@ -31,10 +32,13 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '422':
           $ref: '#/components/responses/InvalidInput'
+        '503':
+          $ref: '#/components/responses/TemporarilyUnavailable'
   /render-card:
     post:
       operationId: renderBirthCard
-      summary: 使用私有方法文案渲染卡片
+      summary: 生成并核销免费卡片
+      description: 使用同一组出生信息生成PNG；只有PNG成功生成后才永久核销体验码。
       requestBody:
         required: true
         content:
@@ -43,7 +47,7 @@ paths:
               $ref: '#/components/schemas/BirthRequest'
       responses:
         '200':
-          description: 1242×1660 PNG卡片
+          description: 1242×1660 PNG卡片；体验码已核销
           content:
             image/png:
               schema:
@@ -51,19 +55,26 @@ paths:
                 contentEncoding: binary
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: 体验码并发冲突或已被其他成功请求核销
         '422':
           $ref: '#/components/responses/InvalidInput'
+        '503':
+          $ref: '#/components/responses/TemporarilyUnavailable'
 components:
   securitySchemes:
-    ApiKeyAuth:
+    ExperienceCode:
       type: apiKey
       in: header
       name: X-API-Key
+      description: 一次性个人体验码；不要写入公开文件或日志。
   responses:
     Unauthorized:
-      description: API Key缺失或无效
+      description: 体验码缺失、无效、已过期或已使用
     InvalidInput:
-      description: 输入、时间口径、城市或文案版式校验失败
+      description: 出生信息、时间口径或地点校验失败
+    TemporarilyUnavailable:
+      description: 服务或验证码存储暂时不可用；未成功出图时可使用原码重试
   schemas:
     BirthRequest:
       type: object
@@ -73,14 +84,14 @@ components:
           type: string
           maxLength: 50
           default: ''
-          description: 姓名可选；不填时卡片自动收起姓名行
+          description: 姓名可选
         birth:
           type: string
           pattern: '^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$'
           example: '1999-01-22 17:45'
         city:
           type: string
-          example: 泉州
+          example: 北京
         country:
           type: string
           default: 中国
@@ -93,20 +104,18 @@ components:
           default: local_civil
         timezone:
           type: [string, 'null']
-          description: 未收录城市提供IANA时区，例如Asia/Shanghai
+          description: 未收录地点可提供IANA时区，例如Asia/Shanghai
         longitude:
           type: [number, 'null']
           minimum: -180
           maximum: 180
     GenerateResponse:
       type: object
-      required: [version, gender, birthplace, time, bazi, profile, card_copy, warnings, disclaimer]
+      additionalProperties: true
       properties:
         version:
           type: string
         name:
-          type: string
-        gender:
           type: string
         birthplace:
           type: string
@@ -116,38 +125,14 @@ components:
         bazi:
           type: object
           additionalProperties: true
-          description: 包含四柱、日主、大运及analysis_context事实层
-        profile:
-          type: object
-          required: [day_pillar, player_type, talent_description]
-          properties:
-            day_pillar:
-              type: string
-            player_type:
-              type: string
-            talent_description:
-              type: string
         card_copy:
           type: object
-          required: [core_mystic, core_plain, main_task, quote, quote_source, reading_note]
-          description: 由人生有迹私有方法确定性生成；调用方不应自行改写后再提交
-          properties:
-            core_mystic:
-              type: string
-            core_plain:
-              type: array
-              minItems: 1
-              maxItems: 2
-              items:
-                type: string
-            main_task:
-              type: string
-            quote:
-              type: string
-            quote_source:
-              type: string
-            reading_note:
-              type: string
+          additionalProperties: true
+          description: 由私有服务生成；调用方不得自行改写后再提交
+        life_kline:
+          type: object
+          additionalProperties: true
+          description: 由私有服务生成的20年连续人生K线、阶段标签与当前课题；调用方不得自行重算
         warnings:
           type: array
           items:
