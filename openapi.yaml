@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: 人生有迹免费卡片 API
-  version: 0.8.0
+  version: 0.8.2
   description: >-
     API负责出生时间处理、确定性排盘、私有分析、20年连续人生K线、当前课题和PNG卡片渲染。
     一次性体验码在准备阶段被预占，成功返回PNG后永久核销；未出图的失败允许重试。
