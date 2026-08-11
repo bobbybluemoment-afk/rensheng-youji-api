@@ -1,22 +1,49 @@
-MIT License
+人生有迹有限个人使用许可 1.0
+============================
 
-Copyright (c) 2026 人生有迹
+Copyright (c) 2026 人生有迹 by 景行。保留所有权利。
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+一、授权范围
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+著作权人授予个人用户一项有限、非独占、不可转让、不可再许可的许可，允许其：
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+1. 为个人、非商业目的下载、复制、安装、运行和学习本项目；
+2. 为个人、非商业目的进行修改，但修改版本不得向公众发布或提供给第三方；
+3. 分享由本人资料生成的卡片，但应保留卡片中的“人生有迹”品牌标识；
+4. 为向原项目提交贡献而创建GitHub Fork。
 
+二、禁止事项
+
+未经著作权人事先书面授权，不得：
+
+1. 将本项目或其任何实质性部分用于直接或间接商业目的；
+2. 利用本项目提供收费咨询、付费报告、付费API、会员服务、广告变现服务或其他面向第三方的商业服务；
+3. 出售、出租、再许可本项目，或将其嵌入商业产品、商业平台及收费系统；
+4. 搬运、镜像、改名、重新打包、公开分发或重新发布本项目的全部或实质性部分；
+5. 将本项目的分析规则、提示词、文案、方法说明、卡片结构或视觉模板用于制作并发布另一款具有相同或高度相似功能的Skill、Agent、网页、应用或产品；
+6. 删除、遮盖或替换项目中的品牌标识、作者署名、版权声明、许可条款或免责声明；
+7. 使用“人生有迹”“景行”及相关Logo暗示官方合作、授权、背书或关联关系。
+
+三、定义
+
+“商业目的”包括以获得收入、费用、佣金、广告收益、流量收益、客户线索、会员权益、商业竞争优势或其他经济利益为目的的使用，无论是否直接向最终用户收费。
+
+“实质性部分”包括能够复现本项目核心功能、分析方法、用户体验或品牌识别的代码、提示词、规则、文案、结构、模板及其组合。
+
+四、第三方内容
+
+本许可仅适用于著作权人拥有或有权授权的内容。项目所使用的第三方软件、依赖库、字体及其他材料，仍适用其各自的许可证和权利声明。
+
+五、免责声明
+
+本项目按“现状”提供，不作任何明示或默示的保证，包括但不限于准确性、完整性、适销性、特定用途适用性及不侵权保证。在适用法律允许的最大范围内，著作权人不对使用或无法使用本项目造成的任何直接、间接、附带、特殊或后果性损失承担责任。
+
+本项目输出仅用于传统文化体验与自我观察，不构成医疗、心理、法律、投资、财务、婚恋或其他专业意见。用户应自行判断并承担使用结果和现实决策的责任。
+
+六、终止
+
+用户违反本许可的任何条款时，授权自动终止。授权终止后，用户应停止使用并删除其持有的本项目副本及未经授权的衍生内容，但依法享有的合理使用权利不受影响。
+
+七、其他
+
+公开提供源代码不代表放弃著作权。本许可未明确授予的权利均由著作权人保留。任何商业、转载、镜像、再发布或其他额外授权，均须通过本仓库GitHub Issue取得著作权人的明确书面许可。
