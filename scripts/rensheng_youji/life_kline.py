@@ -426,49 +426,195 @@ def calculate_life_kline(
 
 
 DOMAIN_WEIGHTS = {
-    "比肩": {"事业选择": 2, "感情关系": 1, "财务安排": 1, "城市与生活": 1},
-    "劫财": {"事业选择": 2, "感情关系": 2, "财务安排": 1},
-    "食神": {"事业选择": 2, "学习发展": 2, "城市与生活": 1},
-    "伤官": {"事业选择": 3, "学习发展": 1, "城市与生活": 2},
-    "偏财": {"财务安排": 3, "事业选择": 2, "家庭关系": 1},
-    "正财": {"财务安排": 3, "事业选择": 2, "感情关系": 1},
-    "七杀": {"事业选择": 3, "感情关系": 1, "家庭关系": 1},
-    "正官": {"事业选择": 3, "感情关系": 2, "家庭关系": 1},
-    "偏印": {"学习发展": 3, "事业选择": 1, "城市与生活": 1},
-    "正印": {"学习发展": 2, "家庭关系": 2, "事业选择": 1},
+    "比肩": {"城市与生活": 2.4, "家庭关系": 1.1},
+    "劫财": {"感情关系": 2.4, "财务安排": 1.2},
+    "食神": {"学习发展": 2.4, "感情关系": 1.0},
+    "伤官": {"城市与生活": 2.4, "事业选择": 1.2},
+    "偏财": {"财务安排": 2.4, "事业选择": 1.0},
+    "正财": {"财务安排": 2.4, "家庭关系": 1.1},
+    "七杀": {"事业选择": 2.4, "家庭关系": 1.2},
+    "正官": {"事业选择": 2.2, "感情关系": 1.5},
+    "偏印": {"学习发展": 2.4, "城市与生活": 1.2},
+    "正印": {"家庭关系": 2.2, "学习发展": 1.8},
 }
 
-ISSUE_COPY = {
+MECHANISM_BY_GOD = {
+    "比肩": "自主边界", "伤官": "自主边界",
+    "劫财": "合作位置",
+    "食神": "能力产出",
+    "偏财": "资源机会", "正财": "资源机会",
+    "七杀": "责任压力", "正官": "责任压力",
+    "偏印": "准备判断", "正印": "准备判断",
+}
+
+ISSUE_HEADLINES = {
     "事业选择": {
-        "headline": "你最近可能在想：现在这份工作还值不值得继续？",
-        "example": "可能是事情越做越多，但收入、位置或成长没有一起增加。",
+        "自主边界": "你最近可能在犹豫：继续适应现在的工作，还是去做更适合自己的事？",
+        "合作位置": "你最近可能更烦的是：合作越来越多，但自己的位置和回报还不清楚？",
+        "能力产出": "你最近可能在意：做了不少事情，为什么真正被看见的成果还不够？",
+        "资源机会": "你最近可能在盘算：守住现有收入，还是为新的方向承担一点风险？",
+        "责任压力": "你最近可能更累的是：责任越来越多，收入或位置却没有一起增加？",
+        "准备判断": "你最近可能在怀疑：还要继续准备，还是该主动争取一次机会？",
     },
     "感情关系": {
-        "headline": "你最近可能在想：这段关系要不要把未来说清楚？",
-        "example": "可能是相处没有大问题，但结婚、城市或生活安排一直没谈明白。",
+        "自主边界": "你最近可能在想：这段关系里，自己的需要是不是总被放到后面？",
+        "合作位置": "你最近可能在意：两个人关系不错，为什么一谈未来就容易反复？",
+        "能力产出": "你最近可能困惑：明明有感情，为什么重要的话总是说不到一起？",
+        "资源机会": "你最近可能在权衡：感情要继续，城市、住房和钱该怎么安排？",
+        "责任压力": "你最近可能有压力：这段关系是不是已经走到必须表态的时候？",
+        "准备判断": "你最近可能在观察：对方真的适合长期相处，还是只是目前习惯了？",
     },
     "财务安排": {
-        "headline": "你最近可能更在意：怎样多赚一点，又不影响现有稳定？",
-        "example": "例如想增加收入或尝试投资，但又担心存款、现金流或失败成本。",
+        "自主边界": "你最近可能想解决：怎样增加收入，又不把自己困在不喜欢的工作里？",
+        "合作位置": "你最近可能在意：和别人一起做事，钱和责任到底该怎么分？",
+        "能力产出": "你最近可能困惑：能力和时间投入不少，为什么还没有稳定变成收入？",
+        "资源机会": "你最近可能在盘算：该继续存钱，还是拿一部分去尝试新的机会？",
+        "责任压力": "你最近可能担心：收入看起来还行，为什么现金流仍让人没有安全感？",
+        "准备判断": "你最近可能在想：还要先提升能力，还是现在就开始增加收入？",
     },
     "家庭关系": {
-        "headline": "你最近可能在想：自己的决定还要不要继续让家里影响？",
-        "example": "可能是想按自己的计划生活，又担心拒绝父母会让关系变紧张。",
+        "自主边界": "你最近可能在想：自己的决定，还要不要继续先得到家里同意？",
+        "合作位置": "你最近可能为难：家里的事总要你协调，但你的需要由谁照顾？",
+        "能力产出": "你最近可能不知道：怎样把自己的想法说清楚，又不让关系立刻变僵？",
+        "资源机会": "你最近可能在权衡：要帮家里到什么程度，才不会影响自己的生活？",
+        "责任压力": "你最近可能觉得累：家里的责任是不是越来越自然地落到你身上？",
+        "准备判断": "你最近可能在反复确认：按家里的安排走，真的会更稳妥吗？",
     },
     "学习发展": {
-        "headline": "你最近可能在想：还要继续准备，还是先把能力用起来？",
-        "example": "例如想考证、读书或转方向，但担心投入不少，最后仍然用不上。",
+        "自主边界": "你最近可能在犹豫：继续走熟悉的学习路线，还是换一个更想学的方向？",
+        "合作位置": "你最近可能在意：跟着别人的节奏准备，真的适合自己吗？",
+        "能力产出": "你最近可能在想：学了不少东西，什么时候才能真正派上用场？",
+        "资源机会": "你最近可能在权衡：继续投入时间和钱学习，回报是否值得？",
+        "责任压力": "你最近可能有压力：这次考试、申请或转方向，是不是不能再失败？",
+        "准备判断": "你最近可能卡在：还要准备到什么程度，才算可以开始行动？",
     },
     "城市与生活": {
-        "headline": "你最近可能在想：要留在这里，还是换个地方生活？",
-        "example": "可能是工作、住房和家人各有牵制，很难同时顾到稳定与发展。",
+        "自主边界": "你最近可能在想：留在熟悉的地方，还是去更适合自己的城市？",
+        "合作位置": "你最近可能为难：自己的发展和伴侣、家人的安排很难放在一起？",
+        "能力产出": "你最近可能不确定：换个环境真的会变好，还是问题仍会跟着自己？",
+        "资源机会": "你最近可能在权衡：更好的机会，值不值得承担房租和生活成本？",
+        "责任压力": "你最近可能觉得被催着决定：工作、住房和落脚城市该先定哪一个？",
+        "准备判断": "你最近可能在等待：是不是再准备充分一点，才适合离开现在的环境？",
+    },
+}
+
+ISSUE_ALTERNATES = {
+    ("事业选择", "责任压力"): [
+        "你最近可能在纠结：该继续扛下更多责任，还是先把回报和位置谈清楚？",
+        "你最近可能最不满的是：工作要求不断提高，属于你的机会却没有增加？",
+    ],
+    ("城市与生活", "自主边界"): [
+        "你最近可能在犹豫：继续留在这里求稳，还是换个城市重新开始？",
+        "你最近可能想弄清楚：不舒服来自这座城市，还是目前的生活方式？",
+    ],
+    ("财务安排", "资源机会"): [
+        "你最近可能拿不准：手里的钱应该先留作安全感，还是用来争取新机会？",
+        "你最近可能更在意：怎样让收入增加，又不把现有生活变得太冒险？",
+    ],
+    ("学习发展", "准备判断"): [
+        "你最近可能在想：继续考证或深造，真的比现在开始实践更有用吗？",
+        "你最近可能困惑：是不是总觉得还没准备好，所以一直没有真正开始？",
+    ],
+    ("家庭关系", "准备判断"): [
+        "你最近可能在问自己：听家里的安排是稳妥，还是只是省去争执？",
+    ],
+    ("感情关系", "合作位置"): [
+        "你最近可能在想：两个人迟迟谈不拢未来，是时机问题还是目标不同？",
+    ],
+}
+
+DOMAIN_STAGE_EXAMPLES = {
+    "事业选择": {
+        "需要决定期": "可能是续约、转岗、离职或新机会同时出现，需要你尽快表态。",
+        "逐渐展开期": "可能是新任务开始增加，但回报和长期位置还没有确定。",
+        "调整安排期": "可能是原来的工作安排越来越难维持，需要重新分配时间和责任。",
+        "成果积累期": "可能是成绩已经出现，但下一步该争取位置、收入还是空间还没想清。",
+        "反复确认期": "可能是日常还能继续，却总觉得成长、收入或意义少了一块。",
+    },
+    "感情关系": {
+        "需要决定期": "可能是结婚、分开、异地或见家长等问题已经很难继续回避。",
+        "逐渐展开期": "可能是关系正在向前，但双方对未来节奏还没有完全一致。",
+        "调整安排期": "可能是以前默认的相处方式开始失效，需要重新谈清边界和安排。",
+        "成果积累期": "可能是关系已经稳定，下一步反而更需要谈现实生活怎么落地。",
+        "反复确认期": "可能是相处没有大问题，但同一个顾虑一直没有真正解决。",
+    },
+    "财务安排": {
+        "需要决定期": "可能是换工作、投资、买房或一笔较大支出正在逼近决定。",
+        "逐渐展开期": "可能是收入机会开始增加，但能否持续、该投入多少还不确定。",
+        "调整安排期": "可能是原来的收支方式不再合适，需要重新安排储蓄和现金流。",
+        "成果积累期": "可能是手里的资源开始变多，但怎么分配才能更有效仍没想清。",
+        "反复确认期": "可能是钱没有立刻出问题，却总觉得离真正安心还有距离。",
+    },
+    "家庭关系": {
+        "需要决定期": "可能是住房、照顾家人或一项家庭决定需要你明确承担多少。",
+        "逐渐展开期": "可能是家庭角色正在变化，别人开始对你提出更多现实期待。",
+        "调整安排期": "可能是原有分工已经让你疲惫，需要重新谈谁负责什么。",
+        "成果积累期": "可能是你已经能照顾很多事，但也开始想为自己留下更多空间。",
+        "反复确认期": "可能是表面相处平稳，同一个边界问题却总在不同事情里出现。",
+    },
+    "学习发展": {
+        "需要决定期": "可能是考试、申请、转专业或转方向已经到了必须选择的时候。",
+        "逐渐展开期": "可能是新的学习机会出现，但投入后能走到哪里还不确定。",
+        "调整安排期": "可能是原来的准备方式效率下降，需要重新安排时间和重点。",
+        "成果积累期": "可能是能力已经积累不少，下一步更重要的是拿去解决真实问题。",
+        "反复确认期": "可能是一直在准备，却总觉得还差一点才敢真正开始。",
+    },
+    "城市与生活": {
+        "需要决定期": "可能是工作、租约、伴侣或家人的安排让落脚城市必须尽快确定。",
+        "逐渐展开期": "可能是新的城市或生活方案开始可行，但现实成本还需要计算。",
+        "调整安排期": "可能是现在的通勤、住房或生活节奏已经越来越难维持。",
+        "成果积累期": "可能是生活逐渐稳定后，你反而开始考虑这里是否适合长期留下。",
+        "反复确认期": "可能是眼下没有非走不可，却经常想象换个地方会不会更好。",
     },
 }
 
 
 def _add_domain_scores(scores: Counter[str], god: str, weight: float) -> None:
-    for domain, value in DOMAIN_WEIGHTS[god].items():
-        scores[domain] += value * weight
+    # 每个作用只投向最相关的两个现实领域，避免“事业”因为出现在所有
+    # 十神中被机械累加为几乎所有用户的第一名。
+    ranked = sorted(
+        DOMAIN_WEIGHTS[god].items(),
+        key=lambda item: item[1],
+        reverse=True,
+    )
+    scores[ranked[0][0]] += weight
+    if len(ranked) > 1:
+        scores[ranked[1][0]] += weight * 0.42
+
+
+def _add_mechanism_score(scores: Counter[str], god: str, weight: float) -> None:
+    scores[MECHANISM_BY_GOD[god]] += weight
+
+
+def _stage_label(timeline: list[dict[str, Any]], center_year: int) -> str:
+    current_index = next(index for index, item in enumerate(timeline) if item["year"] == center_year)
+    current = timeline[current_index]
+    previous = timeline[current_index - 1] if current_index else current
+    delta = current["average"] - previous["average"]
+    if current["volatility"] >= 14:
+        return "需要决定期"
+    if delta >= 2.5:
+        return "逐渐展开期"
+    if delta <= -2.5:
+        return "调整安排期"
+    if current["average"] >= 62:
+        return "成果积累期"
+    return "反复确认期"
+
+
+def _select_headline(
+    domain: str,
+    mechanism: str,
+    signature: dict[str, Any],
+    stage_label: str,
+    current_luck: dict[str, Any] | None,
+) -> str:
+    candidates = [ISSUE_HEADLINES[domain][mechanism]]
+    candidates.extend(ISSUE_ALTERNATES.get((domain, mechanism), []))
+    seed = signature["task_code"] + stage_label
+    if current_luck:
+        seed += current_luck.get("pillar", "")
+    return candidates[sum(ord(char) for char in seed) % len(candidates)]
 
 
 def generate_current_issue(
@@ -476,64 +622,89 @@ def generate_current_issue(
     timeline: list[dict[str, Any]],
     center_year: int,
     birth_year: int,
+    card_copy: dict[str, Any],
 ) -> tuple[str, dict[str, Any]]:
     day_master = bazi["day_master"]
     scores: Counter[str] = Counter()
+    mechanism_scores: Counter[str] = Counter()
+    signature = card_copy["analysis_signature"]
 
-    for index, pillar in enumerate(bazi["pillars"]):
-        if index != 2:
-            _add_domain_scores(scores, ten_god(day_master, pillar[0]), 0.55)
+    # 核心配置和主线任务直接进入当前课题，而不是只使用年龄段。
+    for god, weight in (
+        (signature["primary_god"], 1.6),
+        (signature["outcome_god"], 1.3),
+        (signature["tension_god"], 0.8),
+    ):
+        _add_domain_scores(scores, god, weight)
+        _add_mechanism_score(mechanism_scores, god, weight)
+
     current_luck = luck_for(bazi, center_year)
     if current_luck and current_luck["pillar"]:
-        _add_domain_scores(scores, ten_god(day_master, current_luck["pillar"][0]), 2.0)
-        _add_domain_scores(scores, ten_god(day_master, HIDDEN[current_luck["pillar"][1]][0]), 1.1)
+        luck_gods = (
+            (ten_god(day_master, current_luck["pillar"][0]), 2.2),
+            (ten_god(day_master, HIDDEN[current_luck["pillar"][1]][0]), 1.2),
+        )
+        for god, weight in luck_gods:
+            _add_domain_scores(scores, god, weight)
+            _add_mechanism_score(mechanism_scores, god, weight)
     for year, weight in ((center_year - 2, 0.6), (center_year - 1, 1.0), (center_year, 1.5)):
         pillar = year_ganzhi(year)
-        _add_domain_scores(scores, ten_god(day_master, pillar[0]), weight)
-        _add_domain_scores(scores, ten_god(day_master, HIDDEN[pillar[1]][0]), weight * 0.45)
+        year_gods = (
+            (ten_god(day_master, pillar[0]), weight),
+            (ten_god(day_master, HIDDEN[pillar[1]][0]), weight * 0.45),
+        )
+        for god, god_weight in year_gods:
+            _add_domain_scores(scores, god, god_weight)
+            _add_mechanism_score(mechanism_scores, god, god_weight)
 
+    # 年龄只作轻量生活情境修正，不再直接决定二十多岁用户的课题。
     age = center_year - birth_year
     if 20 <= age <= 24:
-        scores["学习发展"] += 0.8
-        scores["城市与生活"] += 0.7
+        scores["学习发展"] += 0.20
+        scores["城市与生活"] += 0.15
     elif 25 <= age <= 29:
-        scores["事业选择"] += 0.8
-        scores["财务安排"] += 0.5
-        scores["感情关系"] += 0.4
+        scores["事业选择"] += 0.20
+        scores["财务安排"] += 0.15
+        scores["感情关系"] += 0.10
     elif 30 <= age <= 34:
-        scores["事业选择"] += 0.6
-        scores["家庭关系"] += 0.5
-        scores["感情关系"] += 0.4
+        scores["事业选择"] += 0.15
+        scores["家庭关系"] += 0.15
+        scores["感情关系"] += 0.10
     elif 35 <= age <= 40:
-        scores["事业选择"] += 0.5
-        scores["财务安排"] += 0.5
-        scores["家庭关系"] += 0.5
+        scores["事业选择"] += 0.12
+        scores["财务安排"] += 0.12
+        scores["家庭关系"] += 0.12
 
-    domain = max(ISSUE_COPY, key=lambda item: (scores[item], -list(ISSUE_COPY).index(item)))
-    current_index = next(index for index, item in enumerate(timeline) if item["year"] == center_year)
-    current = timeline[current_index]
-    previous = timeline[current_index - 1] if current_index else current
-    delta = current["average"] - previous["average"]
-    if current["volatility"] >= 14:
-        stage_label = "需要决定期"
-    elif delta >= 2.5:
-        stage_label = "逐渐展开期"
-    elif delta <= -2.5:
-        stage_label = "调整安排期"
-    elif current["average"] >= 62:
-        stage_label = "成果积累期"
-    else:
-        stage_label = "反复确认期"
+    domain_order = list(ISSUE_HEADLINES)
+    domain = max(domain_order, key=lambda item: (scores[item], -domain_order.index(item)))
+    mechanism_order = list(next(iter(ISSUE_HEADLINES.values())))
+    mechanism = max(
+        mechanism_order,
+        key=lambda item: (mechanism_scores[item], -mechanism_order.index(item)),
+    )
+    stage_label = _stage_label(timeline, center_year)
 
     issue = {
         "domain": domain,
-        **ISSUE_COPY[domain],
-        "evidence": ["原局主线", "当前大运", "近三年"],
+        "mechanism": mechanism,
+        "headline": _select_headline(domain, mechanism, signature, stage_label, current_luck),
+        "example": DOMAIN_STAGE_EXAMPLES[domain][stage_label],
+        "evidence": {
+            "core": signature["task_code"],
+            "current_luck": current_luck["pillar"] if current_luck else "",
+            "recent_years": [year_ganzhi(year) for year in range(center_year - 2, center_year + 1)],
+            "age_used_as_tiebreaker": True,
+        },
     }
     return stage_label, issue
 
 
-def build_kline_result(bazi: dict[str, Any], birth_year: int, center_year: int | None = None) -> dict[str, Any]:
+def build_kline_result(
+    bazi: dict[str, Any],
+    birth_year: int,
+    card_copy: dict[str, Any],
+    center_year: int | None = None,
+) -> dict[str, Any]:
     center_year = center_year or datetime.now().year
     profile = build_structure_profile(bazi, center_year)
     timeline = calculate_life_kline(bazi, profile, center_year)
@@ -542,10 +713,11 @@ def build_kline_result(bazi: dict[str, Any], birth_year: int, center_year: int |
         timeline,
         center_year,
         birth_year,
+        card_copy,
     )
     return {
         "center_year": center_year,
-        "timeline_algorithm": "continuity-v2-deterministic",
+        "timeline_algorithm": "continuity-v3-structured-topic",
         "timeline": timeline,
         "stage_label": stage_label,
         "current_issue": current_issue,

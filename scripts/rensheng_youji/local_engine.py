@@ -36,6 +36,7 @@ def build_profile(
         raise ValueError("birth 必须使用 YYYY-MM-DD HH:MM 格式") from exc
 
     warnings: list[str] = []
+    birthplace = f"{country}·{city}"
     if time_basis == "true_solar_adjusted":
         final_time = input_time
         time_info = {
@@ -55,9 +56,12 @@ def build_profile(
             "correction_minutes": round(correction, 2),
             "longitude": location.longitude,
             "timezone": location.timezone,
+            "resolved_location": location.resolved_name,
             "utc_offset_hours": utc_offset,
             "note": "已按城市中心经度、出生地历史法定时区和均时差校正真太阳时。",
         }
+        if location.resolved_name:
+            birthplace = f"{country}·{location.resolved_name}"
         warnings.append("真太阳时为城市中心近似值；若接近时辰边界，建议用具体出生地址复核。")
 
     bazi = calculate_bazi(final_time, gender)
@@ -65,13 +69,18 @@ def build_profile(
     if role is None:
         raise ValueError("日柱固定角色库缺失")
     card_copy = generate_card_copy(bazi)
-    kline = build_kline_result(bazi, input_time.year, center_year=center_year)
+    kline = build_kline_result(
+        bazi,
+        input_time.year,
+        card_copy,
+        center_year=center_year,
+    )
 
     return {
-        "version": "1.0.0-local",
+        "version": "1.1.0-local",
         "name": name.strip(),
         "gender": "男" if gender == "male" else "女",
-        "birthplace": f"{country}·{city}",
+        "birthplace": birthplace,
         "time": time_info,
         "bazi": bazi,
         "profile": {

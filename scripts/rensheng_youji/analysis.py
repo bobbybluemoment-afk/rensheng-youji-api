@@ -82,12 +82,43 @@ DAY_PILLAR_QUOTES = {
     "甲戌": ("合抱之木，生于毫末；九层之台，起于累土。", "《道德经》第六十四章"),
 }
 
-PAIR_PLAIN = {
-    ("偏财", "正印"): "你善于整合现实资源，把成果做成能够长期成立、也容易获得认可的东西。",
+TIME_LINES = {
+    "比肩": "越接近结果，你越希望保留自主决定和独立完成的空间。",
+    "劫财": "越接近结果，你越会在合作、竞争和他人评价中确认位置。",
+    "食神": "越接近结果，你越重视过程是否从容，并能形成持续产出。",
+    "伤官": "越接近结果，你越希望打破限制，用自己的方式完成表达。",
+    "偏财": "越接近结果，你越关注资源能否流动，并带来更多可能。",
+    "正财": "越接近结果，你越在意安排是否稳定、具体并能够长期维持。",
+    "七杀": "越接近结果，你越容易提高要求，希望尽快形成明确成果。",
+    "正官": "越接近结果，你越在意责任、规则和长期安排是否清楚。",
+    "偏印": "越接近结果，你越相信独特经验，并倾向保留自己的判断。",
+    "正印": "越接近结果，你越重视知识、标准和外界认可是否可靠。",
 }
 
-PAIR_TASKS = {
-    ("偏财", "正印"): "把整合资源、建立秩序的能力，从证明自己变成可以选择的工具。",
+TASK_OPENERS = {
+    "比肩": "依靠自己打开局面时",
+    "劫财": "在合作与竞争中行动时",
+    "食神": "把兴趣变成持续产出时",
+    "伤官": "打破旧安排寻找新路时",
+    "偏财": "整合人与现实资源时",
+    "正财": "经营稳定生活和资源时",
+    "七杀": "面对压力推进任务时",
+    "正官": "承担责任建立秩序时",
+    "偏印": "依靠独特经验判断时",
+    "正印": "依靠知识和标准判断时",
+}
+
+TASK_ENDINGS = {
+    "比肩": "让自立成为选择，不必所有事都自己扛",
+    "劫财": "先确认合作边界，不靠比较证明位置",
+    "食神": "建立稳定节奏，不再等待完美状态",
+    "伤官": "把变化变成选择，不因受限就急着离开",
+    "偏财": "给机会设定边界，不必什么资源都接住",
+    "正财": "为变化留下余地，不只追求绝对稳定",
+    "七杀": "给压力设定上限，不再一直逼迫自己",
+    "正官": "保留调整规则的空间，不只证明自己可靠",
+    "偏印": "让独特经验进入现实，不退回自己的世界",
+    "正印": "把认可当作支撑，不拿它衡量全部价值",
 }
 
 
@@ -128,9 +159,11 @@ def _key_relation(pillars: list[dict[str, Any]], relations: list[dict[str, Any]]
 
 
 def _primary_visible(visible: list[dict[str, Any]]) -> dict[str, Any]:
-    position_priority = {"year": 3, "month": 2, "time": 1}
+    # 年月决定较稳定的能力来源；时柱另作为“果/落点”单独进入文案。
+    foundation = [item for item in visible if item["position"] in {"year", "month"}]
+    position_priority = {"year": 1, "month": 2}
     return max(
-        visible,
+        foundation,
         key=lambda item: (item["root_count"], position_priority[item["position"]]),
     )
 
@@ -194,27 +227,27 @@ def generate_card_copy(bazi: dict[str, Any]) -> dict[str, Any]:
     primary = _primary_visible(visible)
     primary_god = primary["ten_god"]
     outcome_god = pillars[3]["stem_ten_god"]
-    pair = (primary_god, outcome_god)
-
-    first_line = PAIR_PLAIN.get(
-        pair,
-        f"你善于{WAYS[primary_god]}，并倾向把它转化为{OUTCOMES[outcome_god]}。",
+    first_line = f"处理问题时，你会{WAYS[primary_god]}，并落实为{OUTCOMES[outcome_god]}。"
+    second_line = TIME_LINES[outcome_god]
+    unrooted = [item for item in visible if item["root_count"] == 0]
+    tension_god = (
+        max(unrooted, key=lambda item: {"year": 1, "month": 3, "time": 2}[item["position"]])["ten_god"]
+        if unrooted else primary_god
     )
-    tension_god = next(
-        (item["ten_god"] for item in visible if item["root_count"] == 0),
-        None,
-    )
-    second_line = (
-        TENSION_LINES[tension_god]
-        if tension_god
-        else _fallback_tension(primary_god, relation)
-    )
-    main_task = PAIR_TASKS.get(pair, MAIN_TASKS[primary_god])
+    main_task = f"{TASK_OPENERS[primary_god]}，{TASK_ENDINGS[outcome_god]}。"
     copy = {
         "core_mystic": core_mystic,
         "core_plain": [first_line, second_line],
         "main_task": main_task,
-        "reading_note": "这是根据原局关系提炼的一条主要读法，不是唯一答案。",
+        "analysis_signature": {
+            "primary_god": primary_god,
+            "primary_position": primary["position"],
+            "outcome_god": outcome_god,
+            "tension_god": tension_god,
+            "key_relation": relation,
+            "task_code": f"{primary_god}-{outcome_god}",
+        },
+        "reading_note": "稳定能力取自年月结构，现实落点明确结合时柱；这不是唯一读法。",
     }
     _validate(copy)
     return copy

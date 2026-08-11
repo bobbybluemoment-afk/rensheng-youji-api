@@ -120,6 +120,30 @@ def _validate(data):
             raise ValueError("invalid timeline OHLC ordering")
 
 
+def _brand_logo(size=76):
+    """用 Pillow 绘制仓库 icon.svg 对应的品牌标记，避免依赖额外 SVG 渲染器。"""
+
+    logo = Image.new("RGB", (size, size), BG)
+    mark = ImageDraw.Draw(logo)
+    scale = size / 24
+    mark.rounded_rectangle(
+        (3 * scale, 11 * scale, 9 * scale, 21 * scale),
+        radius=2.5 * scale,
+        fill="#FFD400",
+    )
+    mark.rounded_rectangle(
+        (15 * scale, 7 * scale, 21 * scale, 21 * scale),
+        radius=2.5 * scale,
+        fill="#F75858",
+    )
+    mark.rounded_rectangle(
+        (9 * scale, 3 * scale, 15 * scale, 21 * scale),
+        radius=2.5 * scale,
+        fill="#FFA43D",
+    )
+    return logo
+
+
 def render_card(data, out_path):
     """渲染新版六段式卡片并返回 PNG 的绝对路径。"""
 
@@ -131,7 +155,7 @@ def render_card(data, out_path):
     image = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(image)
 
-    logo = Image.open(ROOT / "assets/logo.png").convert("RGB").resize((76, 76), Image.Resampling.LANCZOS)
+    logo = _brand_logo()
     image.paste(logo, (88, 46))
     draw_tracking(draw, (178, 61), "人生有迹", font(MEDIUM, 38), INK, 4)
 

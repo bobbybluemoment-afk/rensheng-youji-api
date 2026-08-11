@@ -1,0 +1,39 @@
+第三方数据与软件声明
+====================
+
+一、中国省、市、县区地点数据
+
+本项目的 data/china_county_locations.json 由以下开源数据提取名称、层级、
+中心经度与时区所需字段后生成：
+
+- 项目：AreaCity-JsSpider-StatsGov
+- 作者：xiangyuecn
+- 来源：https://github.com/xiangyuecn/AreaCity-JsSpider-StatsGov
+- 数据文件：ok_geo.csv
+- 数据版本：2025.251231.260403（更新时间 2026-04-03）
+- 许可证：MIT License
+
+Copyright (c) 2019 xiangyuecn
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+二、其他第三方内容
+
+lunar_python、Pillow 与 Noto 字体等第三方依赖或素材仍适用其各自的许可证。
+“人生有迹有限个人使用许可”不改变这些第三方内容原有的授权范围。

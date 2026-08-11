@@ -1,14 +1,19 @@
-"""真太阳时换算。
+"""出生地解析与真太阳时换算。
 
-采用经度时差加 NOAA 近似均时差。城市坐标只用于确定城市中心经度，
-因此换算结果应理解为城市级近似值，而不是具体产房坐标的测量结果。
+中国地点优先从 Skill 内置的省、市、县区三级数据中解析。换算采用
+城市或县区中心经度加 NOAA 近似均时差，因此结果仍是地点中心近似值，
+不是具体出生地址的测量结果。
 """
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+import json
 from math import cos, pi, sin
+from pathlib import Path
+import re
 from zoneinfo import ZoneInfo
 
 
@@ -16,56 +21,142 @@ from zoneinfo import ZoneInfo
 class CityLocation:
     longitude: float
     timezone: str = "Asia/Shanghai"
+    resolved_name: str = ""
 
 
-_CHINA_CITIES = {
-    "北京": 116.4074, "上海": 121.4737, "天津": 117.2008, "重庆": 106.5516,
-    "广州": 113.2644, "深圳": 114.0579, "杭州": 120.1551, "南京": 118.7969,
-    "苏州": 120.5853, "武汉": 114.3054, "成都": 104.0665, "西安": 108.9398,
-    "郑州": 113.6254, "长沙": 112.9388, "合肥": 117.2272, "济南": 117.1201,
-    "青岛": 120.3826, "厦门": 118.0894, "泉州": 118.6759, "福州": 119.2965,
-    "南昌": 115.8582, "昆明": 102.8329, "贵阳": 106.6302, "南宁": 108.3669,
-    "海口": 110.1983, "三亚": 109.5119, "哈尔滨": 126.6424, "长春": 125.3235,
-    "沈阳": 123.4315, "大连": 121.6147, "石家庄": 114.5149, "太原": 112.5492,
-    "呼和浩特": 111.7492, "乌鲁木齐": 87.6168, "拉萨": 91.1322, "兰州": 103.8343,
-    "西宁": 101.7782, "银川": 106.2309,
-}
+_DATA_PATH = Path(__file__).resolve().parents[2] / "data" / "china_county_locations.json"
+_COUNTRY_PREFIXES = ("中华人民共和国", "中国")
+_SEPARATORS = re.compile(r"[\s,，/\\·、—_-]+")
+_SUFFIXES = tuple(sorted((
+    "维吾尔自治区", "壮族自治区", "回族自治区", "特别行政区",
+    "自治州", "自治县", "自治旗", "自治区", "地区", "林区",
+    "矿区", "新区", "开发区", "管理区", "特区", "街道", "省",
+    "市", "县", "区", "旗", "盟",
+), key=len, reverse=True))
 
-CITY_LOCATIONS = {name: CityLocation(lon) for name, lon in _CHINA_CITIES.items()}
-CITY_LOCATIONS.update({
-    "香港": CityLocation(114.1694, "Asia/Hong_Kong"),
-    "澳门": CityLocation(113.5439, "Asia/Macau"),
-    "台北": CityLocation(121.5654, "Asia/Taipei"),
-})
+_LOCATION_INDEX: dict[str, list[dict]] | None = None
+
+
+def _clean(value: str) -> str:
+    result = _SEPARATORS.sub("", value.strip())
+    for prefix in _COUNTRY_PREFIXES:
+        if result.startswith(prefix):
+            result = result[len(prefix):]
+            break
+    return result
+
+
+def _strip_suffix(value: str) -> str:
+    cleaned = _clean(value)
+    for suffix in _SUFFIXES:
+        if cleaned.endswith(suffix) and len(cleaned) > len(suffix):
+            return cleaned[:-len(suffix)]
+    return cleaned
 
 
 def normalize_city(city: str) -> str:
-    value = city.strip()
-    for suffix in ("特别行政区", "自治州", "地区", "市", "县", "区"):
-        if value.endswith(suffix):
-            value = value[: -len(suffix)]
-            break
-    return value
+    """保留旧接口：清理国家前缀、分隔符和末尾行政区后缀。"""
+
+    return _strip_suffix(city)
+
+
+def _location_variants(record: dict) -> set[str]:
+    parts = [_clean(part) for part in record["p"]]
+    short = [_strip_suffix(part) for part in record["p"]]
+    variants = {
+        _clean(record["n"]),
+        _strip_suffix(record["n"]),
+        "".join(parts),
+        "".join(short),
+    }
+    if len(parts) >= 2:
+        variants.update({
+            "".join(parts[-2:]),
+            "".join(short[-2:]),
+            parts[0] + parts[-1],
+            short[0] + short[-1],
+        })
+    return {value for value in variants if value}
+
+
+def _load_location_index() -> dict[str, list[dict]]:
+    global _LOCATION_INDEX
+    if _LOCATION_INDEX is not None:
+        return _LOCATION_INDEX
+    try:
+        payload = json.loads(_DATA_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("内置中国地点库无法读取，请重新安装完整 Skill。") from exc
+
+    index: dict[str, list[dict]] = defaultdict(list)
+    for record in payload["locations"]:
+        for variant in _location_variants(record):
+            index[variant].append(record)
+    _LOCATION_INDEX = dict(index)
+    return _LOCATION_INDEX
+
+
+def _describe(record: dict) -> str:
+    return "·".join(record["p"])
+
+
+def _choose_location(city: str, candidates: list[dict]) -> dict:
+    unique: dict[tuple, dict] = {}
+    for record in candidates:
+        key = (tuple(record["p"]), record["x"], record["z"])
+        unique[key] = record
+    values = list(unique.values())
+    if len(values) == 1:
+        return values[0]
+
+    # 北京、上海等省级与地级记录坐标几乎一致时，采用更具体的一条。
+    longitudes = [float(item["x"]) for item in values]
+    if max(longitudes) - min(longitudes) <= 0.08:
+        return max(values, key=lambda item: len(item["p"]))
+
+    choices = "、".join(_describe(item) for item in values[:6])
+    if len(values) > 6:
+        choices += "等"
+    raise ValueError(
+        f"出生地“{city}”存在重名，请补充省或地级市。可选地点：{choices}。"
+    )
 
 
 def resolve_location(city: str, longitude: float | None, timezone: str | None) -> CityLocation:
-    known = CITY_LOCATIONS.get(normalize_city(city))
+    raw_key = _clean(city)
+    short_key = _strip_suffix(city)
+    candidates: list[dict] = []
     if longitude is None:
-        if known is None:
-            raise ValueError("当前城市库尚未收录该城市，请同时提供 longitude 和 timezone。")
-        longitude = known.longitude
-    timezone = timezone or (known.timezone if known else None)
+        index = _load_location_index()
+        candidates = index.get(raw_key, []) or index.get(short_key, [])
+        if not candidates:
+            raise ValueError(
+                "当前地点库尚未匹配到该出生地。中国地点请补充省/市/县区；"
+                "海外地点请提供 longitude 和 IANA timezone。"
+            )
+        selected = _choose_location(city, candidates)
+        longitude = float(selected["x"])
+        timezone = timezone or selected["z"]
+        resolved_name = _describe(selected)
+    else:
+        resolved_name = city.strip()
+
     if not timezone:
-        raise ValueError("未收录城市必须提供 IANA timezone，例如 Asia/Shanghai。")
+        raise ValueError("海外或自定义地点必须提供 IANA timezone，例如 Asia/Tokyo。")
     try:
         ZoneInfo(timezone)
     except Exception as exc:
         raise ValueError("timezone 必须是有效的 IANA 时区名称。") from exc
-    return CityLocation(longitude=longitude, timezone=timezone)
+    return CityLocation(
+        longitude=longitude,
+        timezone=timezone,
+        resolved_name=resolved_name,
+    )
 
 
 def equation_of_time_minutes(value: datetime) -> float:
     """NOAA 五项近似公式，返回均时差（分钟）。"""
+
     day_of_year = value.timetuple().tm_yday
     gamma = 2 * pi / 365 * (day_of_year - 1 + (value.hour - 12) / 24)
     return 229.18 * (
@@ -78,10 +169,11 @@ def equation_of_time_minutes(value: datetime) -> float:
 
 
 def adjust_to_true_solar(local_civil: datetime, location: CityLocation) -> tuple[datetime, float, float]:
-    """把当地法定时间换算为城市中心近似真太阳时。
+    """把当地法定时间换算为地点中心近似真太阳时。
 
     返回：(真太阳时、总校正分钟数、当地 UTC 偏移小时数)。
     """
+
     aware = local_civil.replace(tzinfo=ZoneInfo(location.timezone))
     utc_offset = aware.utcoffset()
     if utc_offset is None:
@@ -89,4 +181,3 @@ def adjust_to_true_solar(local_civil: datetime, location: CityLocation) -> tuple
     offset_hours = utc_offset.total_seconds() / 3600
     correction = equation_of_time_minutes(local_civil) + 4 * location.longitude - 60 * offset_hours
     return local_civil + timedelta(minutes=correction), correction, offset_hours
-
