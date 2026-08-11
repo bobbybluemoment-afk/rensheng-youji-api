@@ -1,7 +1,7 @@
 interface:
   display_name: "人生有迹免费卡片"
-  short_description: "输入出生资料和体验码，直接生成带20年K线的免费卡片"
-  default_prompt: "Use $rensheng-youji-card to generate my free 人生有迹 card from my birth information and experience code."
+  short_description: "本地生成含20年连续人生K线的人生主线卡片"
+  default_prompt: "使用人生有迹免费卡片，根据我的出生时间、出生城市和性别，在本地生成PNG卡片。"
   icon_small: "./assets/icon.svg"
   icon_large: "./assets/icon.svg"
 policy:
