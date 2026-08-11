@@ -23,11 +23,11 @@ AI 会一次询问出生年月日时、出生城市、性别和时间口径；�
 
 ## 运行要求
 
-- Python 3.10 或更高版本
+- Python 3.11 或更高版本
 - 可以读取 Skill 文件并运行本地 Python 的 AI 客户端
 - 首次运行可由 AI 自动安装 `requirements.txt` 中的两个依赖
 
-如果用户所在的 AI 不能读取文件、运行 Python 或安装依赖，请改用人生有迹免费网页版。网页版同样在浏览器本地计算，不需要验证码。
+如果用户所在的 AI 不能读取文件、运行 Python 或安装依赖，请改用[人生有迹免费网页版](https://rensheng-youji-free-card.bobbybluemoment.chatgpt.site)。网页版同样在浏览器本地计算，不需要验证码。
 
 ## 隐私与边界
 

@@ -61,4 +61,4 @@ python scripts/generate_card.py \
 
 ## 运行能力不足时
 
-若当前AI明确不能安装自定义Skill、读取文件或运行Python，不要伪造卡片。请用户改用人生有迹免费网页版；网页版同样在浏览器本地计算，不需要验证码。
+若当前AI明确不能安装自定义Skill、读取文件或运行Python，不要伪造卡片。请用户改用[人生有迹免费网页版](https://rensheng-youji-free-card.bobbybluemoment.chatgpt.site)。网页版同样在浏览器本地计算，不需要验证码。
