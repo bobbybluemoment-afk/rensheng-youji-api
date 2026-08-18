@@ -1,0 +1,10 @@
+{
+  "name": "rensheng-youji-mingli-core",
+  "version": "0.2.0",
+  "visibility": "internal",
+  "entry": "rensheng-youji-mingli-core/SKILL.md",
+  "input_schema": "rensheng-youji-mingli-core/schemas/analysis-input.schema.json",
+  "output_schema": "rensheng-youji-mingli-core/schemas/analysis-output.schema.json",
+  "api_adapter": "../scripts/prepare_core_input.py",
+  "notes": "本版本只增加完整分析 Core 与排盘输入桥接，不改变现有免费卡片输出。"
+}

@@ -1,0 +1,1920 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rensheng-youji.local/schemas/analysis-output.schema.json",
+  "title": "人生有迹完整命理分析母稿 v0.2.0",
+  "description": "内置分析核心返回的统一 analysis_bundle。新增完整自身画像、家庭、关系、对象候选、互动与均衡审计。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "analysis_meta",
+    "chart_facts",
+    "chart_audit",
+    "social_context_model",
+    "five_elements",
+    "day_master",
+    "stems_branches_roots",
+    "interaction_network",
+    "cross_method_analysis",
+    "root_seed_flower_fruit_map",
+    "natal_portrait",
+    "complete_self_portrait",
+    "family_system",
+    "resource_relationship",
+    "social_relationship_style",
+    "relationship_system",
+    "partner_profiles",
+    "interaction_dynamics",
+    "environment_and_mobility",
+    "reality_domains",
+    "domain_connections",
+    "luck_cycle_themes",
+    "annual_theme_activation",
+    "monthly_theme_activation",
+    "life_stages",
+    "turning_points",
+    "reality_candidate_pool",
+    "calibration_state",
+    "not_inferable_register",
+    "portrait_balance_audit",
+    "uncertainty_register",
+    "safety_boundaries"
+  ],
+  "properties": {
+    "analysis_meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "analysis_id",
+        "request_id",
+        "core_version",
+        "generated_at",
+        "analysis_as_of",
+        "target_range",
+        "input_completeness",
+        "status"
+      ],
+      "properties": {
+        "analysis_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "core_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "analysis_as_of": {
+          "type": "string",
+          "format": "date"
+        },
+        "target_range": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "start_year",
+            "end_year"
+          ],
+          "properties": {
+            "start_year": {
+              "type": "integer"
+            },
+            "end_year": {
+              "type": "integer"
+            }
+          }
+        },
+        "input_completeness": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "partial",
+            "blocked"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "partial",
+            "cannot_analyze"
+          ]
+        },
+        "missing_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "method_notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "chart_facts": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "day_master",
+        "pillars",
+        "luck_cycles",
+        "annual_cycles"
+      ],
+      "properties": {
+        "day_master": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pillars": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "year",
+            "month",
+            "day",
+            "hour"
+          ],
+          "properties": {
+            "year": {
+              "$ref": "#/$defs/factPillar"
+            },
+            "month": {
+              "$ref": "#/$defs/factPillar"
+            },
+            "day": {
+              "$ref": "#/$defs/factPillar"
+            },
+            "hour": {
+              "$ref": "#/$defs/factPillar"
+            }
+          }
+        },
+        "luck_cycles": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "annual_cycles": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "chart_audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "checks",
+        "boundary_dependencies",
+        "versions"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "pass_with_flags",
+            "blocked"
+          ]
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/auditCheck"
+          }
+        },
+        "boundary_dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "versions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "version_id",
+              "description"
+            ],
+            "properties": {
+              "version_id": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "social_context_model": {
+      "$ref": "#/$defs/analysisSection"
+    },
+    "five_elements": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/analysisSection"
+        }
+      ]
+    },
+    "day_master": {
+      "$ref": "#/$defs/analysisSection"
+    },
+    "stems_branches_roots": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "pillars",
+        "findings"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "pillars": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "year",
+            "month",
+            "day",
+            "hour"
+          ],
+          "properties": {
+            "year": {
+              "$ref": "#/$defs/pillarAnalysis"
+            },
+            "month": {
+              "$ref": "#/$defs/pillarAnalysis"
+            },
+            "day": {
+              "$ref": "#/$defs/pillarAnalysis"
+            },
+            "hour": {
+              "$ref": "#/$defs/pillarAnalysis"
+            }
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inferenceUnit"
+          }
+        }
+      }
+    },
+    "interaction_network": {
+      "$ref": "#/$defs/analysisSection"
+    },
+    "cross_method_analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "methods",
+        "agreements",
+        "conflicts",
+        "findings"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "methods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "agreements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "conflicts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inferenceUnit"
+          }
+        }
+      }
+    },
+    "root_seed_flower_fruit_map": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "root",
+        "seedling",
+        "flower",
+        "fruit",
+        "continuity",
+        "findings"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "root": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "seedling": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "flower": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "fruit": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "continuity": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inferenceUnit"
+          }
+        }
+      }
+    },
+    "natal_portrait": {
+      "$ref": "#/$defs/analysisSection"
+    },
+    "complete_self_portrait": {
+      "$ref": "#/$defs/completeSelfPortrait"
+    },
+    "family_system": {
+      "$ref": "#/$defs/familySystem"
+    },
+    "resource_relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "material",
+        "institutional",
+        "relational",
+        "capability",
+        "time_energy",
+        "psychological",
+        "findings"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "material": {
+          "$ref": "#/$defs/resourceSection"
+        },
+        "institutional": {
+          "$ref": "#/$defs/resourceSection"
+        },
+        "relational": {
+          "$ref": "#/$defs/resourceSection"
+        },
+        "capability": {
+          "$ref": "#/$defs/resourceSection"
+        },
+        "time_energy": {
+          "$ref": "#/$defs/resourceSection"
+        },
+        "psychological": {
+          "$ref": "#/$defs/resourceSection"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inferenceUnit"
+          }
+        }
+      }
+    },
+    "social_relationship_style": {
+      "$ref": "#/$defs/analysisSection"
+    },
+    "relationship_system": {
+      "$ref": "#/$defs/relationshipSystem"
+    },
+    "partner_profiles": {
+      "$ref": "#/$defs/partnerProfileSet"
+    },
+    "interaction_dynamics": {
+      "$ref": "#/$defs/interactionDynamics"
+    },
+    "environment_and_mobility": {
+      "$ref": "#/$defs/analysisSection"
+    },
+    "reality_domains": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "career",
+        "wealth",
+        "learning",
+        "relationships",
+        "family",
+        "mobility",
+        "health",
+        "growth"
+      ],
+      "properties": {
+        "career": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "wealth": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "learning": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "relationships": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "family": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "mobility": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "health": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "growth": {
+          "$ref": "#/$defs/analysisSection"
+        }
+      }
+    },
+    "domain_connections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/domainConnection"
+      }
+    },
+    "luck_cycle_themes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/luckTheme"
+      }
+    },
+    "annual_theme_activation": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/yearActivation"
+      }
+    },
+    "monthly_theme_activation": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/monthActivation"
+      }
+    },
+    "life_stages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/lifeStage"
+      }
+    },
+    "turning_points": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/turningPoint"
+      }
+    },
+    "reality_candidate_pool": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 15,
+      "items": {
+        "$ref": "#/$defs/realityCandidate"
+      }
+    },
+    "calibration_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "confirmed",
+        "partial",
+        "rejected",
+        "uncertain",
+        "updates"
+      ],
+      "properties": {
+        "confirmed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "partial": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rejected": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "uncertain": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "updates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "not_inferable_register": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "$ref": "#/$defs/notInferable"
+      }
+    },
+    "portrait_balance_audit": {
+      "$ref": "#/$defs/portraitBalanceAudit"
+    },
+    "uncertainty_register": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/uncertainty"
+      }
+    },
+    "safety_boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "disclaimer",
+        "health",
+        "finance",
+        "legal",
+        "relationships",
+        "high_risk_flags"
+      ],
+      "properties": {
+        "disclaimer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "health": {
+          "type": "string"
+        },
+        "finance": {
+          "type": "string"
+        },
+        "legal": {
+          "type": "string"
+        },
+        "relationships": {
+          "type": "string"
+        },
+        "high_risk_flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "to_verify"
+      ]
+    },
+    "birthTimeDependency": {
+      "type": "string",
+      "enum": [
+        "none",
+        "partial",
+        "high"
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "natal",
+        "luck_cycle",
+        "annual",
+        "user_facts",
+        "social_priors"
+      ],
+      "properties": {
+        "natal": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "luck_cycle": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "annual": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "user_facts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "social_priors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "inferenceUnit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "finding",
+        "mechanism_chain",
+        "evidence",
+        "linked_domains",
+        "time_scope",
+        "confidence",
+        "alternatives",
+        "birth_time_dependency",
+        "validation"
+      ],
+      "properties": {
+        "finding": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mechanism_chain": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "linked_domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "time_scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "to_verify"
+          ]
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "birth_time_dependency": {
+          "type": "string",
+          "enum": [
+            "none",
+            "partial",
+            "high"
+          ]
+        },
+        "validation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "analysisSection": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "summary",
+        "findings"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inferenceUnit"
+          }
+        }
+      }
+    },
+    "factHiddenStem": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "stem",
+        "qi_level",
+        "ten_god"
+      ],
+      "properties": {
+        "stem": {
+          "type": "string"
+        },
+        "qi_level": {
+          "type": "string",
+          "enum": [
+            "main",
+            "middle",
+            "residual"
+          ]
+        },
+        "ten_god": {
+          "type": "string"
+        }
+      }
+    },
+    "factPillar": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "stem",
+        "branch",
+        "stem_ten_god",
+        "hidden_stems"
+      ],
+      "properties": {
+        "stem": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "stem_ten_god": {
+          "type": "string"
+        },
+        "hidden_stems": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/factHiddenStem"
+          }
+        }
+      }
+    },
+    "auditCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "status",
+        "detail"
+      ],
+      "properties": {
+        "item": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "flag",
+            "unknown",
+            "blocked"
+          ]
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "pillarAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "facts",
+        "structural_role",
+        "activation_keys",
+        "possible_manifestations",
+        "uncertainties",
+        "findings"
+      ],
+      "properties": {
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "structural_role": {
+          "type": "string"
+        },
+        "activation_keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "possible_manifestations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "uncertainties": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inferenceUnit"
+          }
+        }
+      }
+    },
+    "resourceSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "acquire",
+        "preserve",
+        "exchange",
+        "amplify",
+        "loss_risks",
+        "findings"
+      ],
+      "properties": {
+        "acquire": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "preserve": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exchange": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "amplify": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "loss_risks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inferenceUnit"
+          }
+        }
+      }
+    },
+    "domainConnection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_domain",
+        "trigger",
+        "mechanism",
+        "target_domain",
+        "lag",
+        "amplifiers",
+        "buffers",
+        "evidence"
+      ],
+      "properties": {
+        "source_domain": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": "string"
+        },
+        "mechanism": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "target_domain": {
+          "type": "string"
+        },
+        "lag": {
+          "type": "string",
+          "enum": [
+            "immediate",
+            "months",
+            "cross_year",
+            "long_term",
+            "unknown"
+          ]
+        },
+        "amplifiers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "buffers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        }
+      }
+    },
+    "luckTheme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cycle_index",
+        "start_year",
+        "end_year",
+        "theme_statement",
+        "structural_mechanism",
+        "opportunities",
+        "costs",
+        "required_capabilities",
+        "activated_domains",
+        "activation_keys",
+        "entry_phase",
+        "middle_phase",
+        "exit_phase",
+        "continuity_from_previous",
+        "seed_for_next",
+        "confidence",
+        "alternatives",
+        "birth_time_dependency"
+      ],
+      "properties": {
+        "cycle_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "start_year": {
+          "type": "integer"
+        },
+        "end_year": {
+          "type": "integer"
+        },
+        "theme_statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "structural_mechanism": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "opportunities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "costs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "required_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "activated_domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "activation_keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "entry_phase": {
+          "type": "string"
+        },
+        "middle_phase": {
+          "type": "string"
+        },
+        "exit_phase": {
+          "type": "string"
+        },
+        "continuity_from_previous": {
+          "type": "string"
+        },
+        "seed_for_next": {
+          "type": "string"
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "birth_time_dependency": {
+          "$ref": "#/$defs/birthTimeDependency"
+        }
+      }
+    },
+    "domainImpact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domain",
+        "direction",
+        "intensity",
+        "mechanism"
+      ],
+      "properties": {
+        "domain": {
+          "type": "string"
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "support",
+            "mixed",
+            "pressure",
+            "consolidation"
+          ]
+        },
+        "intensity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "mechanism": {
+          "type": "string"
+        }
+      }
+    },
+    "yearActivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "year",
+        "age",
+        "luck_cycle_index",
+        "year_theme",
+        "luck_theme_link",
+        "activation_mechanisms",
+        "natal_reactions",
+        "change_intensity",
+        "direction",
+        "domain_impacts",
+        "domain_connections",
+        "human_actions",
+        "social_feedback",
+        "carry_in",
+        "carry_out",
+        "seed_for_next",
+        "confidence",
+        "alternatives",
+        "validation"
+      ],
+      "properties": {
+        "year": {
+          "type": "integer"
+        },
+        "age": {
+          "type": "number",
+          "minimum": 0
+        },
+        "luck_cycle_index": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "year_theme": {
+          "type": "string",
+          "minLength": 1
+        },
+        "luck_theme_link": {
+          "type": "string",
+          "minLength": 1
+        },
+        "activation_mechanisms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "natal_reactions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "change_intensity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "support",
+            "mixed",
+            "pressure",
+            "consolidation"
+          ]
+        },
+        "domain_impacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/domainImpact"
+          }
+        },
+        "domain_connections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/domainConnection"
+          }
+        },
+        "human_actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "social_feedback": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "carry_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "carry_out": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "seed_for_next": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "validation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "monthActivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "year",
+        "month",
+        "theme",
+        "annual_link",
+        "activation_mechanisms",
+        "confidence"
+      ],
+      "properties": {
+        "year": {
+          "type": "integer"
+        },
+        "month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12
+        },
+        "theme": {
+          "type": "string"
+        },
+        "annual_link": {
+          "type": "string"
+        },
+        "activation_mechanisms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        }
+      }
+    },
+    "lifeStage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "start_age",
+        "end_age",
+        "theme",
+        "social_context",
+        "continuity",
+        "findings"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "start_age": {
+          "type": "number"
+        },
+        "end_age": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "theme": {
+          "type": "string"
+        },
+        "social_context": {
+          "type": "string"
+        },
+        "continuity": {
+          "type": "string"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inferenceUnit"
+          }
+        }
+      }
+    },
+    "turningPoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "year_or_range",
+        "phase",
+        "theme",
+        "mechanism",
+        "linked_domains",
+        "confidence",
+        "validation"
+      ],
+      "properties": {
+        "year_or_range": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string",
+          "enum": [
+            "preparation",
+            "occurrence",
+            "landing",
+            "integration"
+          ]
+        },
+        "theme": {
+          "type": "string"
+        },
+        "mechanism": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "linked_domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "validation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "realityCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "domain",
+        "statement",
+        "source_layers",
+        "confidence",
+        "validation_question",
+        "status"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "domain": {
+          "type": "string"
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_layers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "chart",
+              "luck",
+              "annual",
+              "user_fact",
+              "social_prior",
+              "cross_method"
+            ]
+          }
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "validation_question": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "unverified",
+            "match",
+            "partial",
+            "reject",
+            "uncertain"
+          ]
+        }
+      }
+    },
+    "uncertainty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "reason",
+        "impact",
+        "affected_sections",
+        "resolution"
+      ],
+      "properties": {
+        "item": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "impact": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "blocking"
+          ]
+        },
+        "affected_sections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resolution": {
+          "type": "string"
+        }
+      }
+    },
+    "completeSelfPortrait": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "outward_presentation",
+        "inner_motivation",
+        "cognition_and_decision",
+        "emotional_security",
+        "action_and_execution",
+        "values_and_boundaries",
+        "stress_and_recovery",
+        "contradictions",
+        "environment_fit",
+        "development_line",
+        "findings"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "outward_presentation": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "inner_motivation": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "cognition_and_decision": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "emotional_security": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "action_and_execution": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "values_and_boundaries": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "stress_and_recovery": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "contradictions": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "environment_fit": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "development_line": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inferenceUnit"
+          }
+        }
+      }
+    },
+    "familySystem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "early_resources",
+        "expectations_and_costs",
+        "role_position",
+        "independence_and_boundaries",
+        "partner_family_interface",
+        "repetition_and_revision",
+        "cross_domain_links",
+        "findings"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "early_resources": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "expectations_and_costs": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "role_position": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "independence_and_boundaries": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "partner_family_interface": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "repetition_and_revision": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "cross_domain_links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/domainConnection"
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inferenceUnit"
+          }
+        }
+      }
+    },
+    "relationshipSystem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "intimacy_needs",
+        "attraction_process",
+        "expression_style",
+        "conflict_pattern",
+        "repair_pattern",
+        "commitment_conditions",
+        "autonomy_and_closeness",
+        "career_family_money_effects",
+        "findings"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "intimacy_needs": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "attraction_process": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "expression_style": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "conflict_pattern": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "repair_pattern": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "commitment_conditions": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "autonomy_and_closeness": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "career_family_money_effects": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inferenceUnit"
+          }
+        }
+      }
+    },
+    "partnerProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "traits",
+        "mechanism",
+        "benefits",
+        "costs",
+        "evidence_strength",
+        "alternatives",
+        "validation",
+        "findings"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "traits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mechanism": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "benefits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "costs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence_strength": {
+          "type": "string",
+          "enum": [
+            "strong",
+            "medium",
+            "weak",
+            "insufficient"
+          ]
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "validation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inferenceUnit"
+          }
+        }
+      }
+    },
+    "partnerProfileSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "attraction",
+        "sustainable",
+        "high_attraction_high_friction",
+        "evidence_limitations",
+        "findings"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "attraction": {
+          "$ref": "#/$defs/partnerProfile"
+        },
+        "sustainable": {
+          "$ref": "#/$defs/partnerProfile"
+        },
+        "high_attraction_high_friction": {
+          "$ref": "#/$defs/partnerProfile"
+        },
+        "evidence_limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inferenceUnit"
+          }
+        }
+      }
+    },
+    "interactionDynamics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "meeting_and_attention",
+        "trust_building",
+        "intimacy_development",
+        "conflict_triggers",
+        "conflict_response",
+        "repair_conditions",
+        "commitment_and_shared_life",
+        "cross_domain_effects",
+        "findings"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "meeting_and_attention": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "trust_building": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "intimacy_development": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "conflict_triggers": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "conflict_response": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "repair_conditions": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "commitment_and_shared_life": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "cross_domain_effects": {
+          "$ref": "#/$defs/analysisSection"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inferenceUnit"
+          }
+        }
+      }
+    },
+    "notInferable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "reason",
+        "evidence_level",
+        "needed_input",
+        "prohibited_claims"
+      ],
+      "properties": {
+        "item": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_level": {
+          "type": "string",
+          "enum": [
+            "weak",
+            "insufficient"
+          ]
+        },
+        "needed_input": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "prohibited_claims": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "portraitBalanceAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "covered_domains",
+        "weak_domains",
+        "unsupported_claims_removed",
+        "cross_domain_paths",
+        "warnings"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "pass_with_flags"
+          ]
+        },
+        "covered_domains": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "weak_domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unsupported_claims_removed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cross_domain_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
+
