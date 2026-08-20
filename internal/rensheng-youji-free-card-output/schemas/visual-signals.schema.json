@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rensheng-youji.local/schemas/visual-signals.schema.json",
+  "title": "人生有迹四项趋势视觉信号",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "analysis_id", "center_year", "evidence_mode", "window_start_state", "annual_visual_signals"],
+  "properties": {
+    "schema_version": {"const": "1.3.0"},
+    "analysis_id": {"type": "string", "minLength": 1},
+    "center_year": {"type": "integer"},
+    "evidence_mode": {"enum": ["birth_only", "reality_calibrated"]},
+    "window_start_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_year", "overall", "career", "wealth", "relationship_carry"],
+      "properties": {
+        "start_year": {"type": "integer"},
+        "overall": {"$ref": "#/$defs/baselineEvidence"},
+        "career": {"$ref": "#/$defs/baselineEvidence"},
+        "wealth": {"$ref": "#/$defs/baselineEvidence"},
+        "relationship_carry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["strength", "type", "confidence", "basis"],
+          "properties": {
+            "strength": {"type": "number", "minimum": 0, "maximum": 1},
+            "type": {"enum": ["none", "latent", "active", "recovery"]},
+            "confidence": {"$ref": "#/$defs/confidence"},
+            "basis": {"type": "array", "items": {"type": "string"}}
+          }
+        }
+      }
+    },
+    "annual_visual_signals": {
+      "type": "array",
+      "minItems": 20,
+      "maxItems": 20,
+      "items": {"$ref": "#/$defs/annualSignal"}
+    }
+  },
+  "$defs": {
+    "confidence": {"enum": ["high", "medium", "needs_validation"]},
+    "baselineEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["facts", "prior_cycles", "natal", "social_stage", "weighted_score", "confidence", "basis"],
+      "properties": {
+        "facts": {"type": "number", "minimum": -2, "maximum": 2},
+        "prior_cycles": {"type": "number", "minimum": -2, "maximum": 2},
+        "natal": {"type": "number", "minimum": -2, "maximum": 2},
+        "social_stage": {"type": "number", "minimum": -2, "maximum": 2},
+        "weighted_score": {"type": "number", "minimum": -2, "maximum": 2},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "basis": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+      }
+    },
+    "annualSignal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["year", "age", "theme", "direction", "luck_bias", "stage_target_shift", "opportunity", "cost", "realization", "durable_shift", "change_intensity", "activation_strength", "reversal_level", "major_transition", "confirmed_major_event", "career_outcome", "career_strength", "learning_carry", "wealth_inflow", "wealth_outflow", "resource_restructure", "relationship_natal_entry", "relationship_luck_environment", "relationship_opportunity", "relationship_carry", "relationship_confirmed_context", "relationship_conflict_only", "confidence", "basis"],
+      "properties": {
+        "year": {"type": "integer"},
+        "age": {"type": "number", "minimum": 0},
+        "theme": {"type": "string", "minLength": 1},
+        "direction": {"enum": ["support", "mixed", "pressure", "consolidation"]},
+        "luck_bias": {"type": "number", "minimum": -2, "maximum": 2},
+        "stage_target_shift": {"type": "number", "minimum": -15, "maximum": 15},
+        "opportunity": {"type": "number", "minimum": 0, "maximum": 4},
+        "cost": {"type": "number", "minimum": 0, "maximum": 4},
+        "realization": {"type": "number", "minimum": -2, "maximum": 2},
+        "durable_shift": {"type": "number", "minimum": -1, "maximum": 1},
+        "change_intensity": {"enum": ["low", "medium", "high"]},
+        "activation_strength": {"type": "integer", "minimum": 0, "maximum": 3},
+        "reversal_level": {"type": "integer", "minimum": 0, "maximum": 2},
+        "major_transition": {"type": "boolean"},
+        "confirmed_major_event": {"type": "boolean"},
+        "career_outcome": {"enum": ["rise", "consolidate", "unlanded_change", "rebuild", "interruption"]},
+        "career_strength": {"type": "number", "minimum": 0, "maximum": 3},
+        "learning_carry": {"type": "number", "minimum": 0, "maximum": 2},
+        "wealth_inflow": {"type": "number", "minimum": 0, "maximum": 3},
+        "wealth_outflow": {"type": "number", "minimum": 0, "maximum": 3},
+        "resource_restructure": {"type": "boolean"},
+        "relationship_natal_entry": {"type": "number", "minimum": 0, "maximum": 2},
+        "relationship_luck_environment": {"type": "number", "minimum": 0, "maximum": 2},
+        "relationship_opportunity": {"type": "number", "minimum": 0, "maximum": 4},
+        "relationship_carry": {"type": "number", "minimum": 0, "maximum": 1},
+        "relationship_confirmed_context": {"type": "number", "minimum": 0, "maximum": 1},
+        "relationship_conflict_only": {"type": "boolean"},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "basis": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+      }
+    }
+  }
+}

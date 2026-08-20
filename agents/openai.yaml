@@ -1,7 +1,7 @@
 interface:
   display_name: "人生有迹免费卡片"
-  short_description: "本地生成含20年连续人生K线的人生主线卡片"
-  default_prompt: "使用人生有迹免费卡片，根据我的出生时间、出生城市和性别，在本地生成PNG卡片。"
+  short_description: "本地生成含人生主线与四项20年趋势的免费卡片"
+  default_prompt: "使用人生有迹免费卡片，根据我的出生时间、出生城市和性别，在本地生成人生主线与20年趋势PNG卡片。"
   icon_small: "./assets/icon.svg"
   icon_large: "./assets/icon.svg"
 policy:

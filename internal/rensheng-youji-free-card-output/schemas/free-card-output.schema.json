@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rensheng-youji.local/schemas/free-card-output.schema.json",
+  "title": "人生有迹新版免费卡片输出",
+  "type": "object",
+  "required": ["schema_version", "source", "identity", "mingju_analysis", "trend_panel", "current_issue", "full_report_hint", "disclaimers"],
+  "properties": {
+    "schema_version": {"const": "1.1.0"},
+    "source": {
+      "type": "object",
+      "required": ["analysis_id", "core_version", "analysis_as_of"],
+      "properties": {
+        "analysis_id": {"type": "string"},
+        "core_version": {"type": "string"},
+        "analysis_as_of": {"type": "string", "format": "date"}
+      }
+    },
+    "identity": {
+      "type": "object",
+      "required": ["name", "gender_label", "birth_text", "birthplace", "time_basis_note"],
+      "properties": {
+        "name": {"type": ["string", "null"]},
+        "gender_label": {"type": "string"},
+        "birth_text": {"type": "string"},
+        "birthplace": {"type": "string"},
+        "time_basis_note": {"type": "string"}
+      }
+    },
+    "mingju_analysis": {
+      "type": "object",
+      "required": ["pillars", "structure_text", "life_theme_text", "time_dependency_note", "confidence", "basis"],
+      "properties": {
+        "pillars": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "string", "minLength": 2, "maxLength": 2}},
+        "structure_text": {"type": "string"},
+        "life_theme_text": {"type": "string"},
+        "time_dependency_note": {"type": ["string", "null"]},
+        "confidence": {"enum": ["high", "medium", "needs_validation"]},
+        "basis": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "trend_panel": {
+      "type": "object",
+      "required": ["window", "window_start_state", "years", "render_rules"],
+      "properties": {
+        "window": {"type": "object"},
+        "window_start_state": {
+          "type": "object",
+          "required": ["evidence_mode", "overall_index", "career_level", "wealth_level", "wealth_ingot_count", "relationship_carry", "confidence"],
+          "properties": {
+            "evidence_mode": {"enum": ["birth_only", "reality_calibrated"]},
+            "overall_index": {"type": "number", "minimum": 32, "maximum": 68},
+            "career_level": {"type": "number", "minimum": 1, "maximum": 6},
+            "wealth_level": {"type": "number", "minimum": 1, "maximum": 8},
+            "wealth_ingot_count": {"type": "integer", "minimum": 3, "maximum": 12},
+            "relationship_carry": {"type": "object"},
+            "confidence": {"type": "object"}
+          }
+        },
+        "years": {
+          "type": "array",
+          "minItems": 20,
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "required": ["year", "age", "is_current", "life_kline", "career", "wealth", "peach", "source_semantics"],
+            "properties": {
+              "year": {"type": "integer"},
+              "age": {"type": "number", "minimum": 0},
+              "is_current": {"type": "boolean"},
+              "life_kline": {
+                "type": "object",
+                "required": ["open", "close", "high", "low"],
+                "properties": {
+                  "open": {"type": "number"},
+                  "close": {"type": "number"},
+                  "high": {"type": "number"},
+                  "low": {"type": "number"}
+                }
+              },
+              "career": {
+                "type": "object",
+                "required": ["level", "label"],
+                "properties": {
+                  "level": {"type": "number", "minimum": 1, "maximum": 9},
+                  "label": {"const": "步步高升"}
+                }
+              },
+              "wealth": {
+                "type": "object",
+                "required": ["level", "ingot_count", "display_ingot_count"],
+                "properties": {
+                  "level": {"type": "number", "minimum": 1, "maximum": 8},
+                  "ingot_count": {"type": "integer", "minimum": 3, "maximum": 12},
+                  "display_ingot_count": {"type": "integer", "minimum": 4, "maximum": 22}
+                }
+              },
+              "peach": {
+                "type": "object",
+                "required": ["highlight", "blossoms", "color_role"],
+                "properties": {
+                  "highlight": {"type": "boolean"},
+                  "blossoms": {"enum": [0, 1, 3, 5, 7]},
+                  "color_role": {"enum": ["none", "peach_pink"]}
+                }
+              },
+              "source_semantics": {"type": "object"}
+            }
+          }
+        },
+        "render_rules": {"type": "object"}
+      }
+    },
+    "current_issue": {
+      "type": "object",
+      "required": ["domain", "title", "body", "example", "basis", "confidence"],
+      "properties": {
+        "domain": {"enum": ["career", "wealth", "relationships", "family", "learning", "mobility", "growth"]},
+        "title": {"type": "string", "minLength": 4, "maxLength": 20},
+        "body": {"type": "string"},
+        "example": {"type": "string"},
+        "basis": {"type": "array", "items": {"type": "string"}},
+        "confidence": {"enum": ["high", "medium", "needs_validation"]}
+      }
+    },
+    "full_report_hint": {
+      "type": "object",
+      "required": ["title", "text"],
+      "properties": {"title": {"type": "string"}, "text": {"type": "string"}}
+    },
+    "disclaimers": {
+      "type": "object",
+      "required": ["trend", "general"],
+      "properties": {"trend": {"type": "string"}, "general": {"type": "string"}}
+    }
+  }
+}

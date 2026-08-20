@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""检查依赖、字体、排盘与连续K线是否可用。"""
+"""检查依赖、字体、排盘与新版免费卡片链路是否可用。"""
 
 from __future__ import annotations
 
@@ -20,8 +20,11 @@ def main() -> int:
         return 2
 
     required = [
-        ROOT / "assets/logo.png",
+        ROOT / "assets/icon.svg",
         ROOT / "assets/fonts/noto/NotoSansCJKsc-Regular.otf",
+        ROOT / "internal/rensheng-youji-mingli-core/SKILL.md",
+        ROOT / "internal/rensheng-youji-free-card-output/SKILL.md",
+        ROOT / "internal/rensheng-youji-free-card-renderer/SKILL.md",
     ]
     missing = [str(path) for path in required if not path.exists()]
     if missing:
@@ -45,7 +48,7 @@ def main() -> int:
     if len(timeline) != 20 or timeline[5]["year"] != 2026:
         print("FAILED: timeline mismatch")
         return 5
-    print("READY: dependencies, assets, chart and K-line passed")
+    print("READY: dependencies, assets, chart and v2 free-card pipeline passed")
     return 0
 
 
