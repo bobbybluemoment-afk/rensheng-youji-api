@@ -38,11 +38,51 @@ def _repeat(seed: str, target: int) -> str:
 
 
 def _dimension(identifier: str, title: str, extra_source: str) -> dict:
+    specifics = {
+        "self_growth": {
+            "daily_habits": ["接到模糊任务时先列步骤和缺少的资料", "交付前会反复核对容易出错的细节"],
+            "decision_style": "先比较风险、时间和后续影响，确认关键条件后才决定",
+            "conflict_response": "被催促或质疑时先把事情做完，之后才说明自己的不同意见",
+            "recovery_pattern": "压力大时需要暂时减少社交，通过独处、整理或规律作息恢复",
+        },
+        "love_partner": {
+            "attraction_traits": ["说话直接并愿意把现实安排讲清楚", "做事有自己的专业标准和稳定节奏"],
+            "long_term_traits": ["遇到分歧愿意讨论而不是突然失联回避", "能够共同商量金钱、城市与家庭边界"],
+            "high_friction_traits": ["行动果断但习惯替别人决定重要事情", "吸引力强却不愿说明关系和未来安排"],
+            "interaction_pattern": "通常先观察对方是否可靠，确认回应稳定后才逐步增加投入和表达",
+        },
+        "career": {
+            "industry_candidates": ["金融与风险管理", "数据与研究服务"],
+            "role_candidates": ["产品策划与项目运营", "研究分析与风险控制"],
+            "task_pattern": "更适合把复杂资料整理成方案、规则或可交付成果，并持续跟进结果",
+            "unsuitable_environment": "不适合长期处在职责模糊、只靠人情推动且成果归属不清的团队",
+        },
+        "finance_resources": {
+            "primary_source": "主要依靠稳定工资和专业能力形成的职位溢价",
+            "secondary_source": "第二来源较像项目奖金、绩效或阶段性合作收入",
+            "unstable_source": "朋友合作、短期机会或未经验证的投资回报波动更大",
+            "leakage_risk": "容易在人情往来、模糊分工或先垫付后结算的情形中损失钱和时间",
+            "retention_method": "适合先固定储蓄和长期账户，再安排可以承受损失的尝试预算",
+        },
+        "body_emotion": {
+            "stress_signals": ["连续忙碌后容易睡前仍反复整理未完成事项", "任务堆积时更容易减少休息或回避交流"],
+            "recovery_conditions": "先减少同时处理的任务数量，再通过规律睡眠和轻度活动恢复",
+            "sustainable_rhythm": "适合有明确截止时间，也能保留固定休息和独处时间的生活安排",
+            "evidence_limit": "这些只是压力与恢复方式候选，不能据此诊断任何器官或疾病",
+        },
+        "family_growth": {
+            "support_source": "支持更可能来自愿意提供教育信息、实际安排或关键费用的家庭角色",
+            "expectation_source": "压力更可能来自强调结果、稳定收入和家庭责任的权威角色",
+            "family_role": "家里遇到需要协调或收尾的事情时，容易成为被询问和托付的人",
+            "boundary_pattern": "常先把家人的需要处理好，再说明自己的时间和选择边界",
+            "education_path_candidate": "学习路径更像先完成较稳妥的学历训练，再通过实习、证书或项目调整方向",
+        },
+    }[identifier]
     return {
         "id": identifier,
         "title": title,
         "finding": _repeat("这个领域需要把已有能力、现实责任和自己的选择放在一起判断。", 35),
-        "reality_findings": [_repeat("你可能已经形成稳定做法，也在承担相应的时间与情绪成本。", 28)],
+        "specific_judgments": specifics,
         "analysis": [
             _repeat("这种方式不是由单一性格决定，更可能受到家庭要求、教育训练、工作分工和近年经历共同影响。它带来可靠与细致，也可能让你在责任增加时忽略自己的需要。", 120),
             _repeat("当前阶段更值得观察的是，投入能否形成清楚结果，以及相关的人、时间和收入安排是否可持续。条件改变以后，同一套能力也可能表现为更主动的选择，而不是被动增加任务。", 120),
@@ -53,6 +93,7 @@ def _dimension(identifier: str, title: str, extra_source: str) -> dict:
         "audit": {
             "core_sections": [extra_source, "root_seed_flower_fruit_map", "cross_method_analysis"],
             "evidence_lenses": ["root_seed_flower_fruit_map", "cross_method_analysis"],
+            "specific_judgment_sources": {key: [extra_source, "root_seed_flower_fruit_map"] for key in specifics},
             "user_facts": [],
             "social_priors": [],
             "needs_validation": "需要真实经历继续确认。",
@@ -81,16 +122,27 @@ def _report() -> dict:
         for year in range(2021, 2041)
     ]
     return {
-        "schema_version": "2.1.0",
+        "schema_version": "2.2.0",
         "document_mode": "full_calibrated",
-        "source": {"analysis_id": "fixture-v2-pipeline", "core_version": "0.2.0", "analysis_as_of": "2026-08-20", "calibration_status": "calibrated"},
+        "source": {"analysis_id": "fixture-v2-pipeline", "core_version": "0.3.0", "analysis_as_of": "2026-08-20", "calibration_status": "calibrated"},
         "title": "人生有迹｜完整报告",
         "subtitle": "看见你带来的能力，理解你走过的路，也寻找新的可能",
         "generated_on": "2026-08-20",
         "brand": "人生有迹 by 景行",
         "profile": {"name": "示例", "identity_option": "女", "birth": "1994-10-02 14:24（普通钟表时间）", "location": "湖北省武汉市", "focus": "事业发展", "question": "未来两年更适合继续积累还是承担新的责任"},
         "chart": {"pillars": ["甲戌", "癸酉", "丁卯", "丁未"], "luck_start": "1998-01-01 00:00:00", "current_luck_cycle": "阶段示例（2024—2033）", "time_basis": "普通钟表时间输入，已进行真太阳时校正", "uncertainty": "不接近时辰边界", "formal_report_allowed": True},
-        "calibration": {"summary": "五条中三条符合、一条部分符合、一条不确定。", "birth_time_status": "稳定", "confirmed": ["工作中经常承担收尾责任", "重要选择通常会比较长期结果", "近年更在意投入是否值得"], "partial": ["学习路径曾经出现调整"], "rejected": [], "uncertain": ["家庭分工仍需确认"]},
+        "calibration": {
+            "summary": "五题均已作答，其中四题形成较清楚的现实路径，一题仍不确定。",
+            "birth_time_status": "稳定",
+            "responses": [
+                {"question_number": index, "domain": domain, "choice": "A" if index < 5 else "D", "selected_text": "先收集资料和比较风险，想清楚后再行动" if index < 5 else "都不符合或暂时不确定，需要以后再观察", "candidate_id": f"c{index:02d}1" if index < 5 else None, "user_note": ""}
+                for index, domain in enumerate(["事业与组织", "家庭与教育", "关系", "财务", "迁移"], start=1)
+            ],
+            "confirmed": ["工作中经常承担收尾责任", "重要选择通常会比较长期结果", "近年更在意投入是否值得"],
+            "partial": ["学习路径曾经出现调整"],
+            "rejected": [],
+            "uncertain": ["家庭分工仍需确认"],
+        },
         "executive_summary": {
             "life_theme": _repeat("你可能一直在学习怎样把能力、责任和自己的选择放在同一条线上，并让长期投入形成看得见的结果。", 65),
             "capabilities_resources": [_repeat("能够整理复杂信息，并把模糊任务变成可以执行的步骤。", 28), _repeat("在规则清楚的环境中容易积累可信度，也能持续完成长期任务。", 30), _repeat("遇到变化时会先核对条件，再决定是否增加责任和投入。", 28)],
@@ -123,11 +175,22 @@ def _calibration_questions() -> dict:
     domains = ["事业与组织", "家庭与教育", "关系", "财务", "迁移"]
     questions = []
     for index, domain in enumerate(domains, start=1):
+        candidate_ids = [f"c{index:02d}{choice}" for choice in (1, 2, 3)]
         questions.append({
-            "display": {"number": index, "domain": domain, "statement": _repeat("过去几年你可能需要在完成责任与保留个人选择之间反复比较，并逐渐更在意投入是否形成清楚结果。", 55), "options": ["很符合", "部分符合", "不符合", "不确定／不了解"]},
-            "audit": {"candidate_id": f"c{index:02d}", "evidence_lenses": ["root_seed_flower_fruit_map", "resource_relationship"], "core_sections": ["reality_candidate_pool", "reality_domains"], "alternatives": ["现实环境也可能形成相似经历"], "birth_time_dependency": "partial", "confidence": "medium"},
+            "display": {
+                "number": index,
+                "domain": domain,
+                "prompt": "遇到一个重要但条件还不清楚的选择时，你通常怎样处理？",
+                "choices": [
+                    {"key": "A", "text": "先收集资料和比较风险，想清楚后再行动"},
+                    {"key": "B", "text": "先尝试一个小步骤，再根据结果继续调整"},
+                    {"key": "C", "text": "先询问信任的人，得到确认后再作决定"},
+                    {"key": "D", "text": "都不符合／不确定（可补充）"},
+                ],
+            },
+            "audit": {"candidate_ids": candidate_ids, "choice_meanings": {"A": candidate_ids[0], "B": candidate_ids[1], "C": candidate_ids[2], "D": "uncertain"}, "evidence_lenses": ["root_seed_flower_fruit_map", "resource_relationship"], "core_sections": ["reality_candidate_pool", "reality_domains"], "alternatives": ["现实环境也可能形成相似经历"], "birth_time_dependency": "partial", "confidence": "medium"},
         })
-    return {"schema_version": "1.0.0", "questions": questions}
+    return {"schema_version": "2.0.0", "questions": questions}
 
 
 def _run(*args: str, expected: int = 0) -> subprocess.CompletedProcess[str]:
@@ -144,7 +207,7 @@ def _assemble_free_card(work: Path) -> Path:
     content = work / "card-content.json"
     output = work / "free-card-output.json"
     signals.write_text(json.dumps(_visual_signals(), ensure_ascii=False), encoding="utf-8")
-    analysis.write_text(json.dumps({"analysis_meta": {"status": "complete", "analysis_id": "fixture-v2-pipeline", "core_version": "0.2.0", "analysis_as_of": "2026-08-20"}}, ensure_ascii=False), encoding="utf-8")
+    analysis.write_text(json.dumps({"analysis_meta": {"status": "complete", "analysis_id": "fixture-v2-pipeline", "core_version": "0.3.0", "analysis_as_of": "2026-08-20"}}, ensure_ascii=False), encoding="utf-8")
     content.write_text(json.dumps(_card_content(), ensure_ascii=False), encoding="utf-8")
     _run("internal/rensheng-youji-free-card-output/scripts/build_visual_series.py", str(signals), "--output", str(series))
     _run("scripts/assemble_free_card.py", "--analysis", str(analysis), "--content", str(content), "--series", str(series), "--output", str(output))
@@ -174,13 +237,13 @@ class FullReportPipelineTest(unittest.TestCase):
             self.assertNotIn("c01", text)
             self.assertNotIn("盘面", text)
             self.assertNotIn("root_seed", text)
-            self.assertEqual(text.count("A. 很符合"), 5)
+            self.assertEqual(text.count("A. 先收集资料"), 5)
 
     def test_visible_evidence_leak_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-calibration-bad-") as temp_dir:
             source = Path(temp_dir) / "questions.json"
             data = _calibration_questions()
-            data["questions"][0]["display"]["statement"] = _repeat("日主身强且盘面证据明确，所以你在工作中经常承担责任。", 40)
+            data["questions"][0]["display"]["prompt"] = "日主身强且盘面证据明确时，你通常怎样处理重要工作？"
             source.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
             result = subprocess.run([sys.executable, str(CALIBRATION_VALIDATOR), str(source)], cwd=ROOT, text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 3)
@@ -202,6 +265,8 @@ class FullReportPipelineTest(unittest.TestCase):
             self.assertTrue(markdown.exists())
             self.assertTrue(pdf.exists())
             self.assertEqual(manifest["checks"]["pdf_pages"], 10)
+            self.assertEqual(manifest["checks"]["wechat_asset"], "assets/wechat-contact.jpg")
+            self.assertEqual(manifest["checks"]["wechat_sha256"], "bcfd93fb14cb90557504b23eb3b419fe55eb19f3a7062b77299d24f12d9677e8")
             self.assertEqual(len(list((delivery / "report-pages").glob("page-*.png"))), 10)
             self.assertEqual(len(re.findall(rb"/Type\s*/Page\b", pdf.read_bytes())), 10)
             with Image.open(card) as image:
@@ -211,6 +276,39 @@ class FullReportPipelineTest(unittest.TestCase):
             self.assertNotIn("初始角色", rendered)
             self.assertNotIn("主线任务", rendered)
 
+    def test_vague_career_candidates_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rensheng-youji-vague-") as temp_dir:
+            source = Path(temp_dir) / "report.json"
+            report = _report()
+            report["dimensions"][2]["specific_judgments"]["industry_candidates"] = ["相关行业", "综合岗位"]
+            source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("过于宽泛", result.stdout)
+
+    def test_unapproved_wechat_asset_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rensheng-youji-qr-") as temp_dir:
+            source = Path(temp_dir) / "report.json"
+            report = _report()
+            report["author"]["wechat_image"] = "assets/placeholder.jpg"
+            source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("正式资源", result.stdout)
+
+    def test_report_and_card_must_share_core_source(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rensheng-youji-source-") as temp_dir:
+            work = Path(temp_dir)
+            report_json = work / "report.json"
+            report_json.write_text(json.dumps(_report(), ensure_ascii=False), encoding="utf-8")
+            free_card = _assemble_free_card(work)
+            data = json.loads(free_card.read_text(encoding="utf-8"))
+            data["source"]["analysis_id"] = "different-core-analysis"
+            free_card.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run([sys.executable, str(DELIVERY_GENERATOR), "--report", str(report_json), "--free-card", str(free_card), "--out-dir", str(work / "delivery")], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("不是来自同一Core母稿", result.stdout)
+
     def test_skipped_calibration_cannot_create_formal_pdf(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-preliminary-") as temp_dir:
             work = Path(temp_dir)
@@ -219,7 +317,7 @@ class FullReportPipelineTest(unittest.TestCase):
             report["source"]["calibration_status"] = "skipped"
             report["title"] = "人生有迹｜初步分析"
             report["chart"]["formal_report_allowed"] = False
-            report["calibration"] = {"summary": "用户跳过现实校准。", "birth_time_status": "待核对", "confirmed": [], "partial": [], "rejected": [], "uncertain": []}
+            report["calibration"] = {"summary": "用户跳过现实校准。", "birth_time_status": "待核对", "responses": [], "confirmed": [], "partial": [], "rejected": [], "uncertain": []}
             report_json = work / "report.json"
             report_json.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
             free_card = _assemble_free_card(work)

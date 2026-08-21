@@ -24,6 +24,7 @@ def main() -> int:
         SKILL_ROOT / "scripts/validate_calibration_questions.py",
         REPO_ROOT / "assets/fonts/noto/NotoSansCJKsc-Regular.otf",
         REPO_ROOT / "assets/wechat-contact.jpg",
+        REPO_ROOT / "assets/asset-manifest.json",
     ]
     missing = [str(path) for path in required if not path.exists()]
     if missing:

@@ -113,7 +113,7 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 
 ### 11. 校准而不倒推
 
-生成 8—15 个可证伪现实候选。吸收“符合、部分符合、不符合、不确定”和补充事实，只更新现实映射、候选排序与置信度。不得倒改四柱和结构事实，不得把失败候选换词包装成正确。
+生成8—15个可证伪现实候选，并组织成同一场景下可互相区分的A/B/C候选组。吸收用户选择、D“都不符合／不确定”和补充事实，只更新现实映射、候选排序与置信度。不得倒改四柱和结构事实，不得把未选择候选换词包装成正确。
 
 每条现实候选至少引用两个独立证据视角，并至少包含根苗花果、资源关系、交叉方法、大运主题、流年执行或领域联动之一；日主旺衰只能作为组成证据，不能单独生成现实候选。校准题的用户可见文字与内部命理审计必须分离。
 
@@ -214,7 +214,7 @@ validation: []
 26. `turning_points`
     - 准备、发生、落地、消化四类转折点；
 27. `reality_candidate_pool`
-    - 8—15 条可验证现实候选；
+    - 8—15条可验证现实候选；每条必须包含2—3个可观察例子和一个真正不同的替代解释；候选需覆盖至少四个生活领域，优先围绕用户当前问题形成能够互相区分的候选组，不使用“务实、稳定、有责任感”等宽泛标签代替现实行为；
 28. `calibration_state`
     - 历史反馈、被支持和被否定的候选及更新结果；
 29. `not_inferable_register`
@@ -228,7 +228,7 @@ validation: []
 
 不要省略没有明显结论的栏目。使用空数组、`null` 或“证据不足”保留结构，不得补造内容。
 
-完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.2.0`。完成分析后运行：
+完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.3.0`。完成分析后运行：
 
 ```bash
 python3 scripts/validate_analysis_output.py <analysis-output.json>

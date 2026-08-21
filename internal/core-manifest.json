@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "visibility": "internal",
   "stages": [
     {
@@ -24,7 +24,10 @@
     "orchestrator": "../skills/rensheng-youji-growth-map/scripts/generate_full_report.py",
     "pdf_renderer": "../skills/rensheng-youji-growth-map/scripts/render_report_pdf.py",
     "pages": 10,
-    "card_page": 2
+    "card_page": 2,
+    "report_schema_version": "2.2.0",
+    "calibration_schema_version": "2.0.0",
+    "wechat_asset_manifest": "../assets/asset-manifest.json"
   },
   "notes": "确定性排盘与同一Core母稿同时支持新版免费卡片和经五题校准的固定10页完整报告。公开免费版在用户环境运行，不使用验证码、MCP或人生有迹云端接口。"
 }

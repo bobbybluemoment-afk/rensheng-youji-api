@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,55 @@ AI_JARGON = {"卡点", "卡住", "换轨", "兑现", "承接", "赛道", "抓手
 MINGLI_TERMS = {"日主", "身强", "身弱", "比肩", "劫财", "食神", "伤官", "正印", "偏印", "正财", "偏财", "正官", "七杀", "格局", "喜用", "忌神", "大运", "流年", "藏干", "刑冲合害", "根苗花果"}
 OLD_FIELDS = {"initial_role", "core_configuration", "main_task", "portrait"}
 PREFERRED_LENSES = {"root_seed_flower_fruit_map", "cross_method_analysis", "resource_relationship", "luck_cycle_themes", "annual_theme_activation", "domain_connections"}
+GENERIC_CANDIDATES = {"专业", "技术", "业务", "管理", "表达", "创意", "资源", "稳定", "成长", "综合岗位", "一般岗位", "相关行业"}
+SPECIFIC_CONTRACTS = {
+    "self_growth": {
+        "daily_habits": ("list", 2, 3),
+        "decision_style": ("text", 18, 80),
+        "conflict_response": ("text", 18, 80),
+        "recovery_pattern": ("text", 18, 80),
+    },
+    "love_partner": {
+        "attraction_traits": ("list", 2, 4),
+        "long_term_traits": ("list", 2, 4),
+        "high_friction_traits": ("list", 2, 4),
+        "interaction_pattern": ("text", 18, 90),
+    },
+    "career": {
+        "industry_candidates": ("candidates", 2, 4),
+        "role_candidates": ("candidates", 2, 4),
+        "task_pattern": ("text", 18, 90),
+        "unsuitable_environment": ("text", 18, 90),
+    },
+    "finance_resources": {
+        "primary_source": ("text", 12, 80),
+        "secondary_source": ("text", 12, 80),
+        "unstable_source": ("text", 12, 80),
+        "leakage_risk": ("text", 18, 90),
+        "retention_method": ("text", 18, 90),
+    },
+    "body_emotion": {
+        "stress_signals": ("list", 2, 3),
+        "recovery_conditions": ("text", 18, 90),
+        "sustainable_rhythm": ("text", 18, 90),
+        "evidence_limit": ("text", 16, 80),
+    },
+    "family_growth": {
+        "support_source": ("text", 18, 90),
+        "expectation_source": ("text", 18, 90),
+        "family_role": ("text", 18, 90),
+        "boundary_pattern": ("text", 18, 90),
+        "education_path_candidate": ("text", 18, 90),
+    },
+}
+SPECIFIC_LABELS = {
+    "daily_habits": "日常习惯", "decision_style": "做决定", "conflict_response": "面对分歧", "recovery_pattern": "压力恢复",
+    "attraction_traits": "容易心动", "long_term_traits": "适合长期", "high_friction_traits": "高吸引高摩擦", "interaction_pattern": "相处方式",
+    "industry_candidates": "行业候选", "role_candidates": "岗位候选", "task_pattern": "适合任务", "unsuitable_environment": "不宜久留",
+    "primary_source": "主要来源", "secondary_source": "第二来源", "unstable_source": "波动来源", "leakage_risk": "容易漏财", "retention_method": "适合留存",
+    "stress_signals": "压力信号", "recovery_conditions": "恢复条件", "sustainable_rhythm": "适合节奏", "evidence_limit": "判断边界",
+    "support_source": "支持来源", "expectation_source": "期待来源", "family_role": "家庭角色", "boundary_pattern": "边界方式", "education_path_candidate": "学习路径",
+}
 
 
 def require(obj: dict[str, Any], key: str, where: str = "root") -> Any:
@@ -41,6 +91,27 @@ def list_length(items: Any, minimum: int, maximum: int, where: str) -> list[Any]
     return items
 
 
+def specific_lines(section: dict[str, Any]) -> list[str]:
+    values = section["specific_judgments"]
+    lines: list[str] = []
+    for key in SPECIFIC_CONTRACTS[section["id"]]:
+        value = values[key]
+        rendered = "、".join(value) if isinstance(value, list) else value
+        lines.append(f"{SPECIFIC_LABELS[key]}｜{rendered}")
+    return lines
+
+
+def flattened_texts(value: Any) -> Iterable[str]:
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, list):
+        for item in value:
+            yield from flattened_texts(item)
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from flattened_texts(item)
+
+
 def visible_payload(data: dict[str, Any]) -> dict[str, Any]:
     return {
         "executive_summary": data["executive_summary"],
@@ -58,8 +129,8 @@ def validate(data: dict[str, Any]) -> None:
     required = ("schema_version", "document_mode", "source", "title", "subtitle", "generated_on", "brand", "profile", "chart", "calibration", "executive_summary", "stage_story", "dimensions", "yearly_outlook", "action_guide", "open_questions", "author", "boundaries")
     for key in required:
         require(data, key)
-    if data["schema_version"] != "2.1.0":
-        raise ValueError("schema_version must be 2.1.0")
+    if data["schema_version"] != "2.2.0":
+        raise ValueError("schema_version must be 2.2.0")
     mode = data["document_mode"]
     if mode not in {"full_calibrated", "preliminary_uncalibrated"}:
         raise ValueError("document_mode 值无效")
@@ -70,6 +141,8 @@ def validate(data: dict[str, Any]) -> None:
     source = data["source"]
     for key in ("analysis_id", "core_version", "analysis_as_of", "calibration_status"):
         require(source, key, "source")
+    if source["core_version"] != "0.3.0":
+        raise ValueError("完整报告必须来自 core_version=0.3.0 的母稿")
     expected_status = "calibrated" if mode == "full_calibrated" else "skipped"
     if source["calibration_status"] != expected_status:
         raise ValueError(f"{mode} 必须使用 calibration_status={expected_status}")
@@ -89,7 +162,7 @@ def validate(data: dict[str, Any]) -> None:
         raise ValueError("正式报告必须通过时间边界预检")
 
     calibration = data["calibration"]
-    for key in ("summary", "birth_time_status", "confirmed", "partial", "rejected", "uncertain"):
+    for key in ("summary", "birth_time_status", "responses", "confirmed", "partial", "rejected", "uncertain"):
         if key not in calibration:
             raise ValueError(f"Missing required field: calibration.{key}")
     answers = sum(len(calibration[key]) for key in ("confirmed", "partial", "rejected", "uncertain"))
@@ -98,6 +171,32 @@ def validate(data: dict[str, Any]) -> None:
     for key in ("confirmed", "partial", "rejected", "uncertain"):
         for index, item in enumerate(calibration[key]):
             length(item, 6, 80, f"calibration.{key}[{index}]")
+    responses = list_length(calibration["responses"], 5, 5, "calibration.responses") if mode == "full_calibrated" else list_length(calibration["responses"], 0, 5, "calibration.responses")
+    response_numbers: list[int] = []
+    reported_user_notes: set[str] = set()
+    for index, response in enumerate(responses):
+        where = f"calibration.responses[{index}]"
+        if not isinstance(response, dict):
+            raise ValueError(f"{where} 必须是对象")
+        for key in ("question_number", "domain", "choice", "selected_text", "candidate_id", "user_note"):
+            if key not in response:
+                raise ValueError(f"Missing required field: {where}.{key}")
+        response_numbers.append(response["question_number"])
+        if response["choice"] not in {"A", "B", "C", "D"}:
+            raise ValueError(f"{where}.choice 必须为A、B、C或D")
+        length(response["selected_text"], 8, 65, f"{where}.selected_text")
+        if response["choice"] == "D":
+            if response["candidate_id"] not in (None, ""):
+                raise ValueError(f"{where}.candidate_id 在选择D时必须为空")
+        elif not isinstance(response["candidate_id"], str) or not re.fullmatch(r"c\d+", response["candidate_id"]):
+            raise ValueError(f"{where}.candidate_id 在选择A—C时必须形如c01")
+        if not isinstance(response["user_note"], str):
+            raise ValueError(f"{where}.user_note 必须是字符串")
+        if response["user_note"]:
+            length(response["user_note"], 4, 100, f"{where}.user_note")
+            reported_user_notes.add(response["user_note"])
+    if mode == "full_calibrated" and response_numbers != [1, 2, 3, 4, 5]:
+        raise ValueError("calibration.responses.question_number 必须依次为1—5")
 
     summary = data["executive_summary"]
     for key in ("life_theme", "capabilities_resources", "formation", "current_situation", "direct_answer"):
@@ -118,15 +217,36 @@ def validate(data: dict[str, Any]) -> None:
     if [section.get("id") for section in dimensions] != DIMENSION_IDS:
         raise ValueError("dimensions must use the six fixed ids in order")
     all_core_sections: set[str] = set()
+    all_specific_texts: list[str] = []
+    audited_user_facts: set[str] = set()
     for index, section in enumerate(dimensions):
         where = f"dimensions[{index}]"
-        for key in ("title", "finding", "reality_findings", "analysis", "current_focus", "suggestions", "confidence", "audit"):
+        for key in ("title", "finding", "specific_judgments", "analysis", "current_focus", "suggestions", "confidence", "audit"):
             require(section, key, where)
         if section["confidence"] not in CONFIDENCE:
             raise ValueError(f"Invalid confidence in {where}")
         length(section["finding"], 20, 95, f"{where}.finding")
-        for item_index, item in enumerate(list_length(section["reality_findings"], 1, 3, f"{where}.reality_findings")):
-            length(item, 15, 75, f"{where}.reality_findings[{item_index}]")
+        specifics = section["specific_judgments"]
+        contract = SPECIFIC_CONTRACTS[section["id"]]
+        if not isinstance(specifics, dict) or set(specifics) != set(contract):
+            raise ValueError(f"{where}.specific_judgments 必须严格包含该领域固定字段：{'、'.join(contract)}")
+        for key, rule in contract.items():
+            kind, minimum, maximum = rule
+            value = specifics[key]
+            field = f"{where}.specific_judgments.{key}"
+            if kind in {"list", "candidates"}:
+                for item_index, item in enumerate(list_length(value, minimum, maximum, field)):
+                    length(item, 4 if kind == "candidates" else 12, 65, f"{field}[{item_index}]")
+                    if kind == "candidates" and re.sub(r"[\s、，。]", "", item) in GENERIC_CANDIDATES:
+                        raise ValueError(f"{field}[{item_index}] 过于宽泛，必须写具体行业或岗位候选")
+            else:
+                length(value, minimum, maximum, field)
+        if section["id"] == "body_emotion" and not any(term in specifics["evidence_limit"] for term in ("不能", "不足", "不作", "不等于")):
+            raise ValueError(f"{where}.specific_judgments.evidence_limit 必须明确健康判断边界")
+        normalized_specifics = [re.sub(r"[\W_]+", "", item) for item in flattened_texts(specifics)]
+        if len(normalized_specifics) != len(set(normalized_specifics)):
+            raise ValueError(f"{where}.specific_judgments 存在重复判断")
+        all_specific_texts.extend(normalized_specifics)
         for paragraph_index, paragraph in enumerate(list_length(section["analysis"], 2, 3, f"{where}.analysis")):
             length(paragraph, 70, 190, f"{where}.analysis[{paragraph_index}]")
         length(section["current_focus"], 20, 85, f"{where}.current_focus")
@@ -137,7 +257,7 @@ def validate(data: dict[str, Any]) -> None:
         if not 330 <= section_count <= 520:
             raise ValueError(f"{where} 可见正文应为330—520个汉字，当前{section_count}")
         audit = section["audit"]
-        for key in ("core_sections", "evidence_lenses", "user_facts", "social_priors", "needs_validation"):
+        for key in ("core_sections", "evidence_lenses", "specific_judgment_sources", "user_facts", "social_priors", "needs_validation"):
             if key not in audit:
                 raise ValueError(f"Missing required field: {where}.audit.{key}")
         core_sections = set(audit["core_sections"])
@@ -147,9 +267,22 @@ def validate(data: dict[str, Any]) -> None:
             raise ValueError(f"{where}.audit 必须包含至少两个 Core 来源和两个独立证据视角")
         if not (core_sections | lenses) & PREFERRED_LENSES:
             raise ValueError(f"{where}.audit 缺少根苗花果、交叉方法、资源关系或时运证据")
+        specific_sources = audit["specific_judgment_sources"]
+        if not isinstance(specific_sources, dict) or set(specific_sources) != set(contract):
+            raise ValueError(f"{where}.audit.specific_judgment_sources 必须逐项覆盖具体判断字段")
+        for key, sources in specific_sources.items():
+            if not isinstance(sources, list) or len(set(sources)) < 2:
+                raise ValueError(f"{where}.audit.specific_judgment_sources.{key} 至少包含两个独立来源")
+        audited_user_facts.update(item for item in audit["user_facts"] if isinstance(item, str))
     for needed in ("root_seed_flower_fruit_map", "cross_method_analysis"):
         if needed not in all_core_sections:
             raise ValueError(f"六个领域的来源审计必须实际使用 {needed}")
+    repeated = {item for item in all_specific_texts if all_specific_texts.count(item) > 1}
+    if repeated:
+        raise ValueError("不同领域出现完全相同的具体判断，疑似套用模板")
+    missing_notes = reported_user_notes - audited_user_facts
+    if missing_notes:
+        raise ValueError("用户在校准中补充的具体事实没有进入相关章节来源审计")
 
     outlook = data["yearly_outlook"]
     for key in ("start_year", "end_year", "summary", "years"):
@@ -190,6 +323,8 @@ def validate(data: dict[str, Any]) -> None:
     for key in ("name", "bio", "github", "web", "wechat_image", "wechat_note"):
         require(author, key, "author")
     length(author["bio"], 12, 100, "author.bio")
+    if author["wechat_image"] != "assets/wechat-contact.jpg":
+        raise ValueError("author.wechat_image 必须使用仓库正式资源 assets/wechat-contact.jpg")
     for index, item in enumerate(list_length(data["boundaries"], 2, 3, "boundaries")):
         length(item, 20, 90, f"boundaries[{index}]")
     if data.get("assisted_service_note"):
@@ -237,7 +372,7 @@ def render(data: dict[str, Any]) -> str:
         f"- **现在正在处理：** {stage['present_task']}", f"- **未来两三年的可能方向：** {stage['next_direction']}", f"- **更长阶段的主线：** {stage['long_range']}", "",
     ]
     for section in data["dimensions"]:
-        lines.extend([f"## {section['title']}", "", f"**核心判断：{section['finding']}**", "", bullets(section["reality_findings"], True), ""])
+        lines.extend([f"## {section['title']}", "", f"**核心判断：{section['finding']}**", "", "### 可以核对的具体判断", "", bullets(specific_lines(section), True), ""])
         for paragraph in section["analysis"]:
             lines.extend([paragraph, ""])
         lines.extend([f"**现阶段重点：** {section['current_focus']}", "", "**可以尝试：**", "", bullets(section["suggestions"]), "", f"*判断等级：{section['confidence']}*", ""])

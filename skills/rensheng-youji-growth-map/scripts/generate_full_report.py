@@ -14,11 +14,15 @@ SKILL_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = SKILL_ROOT.parents[1]
 
 
-def run(command: list[str]) -> None:
+def run(command: list[str]) -> dict:
     result = subprocess.run(command, cwd=REPO_ROOT, text=True, capture_output=True, check=False)
     if result.returncode:
         message = result.stdout.strip() or result.stderr.strip() or "未知错误"
         raise ValueError(message)
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise ValueError("生成程序没有返回可验证的JSON结果") from exc
 
 
 def main() -> int:
@@ -30,6 +34,12 @@ def main() -> int:
     args = parser.parse_args()
     try:
         report = json.loads(args.report.read_text(encoding="utf-8"))
+        free_card = json.loads(args.free_card.read_text(encoding="utf-8"))
+        report_source = report.get("source", {})
+        card_source = free_card.get("source", {})
+        for key in ("analysis_id", "core_version"):
+            if report_source.get(key) != card_source.get(key):
+                raise ValueError(f"报告与新版卡片不是来自同一Core母稿：source.{key}不一致")
         output = args.out_dir.resolve()
         output.mkdir(parents=True, exist_ok=True)
         markdown = output / ("rensheng-youji-full-report.md" if report.get("document_mode") == "full_calibrated" else "rensheng-youji-preliminary.md")
@@ -45,9 +55,16 @@ def main() -> int:
             command = [sys.executable, str(SKILL_ROOT / "scripts/render_report_pdf.py"), str(args.report), "--card", str(card), "--out", str(pdf)]
             if args.keep_pages:
                 command.extend(["--pages-dir", str(output / "report-pages")])
-            run(command)
+            pdf_result = run(command)
             files["pdf"] = str(pdf)
-            checks.update({"pdf_pages": 10, "new_card_embedded_on_page": 2, "wechat_qr_embedded": True, "overflow": False})
+            checks.update({
+                "pdf_pages": pdf_result["pages"],
+                "new_card_embedded_on_page": 2,
+                "wechat_qr_embedded": pdf_result["wechat_embedded"],
+                "wechat_asset": pdf_result["wechat_asset"],
+                "wechat_sha256": pdf_result["wechat_sha256"],
+                "overflow": False,
+            })
         else:
             checks["formal_pdf_skipped"] = "五条现实校准未完成"
 
@@ -59,7 +76,7 @@ def main() -> int:
             "checks": checks,
         }
         manifest.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
         print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False))
         return 1
     print(json.dumps({**result, "manifest": str(manifest)}, ensure_ascii=False, indent=2))

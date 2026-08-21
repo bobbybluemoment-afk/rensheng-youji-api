@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -16,7 +17,7 @@ SKILL_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = SKILL_ROOT.parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from render_report import validate  # noqa: E402
+from render_report import specific_lines, validate  # noqa: E402
 
 
 WIDTH, HEIGHT = 1240, 1754
@@ -30,6 +31,25 @@ MUTED = "#74736E"
 LIGHT_TEAL = "#DDE8E5"
 FONT_PATH = REPO_ROOT / "assets/fonts/noto/NotoSansCJKsc-Regular.otf"
 WECHAT_PATH = REPO_ROOT / "assets/wechat-contact.jpg"
+ASSET_MANIFEST_PATH = REPO_ROOT / "assets/asset-manifest.json"
+
+
+def canonical_wechat_asset() -> tuple[Path, str]:
+    if not ASSET_MANIFEST_PATH.exists():
+        raise ValueError("缺少正式资源清单 assets/asset-manifest.json")
+    manifest = json.loads(ASSET_MANIFEST_PATH.read_text(encoding="utf-8"))
+    expected = manifest.get("assets", {}).get("wechat_contact", {})
+    if expected.get("path") != "assets/wechat-contact.jpg":
+        raise ValueError("正式资源清单中的微信图片路径无效")
+    if not WECHAT_PATH.exists():
+        raise ValueError("缺少正式工作微信图片 assets/wechat-contact.jpg；禁止生成占位图")
+    digest = hashlib.sha256(WECHAT_PATH.read_bytes()).hexdigest()
+    if digest != expected.get("sha256"):
+        raise ValueError("工作微信图片与正式资源清单不一致；禁止使用替代图或占位图")
+    with Image.open(WECHAT_PATH) as source:
+        if list(source.size) != [expected.get("width"), expected.get("height")]:
+            raise ValueError("工作微信图片尺寸与正式资源清单不一致")
+    return WECHAT_PATH, digest
 
 
 def font(size: int) -> ImageFont.FreeTypeFont:
@@ -211,8 +231,8 @@ def dimensions_page(data: dict[str, Any], number: int, indexes: tuple[int, int])
         section = data["dimensions"][index]
         page.heading(section["title"], color=TEAL, size=28)
         page.paragraph("核心判断｜" + section["finding"], size=23, color=INK, gap=9)
-        for item in section["reality_findings"]:
-            page.bullet(item, size=21, accent=PINK if index == 1 else GOLD)
+        for item in specific_lines(section):
+            page.bullet(item, size=18, accent=PINK if index == 1 else GOLD)
         for paragraph in section["analysis"]:
             page.paragraph(paragraph, size=21, gap=10, indent=True)
         page.paragraph("现阶段重点｜" + section["current_focus"], size=21, color=TEAL, gap=8)
@@ -251,11 +271,10 @@ def final_page(data: dict[str, Any]) -> Image.Image:
     page.paragraph("免费网页｜" + data["author"]["web"], size=18, gap=4)
     page.paragraph(data.get("assisted_service_note", ""), size=19, color=TEAL, gap=8)
 
-    if not WECHAT_PATH.exists():
-        raise ValueError("缺少本地微信二维码 assets/wechat-contact.jpg")
-    with Image.open(WECHAT_PATH) as qr_source:
+    wechat_path, _ = canonical_wechat_asset()
+    with Image.open(wechat_path) as qr_source:
         qr = qr_source.convert("RGB")
-    qr.thumbnail((250, 250), Image.Resampling.LANCZOS)
+    qr.thumbnail((330, 420), Image.Resampling.LANCZOS)
     qr_x, qr_y = WIDTH - MARGIN_X - qr.width, min(page.y + 8, HEIGHT - BOTTOM - qr.height - 125)
     page.image.paste(qr, (qr_x, qr_y))
     page.draw.text((MARGIN_X, qr_y + 22), "工作微信", font=font(24), fill=TEAL, stroke_width=1)
@@ -276,6 +295,7 @@ def render_pdf(data: dict[str, Any], card_path: Path, output: Path, pages_dir: P
     validate(data)
     if data["document_mode"] != "full_calibrated":
         raise ValueError("未完成五条校准时只生成初步分析，不生成正式PDF")
+    _, wechat_sha256 = canonical_wechat_asset()
     pages = [
         cover(data), card_page(card_path), page_three(data), page_four(data),
         dimensions_page(data, 5, (0, 1)), dimensions_page(data, 6, (2, 3)), dimensions_page(data, 7, (4, 5)),
@@ -289,7 +309,7 @@ def render_pdf(data: dict[str, Any], card_path: Path, output: Path, pages_dir: P
             image.save(pages_dir / f"page-{index:02d}.png", format="PNG")
     output.parent.mkdir(parents=True, exist_ok=True)
     pages[0].save(output, format="PDF", save_all=True, append_images=pages[1:], resolution=150.0, quality=92)
-    return {"pages": 10, "page_size": [WIDTH, HEIGHT], "card_size": [1242, 1660], "wechat_embedded": True}
+    return {"pages": 10, "page_size": [WIDTH, HEIGHT], "card_size": [1242, 1660], "wechat_embedded": True, "wechat_asset": "assets/wechat-contact.jpg", "wechat_sha256": wechat_sha256}
 
 
 def main() -> int:

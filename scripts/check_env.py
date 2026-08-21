@@ -26,6 +26,11 @@ def main() -> int:
         ROOT / "internal/rensheng-youji-mingli-core/SKILL.md",
         ROOT / "internal/rensheng-youji-free-card-output/SKILL.md",
         ROOT / "internal/rensheng-youji-free-card-renderer/SKILL.md",
+        ROOT / "skills/rensheng-youji-growth-map/SKILL.md",
+        ROOT / "skills/rensheng-youji-growth-map/scripts/generate_full_report.py",
+        ROOT / "skills/rensheng-youji-growth-map/scripts/render_report_pdf.py",
+        ROOT / "assets/wechat-contact.jpg",
+        ROOT / "assets/asset-manifest.json",
     ]
     missing = [str(path) for path in required if not path.exists()]
     if missing:

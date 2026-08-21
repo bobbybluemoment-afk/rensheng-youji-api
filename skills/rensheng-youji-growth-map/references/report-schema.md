@@ -1,4 +1,4 @@
-# 人生有迹报告 JSON v2.1
+# 人生有迹报告 JSON v2.2
 
 把已校验的 Core 母稿提取为 UTF-8 `report.json`。内部 `audit` 只用于核对来源，永远不进入正文。
 
@@ -11,7 +11,7 @@
 
 ```json
 {
-  "schema_version": "2.1.0",
+  "schema_version": "2.2.0",
   "document_mode": "full_calibrated",
   "source": {
     "analysis_id": "与Core一致",
@@ -42,6 +42,16 @@
   "calibration": {
     "summary": "五条中三条符合、一条部分符合、一条不确定。",
     "birth_time_status": "稳定",
+    "responses": [
+      {
+        "question_number": 1,
+        "domain": "事业与组织",
+        "choice": "A",
+        "selected_text": "先收集资料和比较风险，想清楚后再行动",
+        "candidate_id": "c011",
+        "user_note": "用户可选补充的具体事实或年份，没有则为空字符串"
+      }
+    ],
     "confirmed": ["已确认事实一", "已确认事实二", "已确认事实三"],
     "partial": ["部分符合内容"],
     "rejected": [],
@@ -66,7 +76,12 @@
       "id": "self_growth",
       "title": "1｜性格与内在成长",
       "finding": "20—95个汉字",
-      "reality_findings": ["每项15—75个汉字，共1—3项"],
+      "specific_judgments": {
+        "daily_habits": ["两条可以观察的日常习惯，每条12—65个汉字"],
+        "decision_style": "遇到不确定时的处理顺序，18—80个汉字",
+        "conflict_response": "被催促、质疑或发生分歧时的反应，18—80个汉字",
+        "recovery_pattern": "压力后的恢复方式，18—80个汉字"
+      },
       "analysis": ["每段70—190个汉字，共2—3段"],
       "current_focus": "20—85个汉字",
       "suggestions": ["每项15—70个汉字，共1—3项"],
@@ -74,6 +89,12 @@
       "audit": {
         "core_sections": ["complete_self_portrait", "root_seed_flower_fruit_map"],
         "evidence_lenses": ["natal_structure", "root_seed_flower_fruit_map"],
+        "specific_judgment_sources": {
+          "daily_habits": ["complete_self_portrait.action_execution", "root_seed_flower_fruit_map"],
+          "decision_style": ["complete_self_portrait.cognition_decision", "cross_method_analysis"],
+          "conflict_response": ["complete_self_portrait.internal_conflicts", "interaction_network"],
+          "recovery_pattern": ["complete_self_portrait.stress_recovery", "resource_relationship.time_energy"]
+        },
         "user_facts": [],
         "social_priors": [],
         "needs_validation": "仍需核对什么"
@@ -122,6 +143,15 @@
 ## 固定校验
 
 - 六个领域固定顺序为 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`；每个领域可见正文330—520个汉字。
+- 六个领域必须分别提供以下不可互换的 `specific_judgments`，不得用同一段“能力、责任、资源、成长”换词填充：
+  - `self_growth`：`daily_habits`、`decision_style`、`conflict_response`、`recovery_pattern`；
+  - `love_partner`：`attraction_traits`、`long_term_traits`、`high_friction_traits`、`interaction_pattern`；
+  - `career`：`industry_candidates`、`role_candidates`、`task_pattern`、`unsuitable_environment`；行业和岗位候选各2—4项，并按可能性排序；
+  - `finance_resources`：`primary_source`、`secondary_source`、`unstable_source`、`leakage_risk`、`retention_method`；
+  - `body_emotion`：`stress_signals`、`recovery_conditions`、`sustainable_rhythm`、`evidence_limit`；不得诊断疾病；
+  - `family_growth`：`support_source`、`expectation_source`、`family_role`、`boundary_pattern`、`education_path_candidate`。
+- “专业、技术、业务、管理、资源、稳定、成长”等宽泛词不能单独充当行业、岗位或财富来源；必须继续写清具体对象、任务或收入形式。
+- 每个具体判断都必须能在现实中观察或核对；证据只够支持范围时，给出按可能性排序的2—4个候选，不编造唯一职业、父母经历或对象身份。
 - 六个领域合计必须实际引用 `root_seed_flower_fruit_map` 与 `cross_method_analysis`；每个领域至少两个Core来源和两个独立证据视角。
 - 正式报告可见正文4500—6500个汉字；逐年观察恰好连续20年。
 - 年度主题使用现实语言，不直接写十神、大运或流年名词。

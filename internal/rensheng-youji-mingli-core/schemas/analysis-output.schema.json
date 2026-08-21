@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rensheng-youji.local/schemas/analysis-output.schema.json",
-  "title": "人生有迹完整命理分析母稿 v0.2.0",
-  "description": "内置分析核心返回的统一 analysis_bundle。新增完整自身画像、家庭、关系、对象候选、互动与均衡审计。",
+  "title": "人生有迹完整命理分析母稿 v0.3.0",
+  "description": "内置分析核心返回的统一 analysis_bundle。包含完整人物画像、领域联动、可观察现实候选与校准审计。",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -1412,6 +1412,8 @@
         "candidate_id",
         "domain",
         "statement",
+        "observable_examples",
+        "alternative_statement",
         "source_layers",
         "confidence",
         "validation_question",
@@ -1427,7 +1429,21 @@
         },
         "statement": {
           "type": "string",
-          "minLength": 1
+          "minLength": 8
+        },
+        "observable_examples": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 6
+          }
+        },
+        "alternative_statement": {
+          "type": "string",
+          "minLength": 8
         },
         "source_layers": {
           "type": "array",

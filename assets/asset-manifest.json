@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "assets": {
+    "wechat_contact": {
+      "path": "assets/wechat-contact.jpg",
+      "sha256": "bcfd93fb14cb90557504b23eb3b419fe55eb19f3a7062b77299d24f12d9677e8",
+      "width": 888,
+      "height": 1131,
+      "purpose": "人生有迹正式工作微信图片"
+    }
+  }
+}
