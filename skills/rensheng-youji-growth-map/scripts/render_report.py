@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
+"""校验并渲染人生有迹完整报告 Markdown。"""
+
+from __future__ import annotations
+
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
 
 DIMENSION_IDS = [
@@ -21,67 +26,92 @@ BANNED = {
 AI_JARGON = {
     "卡点", "卡住", "换轨", "兑现", "承接", "赛道", "抓手", "底层逻辑", "显化",
 }
+OLD_FIELDS = {"initial_role", "core_configuration", "main_task", "portrait"}
 
 
-def require(obj, key, where="root"):
+def require(obj: dict[str, Any], key: str, where: str = "root") -> Any:
     if key not in obj or obj[key] in (None, "", []):
         raise ValueError(f"Missing required field: {where}.{key}")
     return obj[key]
 
 
-def validate(data):
-    for key in (
-        "title", "subtitle", "generated_on", "brand", "profile", "chart",
-        "calibration", "panorama", "life_thread", "dimensions",
-        "prosperity_guide", "open_questions", "author", "boundaries",
-    ):
+def validate(data: dict[str, Any]) -> None:
+    required = (
+        "schema_version", "source", "title", "subtitle", "generated_on", "brand",
+        "profile", "chart", "calibration", "executive_summary", "stage_story",
+        "dimensions", "yearly_outlook", "action_guide", "open_questions",
+        "author", "boundaries",
+    )
+    for key in required:
         require(data, key)
 
-    if data["title"] != "人生有迹｜成长地图":
-        raise ValueError("title must be 人生有迹｜成长地图")
+    if data["schema_version"] != "2.0.0":
+        raise ValueError("schema_version must be 2.0.0")
+    if data["title"] != "人生有迹｜完整报告":
+        raise ValueError("title must be 人生有迹｜完整报告")
+
+    source = data["source"]
+    for key in ("analysis_id", "core_version", "analysis_as_of", "calibration_status"):
+        require(source, key, "source")
+    if source["calibration_status"] not in {"calibrated", "skipped"}:
+        raise ValueError("source.calibration_status must be calibrated or skipped")
 
     for key in ("identity_option", "birth", "location", "focus", "question"):
         require(data["profile"], key, "profile")
 
-    for key in ("pillars", "luck_start", "da_yun", "current_da_yun", "time_basis"):
-        require(data["chart"], key, "chart")
-    if len(data["chart"]["pillars"]) != 4:
+    chart = data["chart"]
+    for key in ("pillars", "luck_start", "current_luck_cycle", "time_basis"):
+        require(chart, key, "chart")
+    if len(chart["pillars"]) != 4:
         raise ValueError("chart.pillars must contain exactly four pillars")
 
-    for key in ("summary", "birth_time_status"):
-        require(data["calibration"], key, "calibration")
+    calibration = data["calibration"]
+    for key in ("summary", "birth_time_status", "confirmed", "partial", "rejected", "uncertain"):
+        if key not in calibration:
+            raise ValueError(f"Missing required field: calibration.{key}")
 
-    for key in ("life_line", "reality_findings", "current_tension", "direct_answer"):
-        require(data["panorama"], key, "panorama")
-    if not 3 <= len(data["panorama"]["reality_findings"]) <= 5:
-        raise ValueError("panorama.reality_findings must contain 3 to 5 items")
+    summary = data["executive_summary"]
+    for key in ("life_theme", "capabilities_resources", "formation", "current_situation", "direct_answer"):
+        require(summary, key, "executive_summary")
+    if not 3 <= len(summary["capabilities_resources"]) <= 5:
+        raise ValueError("executive_summary.capabilities_resources must contain 3 to 5 items")
 
-    life = data["life_thread"]
-    for key in ("initial_role", "core_configuration", "main_task", "portrait", "stage_path"):
-        require(life, key, "life_thread")
-    for key in ("previous_foundation", "recent_development", "present_task", "next_direction"):
-        require(life["stage_path"], key, "life_thread.stage_path")
+    stage = data["stage_story"]
+    for key in ("previous_foundation", "recent_development", "present_task", "next_direction", "long_range"):
+        require(stage, key, "stage_story")
 
     dimensions = data["dimensions"]
-    if [d.get("id") for d in dimensions] != DIMENSION_IDS:
+    if [section.get("id") for section in dimensions] != DIMENSION_IDS:
         raise ValueError("dimensions must use the six fixed ids in order")
     for index, section in enumerate(dimensions):
         where = f"dimensions[{index}]"
-        for key in (
-            "title", "finding", "reality_findings", "analysis", "current_focus",
-            "suggestions", "confidence", "audit",
-        ):
+        for key in ("title", "finding", "reality_findings", "analysis", "current_focus", "suggestions", "confidence", "audit"):
             require(section, key, where)
         if section["confidence"] not in CONFIDENCE:
             raise ValueError(f"Invalid confidence in {where}")
-        for key in ("chart_basis", "life_basis", "social_basis", "needs_validation"):
-            require(section["audit"], key, f"{where}.audit")
+        for key in ("core_sections", "user_facts", "social_priors", "needs_validation"):
+            if key not in section["audit"]:
+                raise ValueError(f"Missing required field: {where}.audit.{key}")
 
-    guide = data["prosperity_guide"]
+    outlook = data["yearly_outlook"]
+    for key in ("start_year", "end_year", "summary", "years"):
+        require(outlook, key, "yearly_outlook")
+    years = outlook["years"]
+    expected = list(range(int(outlook["start_year"]), int(outlook["end_year"]) + 1))
+    actual = [item.get("year") for item in years]
+    if actual != expected:
+        raise ValueError("yearly_outlook.years must be continuous and match start_year/end_year")
+    for index, item in enumerate(years):
+        for key in ("year", "theme", "carry_in", "likely_expression", "seed_for_next", "confidence"):
+            require(item, key, f"yearly_outlook.years[{index}]")
+        if item["confidence"] not in CONFIDENCE:
+            raise ValueError(f"Invalid confidence in yearly_outlook.years[{index}]")
+
+    guide = data["action_guide"]
     for key in ("priority_actions", "reduce", "traditional_preferences"):
-        require(guide, key, "prosperity_guide")
+        require(guide, key, "action_guide")
     if len(guide["priority_actions"]) != 3:
-        raise ValueError("prosperity_guide.priority_actions must contain exactly 3 items")
+        raise ValueError("action_guide.priority_actions must contain exactly 3 items")
     if not 2 <= len(guide["traditional_preferences"]) <= 5:
         raise ValueError("traditional_preferences must contain 2 to 5 items")
     for index, item in enumerate(guide["traditional_preferences"]):
@@ -92,12 +122,18 @@ def validate(data):
     for key in ("name", "bio", "github", "web", "wechat_image", "wechat_note"):
         require(author, key, "author")
 
+    serialized = json.dumps(data, ensure_ascii=False)
+    for old_field in OLD_FIELDS:
+        if f'"{old_field}"' in serialized:
+            raise ValueError(f"Old report field found: {old_field}")
+
     visible = json.dumps({
-        "panorama": data["panorama"],
-        "life_thread": data["life_thread"],
-        "dimensions": [{k: v for k, v in d.items() if k != "audit"} for d in dimensions],
-        "prosperity_guide": guide,
-        "consultation_note": data.get("consultation_note", ""),
+        "executive_summary": summary,
+        "stage_story": stage,
+        "dimensions": [{key: value for key, value in section.items() if key != "audit"} for section in dimensions],
+        "yearly_outlook": outlook,
+        "action_guide": guide,
+        "assisted_service_note": data.get("assisted_service_note", ""),
     }, ensure_ascii=False)
     found = sorted(term for term in BANNED if term in visible)
     if found:
@@ -107,83 +143,88 @@ def validate(data):
         raise ValueError("AI-style jargon found: " + "、".join(jargon))
 
 
-def bullets(items, bold=False):
+def bullets(items: list[str], bold: bool = False) -> str:
     if bold:
         return "\n".join(f"- **{item}**" for item in items)
     return "\n".join(f"- {item}" for item in items)
 
 
-def render(data):
-    p = data["profile"]
-    c = data["chart"]
-    name = p.get("name") or "未署名"
-    uncertainty = c.get("uncertainty") or "未发现需要额外提示的时间边界问题"
+def render(data: dict[str, Any]) -> str:
+    profile = data["profile"]
+    chart = data["chart"]
     calibration = data["calibration"]
-    panorama = data["panorama"]
-    thread = data["life_thread"]
-    stage = thread["stage_path"]
+    summary = data["executive_summary"]
+    stage = data["stage_story"]
+    name = profile.get("name") or "未署名"
+    uncertainty = chart.get("uncertainty") or "未发现需要额外提示的时间边界问题"
 
     lines = [
         f"# {data['title']}", "", f"> {data['subtitle']}", "", f"**{data['brand']}**", "",
         "## 基本信息", "", "| 项目 | 内容 |", "|---|---|",
         f"| 姓名 | {name} |",
-        f"| 身份选项 | {p['identity_option']} |",
-        f"| 出生时间 | {p['birth']} |",
-        f"| 出生地点 | {p['location']} |",
-        f"| 最想了解 | {p['focus']} |",
-        f"| 当前问题 | {p['question']} |",
+        f"| 身份选项 | {profile['identity_option']} |",
+        f"| 出生时间 | {profile['birth']} |",
+        f"| 出生地点 | {profile['location']} |",
+        f"| 最想了解 | {profile['focus']} |",
+        f"| 当前问题 | {profile['question']} |",
         f"| 报告日期 | {data['generated_on']} |", "",
         "## 排盘口径", "", "| 项目 | 内容 |", "|---|---|",
-        f"| 四柱 | {'　'.join(c['pillars'])} |",
-        f"| 起运时间 | {c['luck_start']} |",
-        f"| 当前大运 | {c['current_da_yun']} |",
-        f"| 时间口径 | {c['time_basis']} |",
+        f"| 四柱 | {'　'.join(chart['pillars'])} |",
+        f"| 起运时间 | {chart['luck_start']} |",
+        f"| 当前大运 | {chart['current_luck_cycle']} |",
+        f"| 时间口径 | {chart['time_basis']} |",
         f"| 时间提示 | {uncertainty} |", "",
-        "**大运：** " + "；".join(c["da_yun"]), "",
         f"**校准结果：** {calibration['summary']}（生时状态：{calibration['birth_time_status']}）", "",
-        "## 全景分析", "", panorama["life_line"], "",
-        bullets(panorama["reality_findings"], bold=True), "",
-        f"**你现在最需要处理的是：{panorama['current_tension']}**", "",
-        f"**对你当前问题的直接回应：{panorama['direct_answer']}**", "",
-        "## 你的人生主线", "",
-        f"### 初始角色\n\n{thread['initial_role']}\n",
-        f"### 核心配置\n\n{thread['core_configuration']}\n",
-        f"### 主线任务\n\n{thread['main_task']}\n",
-        f"### 人物小传\n\n{thread['portrait']}\n",
-        "### 现阶段怎样一步步形成", "",
+        "## 能力与可用资源", "", summary["life_theme"], "",
+        bullets(summary["capabilities_resources"], bold=True), "",
+        "## 这些方式怎样形成", "", summary["formation"], "",
+        "## 你现在所处的阶段", "", f"**当前最需要处理的是：{summary['current_situation']}**", "",
+        f"**对你当前问题的直接回应：{summary['direct_answer']}**", "",
+        "### 阶段怎样一步步发展", "",
         f"- **上一阶段留下的条件：** {stage['previous_foundation']}",
-        f"- **近三年的发展：** {stage['recent_development']}",
+        f"- **近几年的发展：** {stage['recent_development']}",
         f"- **现在正在处理：** {stage['present_task']}",
-        f"- **未来两三年的可能方向：** {stage['next_direction']}", "",
+        f"- **未来两三年的可能方向：** {stage['next_direction']}",
+        f"- **更长阶段的主线：** {stage['long_range']}", "",
     ]
 
     for section in data["dimensions"]:
         lines.extend([
-            f"## {section['title']}", "",
-            f"**核心判断：{section['finding']}**", "",
+            f"## {section['title']}", "", f"**核心判断：{section['finding']}**", "",
             bullets(section["reality_findings"], bold=True), "",
         ])
         for paragraph in section["analysis"]:
             lines.extend([paragraph, ""])
         lines.extend([
-            f"**现阶段重点：** {section['current_focus']}", "",
-            "**可以尝试：**", "", bullets(section["suggestions"]), "",
-            f"*判断等级：{section['confidence']}*", "",
+            f"**现阶段重点：** {section['current_focus']}", "", "**可以尝试：**", "",
+            bullets(section["suggestions"]), "", f"*判断等级：{section['confidence']}*", "",
         ])
 
-    guide = data["prosperity_guide"]
+    outlook = data["yearly_outlook"]
     lines.extend([
-        "## 旺运指南", "", "### 现在最值得做的三件事", "",
-        bullets(guide["priority_actions"]), "",
-        "### 需要减少的一种消耗", "", guide["reduce"], "",
+        "## 阶段与逐年观察", "", outlook["summary"], "",
+        "| 年份 | 年度主题 | 从上一年带入 | 现实中可能怎样表现 | 留给下一年 | 判断等级 |",
+        "|---|---|---|---|---|---|",
+    ])
+    for item in outlook["years"]:
+        lines.append(
+            f"| {item['year']} | {item['theme']} | {item['carry_in']} | "
+            f"{item['likely_expression']} | {item['seed_for_next']} | {item['confidence']} |"
+        )
+    lines.append("")
+
+    guide = data["action_guide"]
+    lines.extend([
+        "## 现实行动建议", "", "### 现在最值得做的三件事", "",
+        bullets(guide["priority_actions"]), "", "### 需要减少的一种消耗", "", guide["reduce"], "",
         "### 传统生活偏好", "",
     ])
     for item in guide["traditional_preferences"]:
         lines.extend([f"**{item['area']}**", "", item["advice"], ""])
 
     lines.extend(["## 仍需继续验证", "", bullets(data["open_questions"]), ""])
-    if data.get("consultation_note"):
-        lines.extend([f"> {data['consultation_note']}", ""])
+    if data.get("assisted_service_note"):
+        lines.extend([f"> {data['assisted_service_note']}", ""])
 
     author = data["author"]
     lines.extend([
@@ -192,23 +233,27 @@ def render(data):
         f"- 免费网页：{author['web']}",
         f"- 工作微信：{author['wechat_image']}（{author['wechat_note']}）", "",
         "## 阅读边界", "", bullets(data["boundaries"]), "", "---", "",
-        "人生有迹 by 景行｜看见反复出现的人生轨迹，也寻找新的可能", "",
+        "人生有迹 by 景行｜看见你带来的能力，理解你走过的路，也寻找新的可能", "",
     ])
     return "\n".join(lines)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Validate and render 人生有迹｜成长地图")
-    parser.add_argument("input", help="UTF-8 JSON report spec")
-    parser.add_argument("--out", required=True, help="Output Markdown path")
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Validate and render 人生有迹｜完整报告")
+    parser.add_argument("input", type=Path, help="UTF-8 report.json")
+    parser.add_argument("--out", type=Path, required=True, help="输出 Markdown 路径")
     args = parser.parse_args()
-    data = json.loads(Path(args.input).read_text(encoding="utf-8"))
-    validate(data)
-    output = Path(args.out)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(render(data), encoding="utf-8")
-    print(f"Rendered {output}")
+    try:
+        data = json.loads(args.input.read_text(encoding="utf-8"))
+        validate(data)
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(render(data), encoding="utf-8")
+    except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
+        print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False))
+        return 1
+    print(json.dumps({"status": "ok", "output": str(args.out)}, ensure_ascii=False))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -260,7 +260,7 @@ def render_free_card(data: dict, output: Path) -> Path:
     draw.text((100, 1415), "当前课题 · " + issue["title"], font=_font(18), fill=C["coral"], anchor="ls")
     _text_lines(draw, _wrap(issue["body"], 39, 2), (100, 1460), 25, C["ink"], 39)
     _text_lines(draw, _wrap(issue["example"], 56, 1), (100, 1548), 17, C["muted"], 25)
-    draw.text((72, 1624), "想看更长时间？完整版将展开逐年伏笔与事业、财务、关系之间的传导",
+    draw.text((72, 1624), "想看完整人生主线与逐年分析？可继续使用「人生有迹完整报告」Skill",
               font=_font(13), fill=C["muted"], anchor="ls")
     draw.text((1170, 1624), "人生有迹 by 景行", font=_font(13), fill=C["muted"], anchor="rs")
 

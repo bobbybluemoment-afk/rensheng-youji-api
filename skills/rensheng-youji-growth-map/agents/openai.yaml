@@ -1,7 +1,6 @@
 interface:
-  display_name: "人生有迹｜成长地图"
-  short_description: "结合八字、现实校准与连续运势，生成六维人生全景成长报告"
-  icon_small: "./assets/logo.png"
-  icon_large: "./assets/logo.png"
-  brand_color: "#B8744E"
-  default_prompt: "使用 $rensheng-youji-deep-report 为我生成一份人生有迹｜成长地图。"
+  display_name: "人生有迹完整报告"
+  short_description: "使用统一Core与现实校准生成人生全景报告"
+  default_prompt: "使用 $rensheng-youji-deep-report 为我生成一份人生有迹完整报告。"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"

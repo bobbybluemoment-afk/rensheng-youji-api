@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""为成长地图创建隔离运行环境。"""
+"""为人生有迹完整报告创建隔离运行环境。"""
 
 from __future__ import annotations
 

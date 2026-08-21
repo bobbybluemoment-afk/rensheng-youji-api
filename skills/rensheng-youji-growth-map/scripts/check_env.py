@@ -1,30 +1,37 @@
 #!/usr/bin/env python3
-"""检查成长地图的确定性排盘环境。"""
+"""检查完整报告与统一 Core 的文件和运行依赖。"""
 
 from __future__ import annotations
 
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+SKILL_ROOT = Path(__file__).resolve().parent.parent
 
 
 def main() -> int:
-    try:
-        import lunar_python  # noqa: F401
-    except ImportError:
-        print("MISSING: lunar_python")
+    required = [
+        REPO_ROOT / "internal/core-manifest.json",
+        REPO_ROOT / "internal/rensheng-youji-mingli-core/SKILL.md",
+        REPO_ROOT / "scripts/prepare_core_input.py",
+        SKILL_ROOT / "references/report-schema.md",
+        SKILL_ROOT / "scripts/render_report.py",
+    ]
+    missing = [str(path) for path in required if not path.exists()]
+    if missing:
+        print("MISSING: " + ", ".join(missing))
         return 2
-    completed = subprocess.run([
-        sys.executable, str(ROOT / "scripts/calc_profile.py"),
-        "--datetime", "1999-01-22 17:45", "--gender", "male",
-        "--city", "福建泉州惠安县",
-    ], check=True, capture_output=True, text=True)
-    if '"day_pillar": "甲戌"' not in completed.stdout:
-        print("FAILED: known chart mismatch")
-        return 3
-    print("READY: dependencies, location, true solar time, chart and luck cycle passed")
+    result = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "scripts/check_env.py")],
+        cwd=REPO_ROOT,
+        check=False,
+    )
+    if result.returncode:
+        return result.returncode
+    print("READY: shared chart, Core and full-report renderer found")
     return 0
 
 
