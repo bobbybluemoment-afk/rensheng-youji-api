@@ -1,6 +1,6 @@
 {
-  "name": "rensheng-youji-free-card-pipeline",
-  "version": "2.0.0",
+  "name": "rensheng-youji-free-pipelines",
+  "version": "2.1.0",
   "visibility": "internal",
   "stages": [
     {
@@ -19,5 +19,12 @@
   "api_adapter": "../scripts/prepare_core_input.py",
   "assembler": "../scripts/assemble_free_card.py",
   "renderer": "../scripts/generate_card.py",
-  "notes": "确定性排盘 → Core完整分析 → 免费卡片提取 → 新版PNG绘图。公开免费版在用户环境运行，不使用验证码、MCP或人生有迹云端接口。"
+  "report_pipeline": {
+    "skill": "../skills/rensheng-youji-growth-map/SKILL.md",
+    "orchestrator": "../skills/rensheng-youji-growth-map/scripts/generate_full_report.py",
+    "pdf_renderer": "../skills/rensheng-youji-growth-map/scripts/render_report_pdf.py",
+    "pages": 10,
+    "card_page": 2
+  },
+  "notes": "确定性排盘与同一Core母稿同时支持新版免费卡片和经五题校准的固定10页完整报告。公开免费版在用户环境运行，不使用验证码、MCP或人生有迹云端接口。"
 }

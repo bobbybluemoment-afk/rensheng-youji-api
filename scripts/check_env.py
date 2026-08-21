@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+import subprocess
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -48,7 +49,23 @@ def main() -> int:
     if len(timeline) != 20 or timeline[5]["year"] != 2026:
         print("FAILED: timeline mismatch")
         return 5
-    print("READY: dependencies, assets, chart and v2 free-card components passed")
+    report_test = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "unittest",
+            "tests.test_full_report_pipeline.FullReportPipelineTest.test_new_card_and_fixed_ten_page_pdf",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if report_test.returncode:
+        print("FAILED: v2 card -> fixed 10-page report pipeline")
+        print(report_test.stdout or report_test.stderr)
+        return 6
+    print("READY: dependencies, chart, v2 card and fixed 10-page report pipeline passed")
     return 0
 
 

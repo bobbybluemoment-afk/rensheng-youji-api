@@ -71,10 +71,22 @@ def boundary_flags(profile: dict[str, Any]) -> list[str]:
     flags: list[str] = []
     time_info = profile["time"]
     true_solar = datetime.strptime(time_info["true_solar_time"], "%Y-%m-%d %H:%M")
-    # 地支时辰边界位于奇数整点；20分钟内标记为敏感，不擅自改柱。
-    distance = min(abs(true_solar.minute), abs(60 - true_solar.minute))
-    if true_solar.hour % 2 == 1 and distance <= 20:
+    # 地支时辰边界位于奇数整点；计算到前后最近边界的真实分钟距离。
+    minute_of_day = true_solar.hour * 60 + true_solar.minute
+    boundary_minutes = [hour * 60 for hour in range(1, 24, 2)]
+    distance = min(abs(minute_of_day - boundary) for boundary in boundary_minutes)
+    distance = min(distance, abs(minute_of_day + 24 * 60 - boundary_minutes[-1]), abs(minute_of_day - 24 * 60 - boundary_minutes[0]))
+    if distance <= 20:
         flags.append("hour_branch_boundary")
+    # 23:00同时涉及部分流派的日界口径，单独保留日柱依赖。
+    day_boundary_distance = min(abs(minute_of_day - 23 * 60), abs(minute_of_day + 24 * 60 - 23 * 60))
+    if day_boundary_distance <= 20:
+        flags.append("day_boundary")
+    for term in profile.get("bazi", {}).get("nearest_solar_terms", []):
+        term_time = datetime.strptime(term["datetime"], "%Y-%m-%d %H:%M:%S")
+        if abs((true_solar - term_time).total_seconds()) <= 20 * 60:
+            flags.append("solar_term_boundary")
+            break
     if abs(float(time_info.get("correction_minutes", 0))) >= 10:
         flags.append("true_solar_time_sensitive")
     return flags or ["none"]
@@ -200,9 +212,16 @@ def adapt_profile(
             "daylight_saving_applied": False,
             "true_solar_time_applied": time_info.get("time_basis") == "local_civil",
             "true_solar_datetime": iso_local(time_info["true_solar_time"], timezone_name),
-            "nearest_solar_terms": [],
+            "nearest_solar_terms": [
+                {
+                    "name": item["name"],
+                    "datetime": datetime.strptime(item["datetime"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo(timezone_name)).isoformat(),
+                    "relation": item["relation"],
+                }
+                for item in bazi.get("nearest_solar_terms", [])
+            ],
             "boundary_flags": boundary_flags(profile),
-            "notes": list(profile.get("warnings", [])) + ["现有 API profile 未暴露邻近节气精确时间；由 chart_audit 保留此项。"],
+            "notes": list(profile.get("warnings", [])) + ["已记录前后节气精确时间；20分钟内进入正式报告边界复核。"],
         },
         "five_elements": None,
         "luck_cycles": {

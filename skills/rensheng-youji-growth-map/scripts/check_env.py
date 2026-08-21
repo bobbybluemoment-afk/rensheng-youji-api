@@ -19,6 +19,11 @@ def main() -> int:
         REPO_ROOT / "scripts/prepare_core_input.py",
         SKILL_ROOT / "references/report-schema.md",
         SKILL_ROOT / "scripts/render_report.py",
+        SKILL_ROOT / "scripts/render_report_pdf.py",
+        SKILL_ROOT / "scripts/generate_full_report.py",
+        SKILL_ROOT / "scripts/validate_calibration_questions.py",
+        REPO_ROOT / "assets/fonts/noto/NotoSansCJKsc-Regular.otf",
+        REPO_ROOT / "assets/wechat-contact.jpg",
     ]
     missing = [str(path) for path in required if not path.exists()]
     if missing:

@@ -1441,7 +1441,12 @@
               "annual",
               "user_fact",
               "social_prior",
-              "cross_method"
+              "cross_method",
+              "root_seed_flower_fruit_map",
+              "resource_relationship",
+              "domain_connections",
+              "luck_cycle_themes",
+              "annual_theme_activation"
             ]
           }
         },
@@ -1917,4 +1922,3 @@
     }
   }
 }
-

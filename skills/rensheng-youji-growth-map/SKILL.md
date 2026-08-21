@@ -22,8 +22,9 @@ description: 根据姓名（可选）、出生年月日时、性别、出生地�
 - 出生城市、国家或地区；
 - 性别，仅用于传统排运顺逆；
 - 时间是普通钟表时间，还是已经校正的真太阳时；
-- 当前城市、学历、职业或学习状态、关系与家庭阶段，可跳过；
-- 最想理解的方向和一个具体问题。
+- 当前城市、学历、职业或学习状态、关系与家庭阶段；不知道时明确写“不知道”；
+- 最想理解的方向和一个具体问题；
+- 根据关注方向补充最少现实资料：事业需问学历/专业、当前工作状态、主要经历和正在比较的选项；关系需问当前状态、反复出现的相处情况和具体困惑；财务需问收入来源、主要压力和责任；家庭需问具体关系和正在发生的矛盾。
 
 普通钟表时间使用 `local_civil`。只有用户明确说明已经校正为真太阳时，才使用 `true_solar_adjusted`。中国出生地优先使用仓库内置地点库，重名时只补问省或地级市。
 
@@ -47,14 +48,23 @@ python scripts/prepare_core_input.py \
 ```
 
 5. 将用户明确提供的现实资料写入 `core-input.json.reality_context`。只记录用户原话能够支持的事实，不把推测写成事实。
-6. 运行 Core 输入校验：
+6. 在生成分析前运行边界预检：
+
+```bash
+python skills/rensheng-youji-growth-map/scripts/preflight_report.py \
+  work/core-input.json --focus "事业发展" --output work/report-preflight.json
+```
+
+若结果为 `blocked`，先核对出生分钟和出生区县。仍无法消除可能改变月柱、日柱、时柱或起运的边界时，只能生成标题明确的“人生有迹｜初步分析”，不得继续生成正式完整PDF。
+
+7. 运行 Core 输入校验：
 
 ```bash
 python internal/rensheng-youji-mingli-core/scripts/validate_analysis_input.py work/core-input.json
 ```
 
-7. 完整读取 `internal/rensheng-youji-mingli-core/SKILL.md` 及其要求的全部参考文件，生成 `work/analysis-output-initial.json`。
-8. 运行 Core 输出校验：
+8. 完整读取 `internal/rensheng-youji-mingli-core/SKILL.md` 及其要求的全部参考文件，生成一次完整的 `work/analysis-output-initial.json`。
+9. 运行 Core 输出校验：
 
 ```bash
 python internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py work/analysis-output-initial.json
@@ -65,10 +75,19 @@ python internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py w
 ## 五条现实校准
 
 1. 完整读取 [calibration.md](references/calibration.md)。
-2. 只从 Core 的 `reality_candidate_pool` 选择五条区分度最高的候选，至少覆盖三个生活领域。
-3. 每条提供“很符合／部分符合／不符合／不确定”四个选项，并允许用户补充事实或年份。
-4. 将回答写入 Core 输入的 `calibration` 和 `reality_context`，保留被否定的候选，不得为了迎合反馈修改四柱、原局结构或大运流年事实。
-5. 再次运行统一 Core，生成 `work/analysis-output-calibrated.json` 并校验。若用户跳过校准，继续使用初始母稿，但相关结论最高标为“中等置信”或“待验证”。
+2. 从 Core 的 `reality_candidate_pool` 选择五条区分度最高的候选，写入同时包含 `display` 与 `audit` 的 `work/calibration-questions.json`；至少覆盖三个生活领域，每条至少使用两个独立证据视角，不能只依赖日主旺衰。
+3. 运行 `validate_calibration_questions.py`，只把它生成的 `work/calibration-visible.md` 发给用户：
+
+```bash
+python skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py \
+  work/calibration-questions.json --visible-out work/calibration-visible.md
+```
+
+不得自行把 `audit`、候选编号、盘面支持、置信度、替代解释或任何命理证据附在问题后面。
+4. 每条固定提供“很符合／部分符合／不符合／不确定”四个选项，并允许用户补充事实或年份。
+5. 将回答写入 Core 输入的 `calibration` 和 `reality_context`，保留被否定的候选，不得为了迎合反馈修改四柱、原局结构或大运流年事实。
+6. 在初始完整母稿上只更新校准状态、用户事实、受影响的现实映射与置信度，保留其余已完成章节；生成并校验 `work/analysis-output-calibrated.json`，避免把没有变化的32个章节整份重新写一遍。
+7. 用户跳过任何一条时，`document_mode` 必须为 `preliminary_uncalibrated`，标题必须为“人生有迹｜初步分析”，只交付初步 Markdown 和新版卡片；不得生成或称为正式完整PDF。
 
 ## 报告提取与输出
 
@@ -79,17 +98,31 @@ python internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py w
    - [prosperity-guide.md](references/prosperity-guide.md)：现实行动建议；
    - [brand-and-conversion.md](references/brand-and-conversion.md)：免费使用与人工服务入口；
    - [safety-language.md](references/safety-language.md)：健康、财务、关系和隐私边界。
-2. 从已校验的 Core 母稿提取 `report.json`。不得重新推命，不得从人口常见路径补造用户经历。
+2. 从已校验的 Core 母稿提取 `report.json`。正式报告使用 `schema_version=2.1.0`、`document_mode=full_calibrated`；不得重新推命，不得从人口常见路径补造用户经历。
 3. 报告开头依次写能力与可用资源、这些方式怎样形成、当前阶段怎样发展，再展开六个领域。
 4. 时间分析使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系；同时概括更长的大运阶段。
-5. 运行：
+5. 从同一份校准后 Core 母稿依次运行 `rensheng-youji-free-card-output` 与 `rensheng-youji-free-card-renderer` 的现有新版流程，生成 `work/free-card-output.json`。不得复制旧卡片，也不得在报告目录另写卡片算法。
+6. 运行统一交付命令：
 
 ```bash
-python skills/rensheng-youji-growth-map/scripts/render_report.py \
-  work/report.json --out work/rensheng-youji-full-report.md
+python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
+  --report work/report.json \
+  --free-card work/free-card-output.json \
+  --out-dir work/delivery \
+  --keep-pages
 ```
 
-6. 默认交付 Markdown。用户明确要求且当前环境能够创建PDF时，将同一 Markdown 排版为PDF；正文目标约8—10页，不通过缩小字号塞入过量内容。
+7. 正式交付固定包含新版1242×1660卡片PNG、Markdown、恰好10页的PDF和 `report-delivery-manifest.json`。PDF第2页必须嵌入刚刚生成的同一张新版卡片；不得让用户模型自行决定版式、页数、换行、颜色或二维码位置。
+
+## 用户可见进度
+
+只使用以下短提示，不展示文件路径、Schema、候选编号、程序日志或内部推理：
+
+1. “正在核对出生时间与排盘口径。”
+2. “排盘已完成，正在准备五条现实校准。”
+3. “已收到校准结果，正在整理人生主线与各领域分析。”
+4. “正在生成新版人生卡片与10页完整报告。”
+5. “文件已生成，正在检查页数、换行、二维码和内容完整性。”
 
 ## 报告固定结构
 
@@ -109,7 +142,11 @@ python skills/rensheng-youji-growth-map/scripts/render_report.py \
 ## 完成检查
 
 - `source.analysis_id`、`source.core_version` 与 Core 母稿一致；
+- 正式PDF前已经完成五条校准且时间边界预检通过；
 - 四柱、时间口径和大运事实未被改写；
+- 第2页为同一 Core 生成的新版人生卡片，卡片尺寸为1242×1660；
+- PDF恰好10页，所有正文无截断，微信二维码实际嵌入，标题/重点/正文有稳定颜色层级；
+- 用户可见校准题中没有候选编号、置信度、盘面支持或命理证据；
 - 不包含“初始角色、核心配置、主线任务、人物小传”等旧卡片字段；
 - 六个领域均有实质内容或明确写证据不足，不能把事业段落换词复制到其他领域；
 - 已确认事实、命理推断、社会先验和待验证候选没有混写；

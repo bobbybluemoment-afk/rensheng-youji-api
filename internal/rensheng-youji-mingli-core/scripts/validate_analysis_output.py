@@ -145,6 +145,17 @@ MANDATORY_PORTRAIT_DOMAINS = {
     "health",
     "continuity",
 }
+PREFERRED_CANDIDATE_LENSES = {
+    "cross_method",
+    "luck",
+    "annual",
+    "root_seed_flower_fruit_map",
+    "resource_relationship",
+    "cross_method_analysis",
+    "luck_cycle_themes",
+    "annual_theme_activation",
+    "domain_connections",
+}
 
 
 def load_json(path: Path) -> Any:
@@ -219,6 +230,20 @@ def validate(data: Any) -> list[str]:
                         errors.append(f"{path}.hidden_stems 第一项必须是主气 main")
 
     require_keys(data.get("chart_audit"), {"status", "checks", "boundary_dependencies", "versions"}, "chart_audit", errors)
+    cross_method = data.get("cross_method_analysis")
+    require_keys(cross_method, {"summary", "methods", "agreements", "conflicts", "findings"}, "cross_method_analysis", errors)
+    if isinstance(cross_method, dict):
+        methods = cross_method.get("methods")
+        if not isinstance(methods, list) or len(set(methods)) < 3:
+            errors.append("cross_method_analysis.methods 至少包含三个独立方法")
+        if not isinstance(cross_method.get("agreements"), list) or not cross_method.get("agreements"):
+            errors.append("cross_method_analysis.agreements 至少记录一项交叉支持")
+        if not isinstance(cross_method.get("conflicts"), list):
+            errors.append("cross_method_analysis.conflicts 必须是数组；无冲突时使用空数组")
+    root_map = data.get("root_seed_flower_fruit_map")
+    require_keys(root_map, {"summary", "root", "seedling", "flower", "fruit", "continuity", "findings"}, "root_seed_flower_fruit_map", errors)
+    if isinstance(root_map, dict) and (not isinstance(root_map.get("continuity"), list) or len(root_map.get("continuity", [])) < 2):
+        errors.append("root_seed_flower_fruit_map.continuity 至少包含两条跨阶段或同时共存的连续关系")
     require_keys(data.get("complete_self_portrait"), SELF_PORTRAIT_KEYS, "complete_self_portrait", errors)
     require_keys(data.get("family_system"), FAMILY_SYSTEM_KEYS, "family_system", errors)
     require_keys(data.get("relationship_system"), RELATIONSHIP_SYSTEM_KEYS, "relationship_system", errors)
@@ -277,6 +302,12 @@ def validate(data: Any) -> list[str]:
             require_keys(candidate, {"candidate_id", "domain", "statement", "source_layers", "confidence", "validation_question", "status"}, path, errors)
             if isinstance(candidate, dict) and isinstance(candidate.get("candidate_id"), str):
                 ids.append(candidate["candidate_id"])
+            if isinstance(candidate, dict):
+                layers = candidate.get("source_layers")
+                if not isinstance(layers, list) or len(set(layers)) < 2:
+                    errors.append(f"{path}.source_layers 至少包含两个独立证据视角")
+                elif not (set(layers) & PREFERRED_CANDIDATE_LENSES):
+                    errors.append(f"{path}.source_layers 不能只依赖日主旺衰，必须包含根苗花果、资源、交叉方法或时运视角")
         if len(ids) != len(set(ids)):
             errors.append("reality_candidate_pool.candidate_id 不能重复")
 
@@ -319,7 +350,7 @@ def self_test_fixture() -> dict[str, Any]:
     pillar_analysis = {"facts": [], "structural_role": "", "activation_keys": [], "possible_manifestations": [], "uncertainties": [], "findings": []}
     resource = {"acquire": [], "preserve": [], "exchange": [], "amplify": [], "loss_risks": [], "findings": []}
     annual = {"year": 2026, "age": 36, "luck_cycle_index": 0, "year_theme": "自检", "luck_theme_link": "自检", "activation_mechanisms": [], "natal_reactions": [], "change_intensity": "low", "direction": "consolidation", "domain_impacts": [], "domain_connections": [], "human_actions": [], "social_feedback": [], "carry_in": [], "carry_out": [], "seed_for_next": [], "confidence": "to_verify", "alternatives": [], "validation": []}
-    candidate = lambda number: {"candidate_id": f"c{number}", "domain": "self-test", "statement": "待验证候选", "source_layers": ["chart"], "confidence": "to_verify", "validation_question": "是否符合？", "status": "unverified"}
+    candidate = lambda number: {"candidate_id": f"c{number}", "domain": "self-test", "statement": "待验证候选", "source_layers": ["chart", "cross_method"], "confidence": "to_verify", "validation_question": "是否符合？", "status": "unverified"}
     partner_profile = {"summary": "自检", "traits": [], "mechanism": [], "benefits": [], "costs": [], "evidence_strength": "insufficient", "alternatives": [], "validation": [], "findings": []}
     complete_self_portrait = {
         "summary": "自检",
@@ -380,8 +411,8 @@ def self_test_fixture() -> dict[str, Any]:
         "day_master": empty_section(),
         "stems_branches_roots": {"summary": "", "pillars": {"year": pillar_analysis, "month": pillar_analysis, "day": pillar_analysis, "hour": pillar_analysis}, "findings": []},
         "interaction_network": empty_section(),
-        "cross_method_analysis": {"summary": "", "methods": [], "agreements": [], "conflicts": [], "findings": []},
-        "root_seed_flower_fruit_map": {"summary": "", "root": empty_section(), "seedling": empty_section(), "flower": empty_section(), "fruit": empty_section(), "continuity": [], "findings": []},
+        "cross_method_analysis": {"summary": "自检", "methods": ["格局", "调候", "根苗花果"], "agreements": ["自检交叉支持"], "conflicts": [], "findings": []},
+        "root_seed_flower_fruit_map": {"summary": "自检", "root": empty_section(), "seedling": empty_section(), "flower": empty_section(), "fruit": empty_section(), "continuity": ["根与苗连续", "花与果连续"], "findings": []},
         "natal_portrait": empty_section(),
         "complete_self_portrait": complete_self_portrait,
         "family_system": family_system,

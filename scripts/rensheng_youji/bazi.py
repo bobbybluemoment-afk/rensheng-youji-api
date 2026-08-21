@@ -13,6 +13,8 @@ def calculate_bazi(value: datetime, gender: str) -> dict:
     solar = Solar.fromYmdHms(value.year, value.month, value.day, value.hour, value.minute, value.second)
     lunar = solar.getLunar()
     eight = lunar.getEightChar()
+    previous_jie = lunar.getPrevJie()
+    next_jie = lunar.getNextJie()
     gender_number = 1 if gender == "male" else 0
     yun = eight.getYun(gender_number)
 
@@ -93,5 +95,9 @@ def calculate_bazi(value: datetime, gender: str) -> dict:
             "hours": yun.getStartHour(),
         },
         "luck_start_local_time": yun.getStartSolar().toYmdHms(),
+        "nearest_solar_terms": [
+            {"name": previous_jie.getName(), "datetime": previous_jie.getSolar().toYmdHms(), "relation": "previous"},
+            {"name": next_jie.getName(), "datetime": next_jie.getSolar().toYmdHms(), "relation": "next"},
+        ],
         "da_yun": da_yun,
     }

@@ -12,9 +12,11 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "internal/rensheng-youji-mingli-core/scripts"))
 
 from rensheng_youji.local_engine import build_profile, render_profile  # noqa: E402
 from rensheng_youji.solar_time import resolve_location  # noqa: E402
+from adapter_from_api_profile import boundary_flags  # noqa: E402
 
 
 def test_jiaxu_known_case(tmp_path):
@@ -58,6 +60,22 @@ def test_china_county_location_resolution():
 
     with pytest.raises(ValueError, match="存在重名"):
         resolve_location("朝阳区", None, None)
+
+
+def test_report_boundary_flags_cover_adjacent_hour_day_and_solar_term():
+    near_next_hour = {"time": {"true_solar_time": "1994-10-02 12:59", "correction_minutes": 0}, "bazi": {"nearest_solar_terms": []}}
+    assert "hour_branch_boundary" in boundary_flags(near_next_hour)
+
+    near_day_boundary = {"time": {"true_solar_time": "1994-10-02 23:10", "correction_minutes": 0}, "bazi": {"nearest_solar_terms": []}}
+    flags = boundary_flags(near_day_boundary)
+    assert "hour_branch_boundary" in flags
+    assert "day_boundary" in flags
+
+    near_solar_term = {
+        "time": {"true_solar_time": "1994-10-08 20:20", "correction_minutes": 0},
+        "bazi": {"nearest_solar_terms": [{"name": "寒露", "datetime": "1994-10-08 20:29:05", "relation": "next"}]},
+    }
+    assert "solar_term_boundary" in boundary_flags(near_solar_term)
 
 
 def test_time_pillar_changes_core_landing_and_main_task():
