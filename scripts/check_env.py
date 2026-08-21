@@ -48,7 +48,7 @@ def main() -> int:
     if len(timeline) != 20 or timeline[5]["year"] != 2026:
         print("FAILED: timeline mismatch")
         return 5
-    print("READY: dependencies, assets, chart and v2 free-card pipeline passed")
+    print("READY: dependencies, assets, chart and v2 free-card components passed")
     return 0
 
 
