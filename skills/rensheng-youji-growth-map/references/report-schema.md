@@ -1,4 +1,4 @@
-# 人生有迹报告 JSON v2.2
+# 人生有迹报告 JSON v2.3
 
 把已校验的 Core 母稿提取为 UTF-8 `report.json`。内部 `audit` 只用于核对来源，永远不进入正文。
 
@@ -11,11 +11,11 @@
 
 ```json
 {
-  "schema_version": "2.2.0",
+  "schema_version": "2.3.0",
   "document_mode": "full_calibrated",
   "source": {
     "analysis_id": "与Core一致",
-    "core_version": "0.2.0",
+    "core_version": "0.3.0",
     "analysis_as_of": "2026-08-20",
     "calibration_status": "calibrated"
   },
@@ -30,6 +30,27 @@
     "location": "北京",
     "focus": "事业发展",
     "question": "未来两年更适合继续深耕专业还是尝试管理"
+  },
+  "focus_scope": {
+    "selected_focus": "事业发展",
+    "emphasis_sections": [
+      "executive_summary.current_situation",
+      "executive_summary.direct_answer",
+      "stage_story.present_task",
+      "stage_story.next_direction",
+      "yearly_outlook",
+      "action_guide.priority_actions"
+    ],
+    "excluded_sections": [
+      "executive_summary.life_theme",
+      "executive_summary.capabilities_resources",
+      "executive_summary.formation",
+      "stage_story.previous_foundation",
+      "stage_story.long_range"
+    ],
+    "overview_domains": [
+      "self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"
+    ]
   },
   "chart": {
     "pillars": ["辛未", "丁酉", "庚戌", "丁亥"],
@@ -141,6 +162,9 @@
 ```
 
 ## 固定校验
+
+- `focus_scope` 三组列表必须与示例完全一致，`selected_focus` 必须等于 `profile.focus`。关注方向只决定第4页“当前阶段与问题回应”、相关年度提醒及行动优先级，不得改写完整人生主线、能力资源、形成过程、长期主线或六领域基础判断。
+- 第1页使用渲染器内置的固定产品介绍与 Logo，不读取 `life_theme`、`current_situation`、四柱或关注方向。第3页先呈现完整人生主线，再呈现能力、资源与形成过程。
 
 - 六个领域固定顺序为 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`；每个领域可见正文330—520个汉字。
 - 六个领域必须分别提供以下不可互换的 `specific_judgments`，不得用同一段“能力、责任、资源、成长”换词填充：

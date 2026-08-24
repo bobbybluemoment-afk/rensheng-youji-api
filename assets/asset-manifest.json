@@ -7,6 +7,13 @@
       "width": 888,
       "height": 1131,
       "purpose": "人生有迹正式工作微信图片"
+    },
+    "report_logo": {
+      "path": "assets/rensheng-youji-logo.png",
+      "sha256": "25de53816f50fe9cfa7d56f6c0c6ee15727b455b5f1171300b4ccf6c47ae2a57",
+      "width": 256,
+      "height": 256,
+      "purpose": "人生有迹完整报告固定封面Logo"
     }
   }
 }

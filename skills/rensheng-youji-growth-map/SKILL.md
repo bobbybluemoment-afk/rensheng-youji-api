@@ -10,6 +10,7 @@ description: 根据姓名（可选）、出生年月日时、性别、出生地�
 - 始终复用仓库根目录的确定性排盘与 `rensheng-youji-mingli-core`，不得维护第二套四柱、大运、流年或命理分析规则。
 - Core 负责生成完整 `analysis_bundle`；本 Skill 只负责现实校准、报告取材、篇幅组织与渲染。
 - 报告与免费卡片必须来自同一套 Core，人生主线可以扩写，不能得出相反结论。
+- 用户选择的关注方向只决定第4页“当前阶段与问题回应”的重点，不得改写完整人生主线、能力资源、形成过程或其他领域的基础判断。
 - Skill 免费公开运行，不索要验证码，不调用人生有迹服务器。若当前AI不能运行Skill，可提示用户联系景行获得人工代生成、校准、排版与解释服务。
 - 使用普通中文、条件式表达和可验证现实场景，不承诺事件，不用恐吓引导咨询。
 
@@ -75,7 +76,7 @@ python internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py w
 ## 五条现实校准
 
 1. 完整读取 [calibration.md](references/calibration.md)。
-2. 从 Core 的 `reality_candidate_pool` 选择五组区分度最高的候选，写入同时包含 `display` 与 `audit` 的 `work/calibration-questions.json`；每题用A、B、C三个互斥的具体行为或经历候选加D“都不符合／不确定”，不再询问宽泛描述是否符合。至少覆盖三个生活领域，每条至少使用两个独立证据视角，不能只依赖日主旺衰。
+2. 从 Core 的 `reality_candidate_pool` 选择五组区分度最高的候选，写入同时包含 `display` 与 `audit` 的 `work/calibration-questions.json`；每题用A、B、C三个互斥的具体行为或经历候选加D“都不符合／不确定”，不再询问宽泛描述是否符合。五题至少覆盖四个生活领域，同一领域最多两题，用户关注方向最多两题；每条至少使用两个独立证据视角，不能只依赖日主旺衰。
 3. 运行 `validate_calibration_questions.py`，只把它生成的 `work/calibration-visible.md` 发给用户：
 
 ```bash
@@ -98,8 +99,8 @@ python skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.p
    - [prosperity-guide.md](references/prosperity-guide.md)：现实行动建议；
    - [brand-and-conversion.md](references/brand-and-conversion.md)：免费使用与人工服务入口；
    - [safety-language.md](references/safety-language.md)：健康、财务、关系和隐私边界。
-2. 从已校验的 Core 母稿提取 `report.json`。正式报告使用 `schema_version=2.2.0`、`document_mode=full_calibrated`；六个领域必须填写各自的 `specific_judgments`，让性格落到习惯和处理方式、事业落到行业/岗位/任务候选、财务落到收入来源、关系落到吸引与互动、家庭教育落到角色与路径。不得重新推命，不得从人口常见路径补造用户经历。
-3. 报告开头依次写能力与可用资源、这些方式怎样形成、当前阶段怎样发展，再展开六个领域。
+2. 从已校验的 Core 母稿提取 `report.json`。正式报告使用 `schema_version=2.3.0`、`document_mode=full_calibrated`；必须填写固定 `focus_scope`，明确用户关注方向不得进入完整人生主线、能力资源与形成过程。六个领域必须填写各自的 `specific_judgments`，让性格落到习惯和处理方式、事业落到行业/岗位/任务候选、财务落到收入来源、关系落到吸引与互动、家庭教育落到角色与路径。不得重新推命，不得从人口常见路径补造用户经历。
+3. 完整人生主线先根据原局全局、根苗花果、资源关系、家庭教育、事业财富、亲密关系和长期时运综合生成，再在第4页单独回答用户选择的问题。不得先确定用户关注方向，再反向筛选整份报告的证据。
 4. 时间分析使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系；同时概括更长的大运阶段。
 5. 从同一份校准后 Core 母稿依次运行 `rensheng-youji-free-card-output` 与 `rensheng-youji-free-card-renderer` 的现有新版流程，生成 `work/free-card-output.json`。不得复制旧卡片，也不得在报告目录另写卡片算法。
 6. 运行统一交付命令：
@@ -126,10 +127,10 @@ python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
 
 ## 报告固定结构
 
-1. 基本信息与排盘口径；
-2. 能力与可用资源；
+1. 固定品牌封面与报告介绍；
+2. 完整人生主线、能力与可用资源；
 3. 这些方式怎样形成；
-4. 人生主线、当前阶段与用户问题；
+4. 当前阶段与用户问题；
 5. 性格与内在成长；
 6. 恋爱与伴侣；
 7. 事业发展；
@@ -150,6 +151,8 @@ python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
 - 不包含“初始角色、核心配置、主线任务、人物小传”等旧卡片字段；
 - 六个领域均有实质内容或明确写证据不足，不能把事业段落换词复制到其他领域；
 - 六个领域的具体判断槽位全部通过语义验收；行业、岗位、财富来源和吸引类型不能只写宽泛类别；
+- 完整人生主线与能力形成部分至少覆盖六个现实领域，不能围绕用户关注方向集中取材；
+- 用户关注方向只在第4页、逐年回应与行动优先级中加重，不改变其他领域篇幅与基础结论；
 - 校准答案选择了哪个现实候选，相关章节就引用哪个候选或用户补充事实，不得只提高置信度；
 - 已确认事实、命理推断、社会先验和待验证候选没有混写；
 - 当前问题在开篇和相关章节获得直接回应；

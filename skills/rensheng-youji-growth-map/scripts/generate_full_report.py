@@ -63,6 +63,9 @@ def main() -> int:
                 "wechat_qr_embedded": pdf_result["wechat_embedded"],
                 "wechat_asset": pdf_result["wechat_asset"],
                 "wechat_sha256": pdf_result["wechat_sha256"],
+                "cover_logo_embedded": pdf_result["logo_embedded"],
+                "cover_logo_asset": pdf_result["logo_asset"],
+                "cover_logo_sha256": pdf_result["logo_sha256"],
                 "overflow": False,
             })
         else:

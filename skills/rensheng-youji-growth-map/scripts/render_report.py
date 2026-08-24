@@ -12,6 +12,23 @@ from typing import Any
 
 
 DIMENSION_IDS = ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]
+FOCUS_EMPHASIS_SECTIONS = [
+    "executive_summary.current_situation", "executive_summary.direct_answer",
+    "stage_story.present_task", "stage_story.next_direction", "yearly_outlook",
+    "action_guide.priority_actions",
+]
+FOCUS_EXCLUDED_SECTIONS = [
+    "executive_summary.life_theme", "executive_summary.capabilities_resources",
+    "executive_summary.formation", "stage_story.previous_foundation", "stage_story.long_range",
+]
+FIXED_REPORT_INTRO = "这份报告根据你的出生信息、完整命盘和现实校准生成。它会从性格、家庭、事业、财务、亲密关系与人生阶段之间的联系，梳理你反复出现的能力、选择和课题。请结合自己的真实经历阅读；如果之后还有想继续了解的问题，可以在报告末页找到联系方式。"
+FOCUS_TERMS = {
+    "relationship": ("感情", "情感", "恋爱", "伴侣", "婚姻", "对象", "亲密关系"),
+    "career": ("事业", "工作", "职业", "岗位", "职位", "职场"),
+    "finance": ("财务", "财富", "收入", "金钱", "资产", "工资"),
+    "family": ("家庭", "父母", "家人", "成长环境"),
+    "health": ("身体", "情绪", "健康", "休息"),
+}
 CONFIDENCE = {"高置信", "中等置信", "待验证"}
 BANNED = {"百分之百准确", "保证发财", "保证复合", "必然离婚", "命中注定", "改命消灾", "克夫", "克妻", "婚灾", "大凶"}
 AI_JARGON = {"卡点", "卡住", "换轨", "兑现", "承接", "赛道", "抓手", "底层逻辑", "显化", "能量场"}
@@ -126,11 +143,11 @@ def visible_payload(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def validate(data: dict[str, Any]) -> None:
-    required = ("schema_version", "document_mode", "source", "title", "subtitle", "generated_on", "brand", "profile", "chart", "calibration", "executive_summary", "stage_story", "dimensions", "yearly_outlook", "action_guide", "open_questions", "author", "boundaries")
+    required = ("schema_version", "document_mode", "source", "title", "subtitle", "generated_on", "brand", "profile", "focus_scope", "chart", "calibration", "executive_summary", "stage_story", "dimensions", "yearly_outlook", "action_guide", "open_questions", "author", "boundaries")
     for key in required:
         require(data, key)
-    if data["schema_version"] != "2.2.0":
-        raise ValueError("schema_version must be 2.2.0")
+    if data["schema_version"] != "2.3.0":
+        raise ValueError("schema_version must be 2.3.0")
     mode = data["document_mode"]
     if mode not in {"full_calibrated", "preliminary_uncalibrated"}:
         raise ValueError("document_mode 值无效")
@@ -153,6 +170,15 @@ def validate(data: dict[str, Any]) -> None:
         length(data["profile"]["name"], 1, 20, "profile.name")
     length(data["profile"]["focus"], 2, 20, "profile.focus")
     length(data["profile"]["question"], 8, 80, "profile.question")
+    focus_scope = data["focus_scope"]
+    if focus_scope.get("selected_focus") != data["profile"]["focus"]:
+        raise ValueError("focus_scope.selected_focus 必须与 profile.focus 一致")
+    if focus_scope.get("emphasis_sections") != FOCUS_EMPHASIS_SECTIONS:
+        raise ValueError("focus_scope.emphasis_sections 必须使用固定关注范围")
+    if focus_scope.get("excluded_sections") != FOCUS_EXCLUDED_SECTIONS:
+        raise ValueError("focus_scope.excluded_sections 必须保护完整人生主线与长期判断")
+    if focus_scope.get("overview_domains") != DIMENSION_IDS:
+        raise ValueError("focus_scope.overview_domains 必须完整覆盖六个生活领域")
     chart = data["chart"]
     for key in ("pillars", "luck_start", "current_luck_cycle", "time_basis"):
         require(chart, key, "chart")
@@ -207,6 +233,16 @@ def validate(data: dict[str, Any]) -> None:
     length(summary["formation"], 70, 240, "executive_summary.formation")
     length(summary["current_situation"], 25, 110, "executive_summary.current_situation")
     length(summary["direct_answer"], 35, 150, "executive_summary.direct_answer")
+    selected_focus = data["profile"]["focus"]
+    for terms in FOCUS_TERMS.values():
+        if any(term in selected_focus for term in terms):
+            theme_hits = sum(summary["life_theme"].count(term) for term in terms)
+            if theme_hits > 2:
+                raise ValueError("关注方向过度进入完整人生主线；请先写全盘主线，再在第4页回应用户问题")
+            protected = "".join(summary["capabilities_resources"]) + summary["formation"]
+            if sum(protected.count(term) for term in terms) > 4:
+                raise ValueError("关注方向过度进入能力与形成过程；这些章节必须保持全盘视角")
+            break
 
     stage = data["stage_story"]
     for key in ("previous_foundation", "recent_development", "present_task", "next_direction", "long_range"):
@@ -360,12 +396,13 @@ def render(data: dict[str, Any]) -> str:
     name = profile.get("name") or "未署名"
     lines = [
         f"# {data['title']}", "", f"> {data['subtitle']}", "", f"**{data['brand']}**", "",
+        "## 关于这份报告", "", FIXED_REPORT_INTRO, "", "> 阅读后如果还有想继续了解的问题，请查看第10页联系方式。", "",
         "## 基本信息与排盘口径", "", "| 项目 | 内容 |", "|---|---|",
         f"| 姓名 | {name} |", f"| 身份选项 | {profile['identity_option']} |", f"| 出生时间 | {profile['birth']} |",
         f"| 出生地点 | {profile['location']} |", f"| 最想了解 | {profile['focus']} |", f"| 当前问题 | {profile['question']} |",
         f"| 四柱 | {'　'.join(chart['pillars'])} |", f"| 当前阶段 | {chart['current_luck_cycle']} |", f"| 时间口径 | {chart['time_basis']} |", "",
         f"**校准结果：** {calibration['summary']}（生时状态：{calibration['birth_time_status']}）", "",
-        "## 能力与可用资源", "", summary["life_theme"], "", bullets(summary["capabilities_resources"], True), "",
+        "## 完整人生主线", "", summary["life_theme"], "", "## 能力与可用资源", "", bullets(summary["capabilities_resources"], True), "",
         "## 这些方式怎样形成", "", summary["formation"], "", "## 你现在所处的阶段", "",
         f"**当前最需要处理的是：{summary['current_situation']}**", "", f"**对你当前问题的直接回应：{summary['direct_answer']}**", "",
         "### 阶段怎样一步步发展", "", f"- **上一阶段留下的条件：** {stage['previous_foundation']}", f"- **近几年的发展：** {stage['recent_development']}",

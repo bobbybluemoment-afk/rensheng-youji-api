@@ -17,7 +17,7 @@ SKILL_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = SKILL_ROOT.parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from render_report import specific_lines, validate  # noqa: E402
+from render_report import FIXED_REPORT_INTRO, specific_lines, validate  # noqa: E402
 
 
 WIDTH, HEIGHT = 1240, 1754
@@ -31,6 +31,7 @@ MUTED = "#74736E"
 LIGHT_TEAL = "#DDE8E5"
 FONT_PATH = REPO_ROOT / "assets/fonts/noto/NotoSansCJKsc-Regular.otf"
 WECHAT_PATH = REPO_ROOT / "assets/wechat-contact.jpg"
+LOGO_PATH = REPO_ROOT / "assets/rensheng-youji-logo.png"
 ASSET_MANIFEST_PATH = REPO_ROOT / "assets/asset-manifest.json"
 
 
@@ -52,6 +53,24 @@ def canonical_wechat_asset() -> tuple[Path, str]:
     return WECHAT_PATH, digest
 
 
+def canonical_logo_asset() -> tuple[Path, str]:
+    if not ASSET_MANIFEST_PATH.exists():
+        raise ValueError("缺少正式资源清单 assets/asset-manifest.json")
+    manifest = json.loads(ASSET_MANIFEST_PATH.read_text(encoding="utf-8"))
+    expected = manifest.get("assets", {}).get("report_logo", {})
+    if expected.get("path") != "assets/rensheng-youji-logo.png":
+        raise ValueError("正式资源清单中的报告Logo路径无效")
+    if not LOGO_PATH.exists():
+        raise ValueError("缺少正式报告Logo assets/rensheng-youji-logo.png")
+    digest = hashlib.sha256(LOGO_PATH.read_bytes()).hexdigest()
+    if digest != expected.get("sha256"):
+        raise ValueError("报告Logo与正式资源清单不一致")
+    with Image.open(LOGO_PATH) as source:
+        if list(source.size) != [expected.get("width"), expected.get("height")]:
+            raise ValueError("报告Logo尺寸与正式资源清单不一致")
+    return LOGO_PATH, digest
+
+
 def font(size: int) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(str(FONT_PATH), size=size)
 
@@ -66,8 +85,12 @@ def wrap(draw: ImageDraw.ImageDraw, text: str, text_font: ImageFont.FreeTypeFont
         for char in paragraph:
             candidate = current + char
             if current and draw.textlength(candidate, font=text_font) > width:
-                lines.append(current.rstrip())
-                current = char.lstrip()
+                if char in "，。！？；：、）》】」』”’":
+                    lines.append(candidate.rstrip())
+                    current = ""
+                else:
+                    lines.append(current.rstrip())
+                    current = char.lstrip()
             else:
                 current = candidate
         if current:
@@ -145,37 +168,41 @@ def cover(data: dict[str, Any]) -> Image.Image:
     draw = ImageDraw.Draw(image)
     draw.rounded_rectangle((72, 62, WIDTH - 72, HEIGHT - 62), 32, outline=TEAL, width=4)
     draw.rectangle((72, 62, WIDTH - 72, 92), fill=TEAL)
-    draw.text((112, 210), data["title"], font=font(64), fill=TEAL, stroke_width=1)
+    logo_path, _ = canonical_logo_asset()
+    with Image.open(logo_path) as logo_source:
+        logo = logo_source.convert("RGBA")
+    corner = logo.getpixel((0, 0))[:3]
+    pixels = []
+    for red, green, blue, alpha in logo.getdata():
+        distance = abs(red - corner[0]) + abs(green - corner[1]) + abs(blue - corner[2])
+        pixels.append((red, green, blue, 0 if distance < 28 else alpha))
+    logo.putdata(pixels)
+    logo = logo.resize((270, 270), Image.Resampling.LANCZOS)
+    image.paste(logo, ((WIDTH - logo.width) // 2, 135), logo)
+
+    title_font = font(60)
+    title_x = (WIDTH - draw.textlength(data["title"], font=title_font)) / 2
+    draw.text((title_x, 440), data["title"], font=title_font, fill=TEAL, stroke_width=1)
+    subtitle_font = font(28)
+    subtitle_x = (WIDTH - draw.textlength(data["subtitle"], font=subtitle_font)) / 2
+    draw.text((subtitle_x, 535), data["subtitle"], font=subtitle_font, fill=GOLD)
+    draw.line((190, 600, WIDTH - 190, 600), fill=GOLD, width=3)
+
+    draw.rounded_rectangle((112, 665, WIDTH - 112, 1115), 28, fill="#E7EFEA")
+    draw.text((154, 710), "关于这份报告", font=font(31), fill=TEAL, stroke_width=1)
+    intro_y = 780
+    for line in wrap(draw, FIXED_REPORT_INTRO, font(28), WIDTH - 308):
+        draw.text((154, intro_y), line, font=font(28), fill=INK)
+        intro_y += 46
+    draw.rounded_rectangle((150, 1185, WIDTH - 150, 1285), 20, outline=GOLD, width=3)
+    contact = "阅读后如果还有想继续了解的问题，请查看第10页联系方式。"
+    contact_font = font(24)
+    contact_x = (WIDTH - draw.textlength(contact, font=contact_font)) / 2
+    draw.text((contact_x, 1218), contact, font=contact_font, fill=TEAL)
     name = data["profile"].get("name") or "专属"
-    draw.text((112, 325), f"{name}的人生主线与阶段观察", font=font(34), fill=GOLD)
-    draw.line((112, 405, WIDTH - 112, 405), fill=GOLD, width=4)
-    draw.text((112, 470), "人生主线", font=font(28), fill=MUTED)
-    y = 530
-    body_font = font(34)
-    for line in wrap(draw, data["executive_summary"]["life_theme"], body_font, WIDTH - 224):
-        draw.text((112, y), line, font=body_font, fill=INK)
-        y += 54
-    y += 30
-    draw.rounded_rectangle((104, y, WIDTH - 104, y + 250), 24, fill="#E7EFEA")
-    draw.text((134, y + 26), "当前最需要处理", font=font(27), fill=TEAL, stroke_width=1)
-    body_y = y + 80
-    for line in wrap(draw, data["executive_summary"]["current_situation"], font(29), WIDTH - 268):
-        draw.text((134, body_y), line, font=font(29), fill=INK)
-        body_y += 46
-    chart = data["chart"]
-    profile = data["profile"]
-    info_y = 1240
-    for label, value in [
-        ("出生", f"{profile['birth']}　{profile['location']}"),
-        ("四柱", "　".join(chart["pillars"])),
-        ("关注", profile["focus"]),
-        ("生成", data["generated_on"]),
-    ]:
-        draw.text((112, info_y), label, font=font(22), fill=MUTED)
-        value_lines = wrap(draw, value, font(24), WIDTH - 332)
-        for line_index, line in enumerate(value_lines):
-            draw.text((220, info_y + line_index * 38), line, font=font(24), fill=INK)
-        info_y += max(52, len(value_lines) * 38 + 10)
+    meta = f"{name}｜生成日期 {data['generated_on']}"
+    meta_font = font(22)
+    draw.text(((WIDTH - draw.textlength(meta, font=meta_font)) / 2, 1390), meta, font=meta_font, fill=MUTED)
     draw.text((112, HEIGHT - 150), "人生有迹 by 景行", font=font(25), fill=TEAL)
     draw.text((WIDTH - 180, HEIGHT - 150), "1 / 10", font=font(20), fill=MUTED)
     return image
@@ -200,6 +227,9 @@ def card_page(card_path: Path) -> Image.Image:
 def page_three(data: dict[str, Any]) -> Image.Image:
     page = Page(3, "能力、资源与形成过程")
     summary = data["executive_summary"]
+    page.heading("完整人生主线", color=TEAL)
+    page.paragraph(summary["life_theme"], size=25, indent=True)
+    page.divider()
     page.heading("你已经带来的能力")
     for item in summary["capabilities_resources"]:
         page.bullet(item)
@@ -296,6 +326,7 @@ def render_pdf(data: dict[str, Any], card_path: Path, output: Path, pages_dir: P
     if data["document_mode"] != "full_calibrated":
         raise ValueError("未完成五条校准时只生成初步分析，不生成正式PDF")
     _, wechat_sha256 = canonical_wechat_asset()
+    _, logo_sha256 = canonical_logo_asset()
     pages = [
         cover(data), card_page(card_path), page_three(data), page_four(data),
         dimensions_page(data, 5, (0, 1)), dimensions_page(data, 6, (2, 3)), dimensions_page(data, 7, (4, 5)),
@@ -309,7 +340,7 @@ def render_pdf(data: dict[str, Any], card_path: Path, output: Path, pages_dir: P
             image.save(pages_dir / f"page-{index:02d}.png", format="PNG")
     output.parent.mkdir(parents=True, exist_ok=True)
     pages[0].save(output, format="PDF", save_all=True, append_images=pages[1:], resolution=150.0, quality=92)
-    return {"pages": 10, "page_size": [WIDTH, HEIGHT], "card_size": [1242, 1660], "wechat_embedded": True, "wechat_asset": "assets/wechat-contact.jpg", "wechat_sha256": wechat_sha256}
+    return {"pages": 10, "page_size": [WIDTH, HEIGHT], "card_size": [1242, 1660], "wechat_embedded": True, "wechat_asset": "assets/wechat-contact.jpg", "wechat_sha256": wechat_sha256, "logo_embedded": True, "logo_asset": "assets/rensheng-youji-logo.png", "logo_sha256": logo_sha256}
 
 
 def main() -> int:

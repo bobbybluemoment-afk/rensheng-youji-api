@@ -122,7 +122,7 @@ def _report() -> dict:
         for year in range(2021, 2041)
     ]
     return {
-        "schema_version": "2.2.0",
+        "schema_version": "2.3.0",
         "document_mode": "full_calibrated",
         "source": {"analysis_id": "fixture-v2-pipeline", "core_version": "0.3.0", "analysis_as_of": "2026-08-20", "calibration_status": "calibrated"},
         "title": "人生有迹｜完整报告",
@@ -130,6 +130,12 @@ def _report() -> dict:
         "generated_on": "2026-08-20",
         "brand": "人生有迹 by 景行",
         "profile": {"name": "示例", "identity_option": "女", "birth": "1994-10-02 14:24（普通钟表时间）", "location": "湖北省武汉市", "focus": "事业发展", "question": "未来两年更适合继续积累还是承担新的责任"},
+        "focus_scope": {
+            "selected_focus": "事业发展",
+            "emphasis_sections": ["executive_summary.current_situation", "executive_summary.direct_answer", "stage_story.present_task", "stage_story.next_direction", "yearly_outlook", "action_guide.priority_actions"],
+            "excluded_sections": ["executive_summary.life_theme", "executive_summary.capabilities_resources", "executive_summary.formation", "stage_story.previous_foundation", "stage_story.long_range"],
+            "overview_domains": ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"],
+        },
         "chart": {"pillars": ["甲戌", "癸酉", "丁卯", "丁未"], "luck_start": "1998-01-01 00:00:00", "current_luck_cycle": "阶段示例（2024—2033）", "time_basis": "普通钟表时间输入，已进行真太阳时校正", "uncertainty": "不接近时辰边界", "formal_report_allowed": True},
         "calibration": {
             "summary": "五题均已作答，其中四题形成较清楚的现实路径，一题仍不确定。",
@@ -267,12 +273,16 @@ class FullReportPipelineTest(unittest.TestCase):
             self.assertEqual(manifest["checks"]["pdf_pages"], 10)
             self.assertEqual(manifest["checks"]["wechat_asset"], "assets/wechat-contact.jpg")
             self.assertEqual(manifest["checks"]["wechat_sha256"], "bcfd93fb14cb90557504b23eb3b419fe55eb19f3a7062b77299d24f12d9677e8")
+            self.assertEqual(manifest["checks"]["cover_logo_asset"], "assets/rensheng-youji-logo.png")
+            self.assertEqual(manifest["checks"]["cover_logo_sha256"], "25de53816f50fe9cfa7d56f6c0c6ee15727b455b5f1171300b4ccf6c47ae2a57")
             self.assertEqual(len(list((delivery / "report-pages").glob("page-*.png"))), 10)
             self.assertEqual(len(re.findall(rb"/Type\s*/Page\b", pdf.read_bytes())), 10)
             with Image.open(card) as image:
                 self.assertEqual(image.size, (1242, 1660))
             rendered = markdown.read_text(encoding="utf-8")
             self.assertIn("# 人生有迹｜完整报告", rendered)
+            self.assertIn("这份报告根据你的出生信息、完整命盘和现实校准生成", rendered)
+            self.assertIn("## 完整人生主线", rendered)
             self.assertNotIn("初始角色", rendered)
             self.assertNotIn("主线任务", rendered)
 
@@ -285,6 +295,29 @@ class FullReportPipelineTest(unittest.TestCase):
             result = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")], cwd=ROOT, text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 1)
             self.assertIn("过于宽泛", result.stdout)
+
+    def test_focus_scope_rejects_overfocused_life_theme(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rensheng-youji-focus-") as temp_dir:
+            source = Path(temp_dir) / "report.json"
+            report = _report()
+            report["profile"]["focus"] = "情感方向"
+            report["focus_scope"]["selected_focus"] = "情感方向"
+            report["executive_summary"]["life_theme"] = _repeat("你的感情关系与伴侣选择一直围绕亲密关系发展，并继续影响感情安排。", 65)
+            source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("关注方向过度进入完整人生主线", result.stdout)
+
+    def test_calibration_must_cover_four_domains(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rensheng-youji-domain-") as temp_dir:
+            source = Path(temp_dir) / "questions.json"
+            data = _calibration_questions()
+            for index, domain in enumerate(["事业与组织", "事业与组织", "关系", "关系", "财务"]):
+                data["questions"][index]["display"]["domain"] = domain
+            source.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run([sys.executable, str(CALIBRATION_VALIDATOR), str(source)], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 3)
+            self.assertIn("至少覆盖四个生活领域", result.stdout)
 
     def test_unapproved_wechat_asset_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-qr-") as temp_dir:

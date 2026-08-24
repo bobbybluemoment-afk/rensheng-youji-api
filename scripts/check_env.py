@@ -30,6 +30,7 @@ def main() -> int:
         ROOT / "skills/rensheng-youji-growth-map/scripts/generate_full_report.py",
         ROOT / "skills/rensheng-youji-growth-map/scripts/render_report_pdf.py",
         ROOT / "assets/wechat-contact.jpg",
+        ROOT / "assets/rensheng-youji-logo.png",
         ROOT / "assets/asset-manifest.json",
     ]
     missing = [str(path) for path in required if not path.exists()]
@@ -70,7 +71,7 @@ def main() -> int:
         print("FAILED: v2 card -> fixed 10-page report pipeline")
         print(report_test.stdout or report_test.stderr)
         return 6
-    print("READY: dependencies, chart, v2 card and fixed 10-page report pipeline passed")
+    print("READY: dependencies, chart, v2 card, fixed cover and 10-page report pipeline passed")
     return 0
 
 

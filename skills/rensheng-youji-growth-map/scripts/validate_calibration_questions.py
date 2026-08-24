@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from difflib import SequenceMatcher
 import json
 import re
@@ -46,6 +47,7 @@ def validate(data: Any) -> list[str]:
         return errors + ["questions 必须恰好包含五条"]
 
     domains: set[str] = set()
+    domain_counts: Counter[str] = Counter()
     numbers: list[int] = []
     for index, question in enumerate(questions):
         path = f"questions[{index}]"
@@ -73,6 +75,7 @@ def validate(data: Any) -> list[str]:
             errors.append(f"{path}.display.domain 不在允许范围")
         else:
             domains.add(domain)
+            domain_counts[domain] += 1
         visible_parts: list[str] = []
         if not isinstance(prompt, str):
             errors.append(f"{path}.display.prompt 必须是文字")
@@ -149,8 +152,11 @@ def validate(data: Any) -> list[str]:
 
     if numbers != [1, 2, 3, 4, 5]:
         errors.append("五条题目的 number 必须依次为1—5")
-    if len(domains) < 3:
-        errors.append("五条题目至少覆盖三个生活领域")
+    if len(domains) < 4:
+        errors.append("五条题目至少覆盖四个生活领域")
+    for domain, count in domain_counts.items():
+        if count > 2:
+            errors.append(f"同一生活领域最多两题：{domain} 当前{count}题")
     return errors
 
 
