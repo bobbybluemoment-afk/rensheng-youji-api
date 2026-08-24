@@ -2,5 +2,6 @@ venv/
 __pycache__/
 *.pyc
 *.png
+!assets/rensheng-youji-logo.png
 *.profile.json
 .DS_Store

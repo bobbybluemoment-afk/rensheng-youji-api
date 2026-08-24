@@ -7,6 +7,7 @@ import argparse
 import json
 import re
 from collections.abc import Iterable
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,7 @@ FOCUS_EMPHASIS_SECTIONS = [
 FOCUS_EXCLUDED_SECTIONS = [
     "executive_summary.life_theme", "executive_summary.capabilities_resources",
     "executive_summary.formation", "stage_story.previous_foundation", "stage_story.long_range",
+    "dimensions",
 ]
 FIXED_REPORT_INTRO = "这份报告根据你的出生信息、完整命盘和现实校准生成。它会从性格、家庭、事业、财务、亲密关系与人生阶段之间的联系，梳理你反复出现的能力、选择和课题。请结合自己的真实经历阅读；如果之后还有想继续了解的问题，可以在报告末页找到联系方式。"
 FOCUS_TERMS = {
@@ -32,7 +34,10 @@ FOCUS_TERMS = {
 CONFIDENCE = {"高置信", "中等置信", "待验证"}
 BANNED = {"百分之百准确", "保证发财", "保证复合", "必然离婚", "命中注定", "改命消灾", "克夫", "克妻", "婚灾", "大凶"}
 AI_JARGON = {"卡点", "卡住", "换轨", "兑现", "承接", "赛道", "抓手", "底层逻辑", "显化", "能量场"}
-MINGLI_TERMS = {"日主", "身强", "身弱", "比肩", "劫财", "食神", "伤官", "正印", "偏印", "正财", "偏财", "正官", "七杀", "格局", "喜用", "忌神", "大运", "流年", "藏干", "刑冲合害", "根苗花果"}
+MINGLI_TERMS = {"日主", "身强", "身弱", "比肩", "劫财", "食神", "伤官", "食伤", "正印", "偏印", "正财", "偏财", "正官", "七杀", "格局", "喜用", "忌神", "大运", "流年", "藏干", "透干", "透出", "得令", "刑冲合害", "根苗花果", "财多身弱"}
+MINGLI_PATTERN = re.compile(r"(?:[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥][木火土金水])")
+FOCUS_GENERIC_KEYWORDS = {"事业", "工作", "职业", "感情", "关系", "恋爱", "财务", "财富", "收入", "家庭", "健康", "身体", "情绪", "发展", "方向", "问题", "未来", "当前", "进展", "选择"}
+UNSUPPORTED_GLYPHS = {"□", "�"}
 OLD_FIELDS = {"initial_role", "core_configuration", "main_task", "portrait"}
 PREFERRED_LENSES = {"root_seed_flower_fruit_map", "cross_method_analysis", "resource_relationship", "luck_cycle_themes", "annual_theme_activation", "domain_connections"}
 GENERIC_CANDIDATES = {"专业", "技术", "业务", "管理", "表达", "创意", "资源", "稳定", "成长", "综合岗位", "一般岗位", "相关行业"}
@@ -108,6 +113,13 @@ def list_length(items: Any, minimum: int, maximum: int, where: str) -> list[Any]
     return items
 
 
+def reject_past_years(value: Any, current_year: int, where: str) -> None:
+    years = [int(item) for item in re.findall(r"(?<!\d)(20\d{2})(?!\d)", json.dumps(value, ensure_ascii=False))]
+    past = sorted({year for year in years if year < current_year})
+    if past:
+        raise ValueError(f"{where} 属于当前或未来行动，不得使用过去年份：{past}")
+
+
 def specific_lines(section: dict[str, Any]) -> list[str]:
     values = section["specific_judgments"]
     lines: list[str] = []
@@ -143,11 +155,15 @@ def visible_payload(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def validate(data: dict[str, Any]) -> None:
-    required = ("schema_version", "document_mode", "source", "title", "subtitle", "generated_on", "brand", "profile", "focus_scope", "chart", "calibration", "executive_summary", "stage_story", "dimensions", "yearly_outlook", "action_guide", "open_questions", "author", "boundaries")
+    required = ("schema_version", "document_mode", "source", "title", "subtitle", "generated_on", "brand", "profile", "focus_scope", "cross_output_consistency", "chart", "calibration", "executive_summary", "stage_story", "dimensions", "yearly_outlook", "action_guide", "open_questions", "author", "boundaries")
     for key in required:
         require(data, key)
-    if data["schema_version"] != "2.3.0":
-        raise ValueError("schema_version must be 2.3.0")
+    if data["schema_version"] != "2.3.1":
+        raise ValueError("schema_version must be 2.3.1")
+    try:
+        generated_on = date.fromisoformat(data["generated_on"])
+    except (TypeError, ValueError) as exc:
+        raise ValueError("generated_on 必须为YYYY-MM-DD") from exc
     mode = data["document_mode"]
     if mode not in {"full_calibrated", "preliminary_uncalibrated"}:
         raise ValueError("document_mode 值无效")
@@ -160,6 +176,8 @@ def validate(data: dict[str, Any]) -> None:
         require(source, key, "source")
     if source["core_version"] != "0.3.0":
         raise ValueError("完整报告必须来自 core_version=0.3.0 的母稿")
+    if source["analysis_as_of"] != data["generated_on"]:
+        raise ValueError("source.analysis_as_of 必须与 generated_on 为同一天，避免行动建议使用过期年份")
     expected_status = "calibrated" if mode == "full_calibrated" else "skipped"
     if source["calibration_status"] != expected_status:
         raise ValueError(f"{mode} 必须使用 calibration_status={expected_status}")
@@ -179,6 +197,11 @@ def validate(data: dict[str, Any]) -> None:
         raise ValueError("focus_scope.excluded_sections 必须保护完整人生主线与长期判断")
     if focus_scope.get("overview_domains") != DIMENSION_IDS:
         raise ValueError("focus_scope.overview_domains 必须完整覆盖六个生活领域")
+    topic_keywords = list_length(focus_scope.get("topic_keywords"), 1, 4, "focus_scope.topic_keywords")
+    for index, keyword in enumerate(topic_keywords):
+        length(keyword, 2, 8, f"focus_scope.topic_keywords[{index}]")
+        if keyword in FOCUS_GENERIC_KEYWORDS:
+            raise ValueError(f"focus_scope.topic_keywords[{index}] 过于宽泛，必须提取当前问题中的具体对象或选择")
     chart = data["chart"]
     for key in ("pillars", "luck_start", "current_luck_cycle", "time_basis"):
         require(chart, key, "chart")
@@ -233,6 +256,7 @@ def validate(data: dict[str, Any]) -> None:
     length(summary["formation"], 70, 240, "executive_summary.formation")
     length(summary["current_situation"], 25, 110, "executive_summary.current_situation")
     length(summary["direct_answer"], 35, 150, "executive_summary.direct_answer")
+    reject_past_years(summary["direct_answer"], generated_on.year, "executive_summary.direct_answer")
     selected_focus = data["profile"]["focus"]
     for terms in FOCUS_TERMS.values():
         if any(term in selected_focus for term in terms):
@@ -248,6 +272,8 @@ def validate(data: dict[str, Any]) -> None:
     for key in ("previous_foundation", "recent_development", "present_task", "next_direction", "long_range"):
         require(stage, key, "stage_story")
         length(stage[key], 25, 110, f"stage_story.{key}")
+    reject_past_years(stage["present_task"], generated_on.year, "stage_story.present_task")
+    reject_past_years(stage["next_direction"], generated_on.year, "stage_story.next_direction")
 
     dimensions = data["dimensions"]
     if [section.get("id") for section in dimensions] != DIMENSION_IDS:
@@ -286,8 +312,10 @@ def validate(data: dict[str, Any]) -> None:
         for paragraph_index, paragraph in enumerate(list_length(section["analysis"], 2, 3, f"{where}.analysis")):
             length(paragraph, 70, 190, f"{where}.analysis[{paragraph_index}]")
         length(section["current_focus"], 20, 85, f"{where}.current_focus")
+        reject_past_years(section["current_focus"], generated_on.year, f"{where}.current_focus")
         for item_index, item in enumerate(list_length(section["suggestions"], 1, 3, f"{where}.suggestions")):
             length(item, 15, 70, f"{where}.suggestions[{item_index}]")
+        reject_past_years(section["suggestions"], generated_on.year, f"{where}.suggestions")
         visible_section = {key: value for key, value in section.items() if key not in {"audit", "id", "title", "confidence"}}
         section_count = cjk_count(json.dumps(visible_section, ensure_ascii=False))
         if not 330 <= section_count <= 520:
@@ -319,6 +347,17 @@ def validate(data: dict[str, Any]) -> None:
     missing_notes = reported_user_notes - audited_user_facts
     if missing_notes:
         raise ValueError("用户在校准中补充的具体事实没有进入相关章节来源审计")
+    protected_focus_text = json.dumps({
+        "life_theme": summary["life_theme"],
+        "capabilities_resources": summary["capabilities_resources"],
+        "formation": summary["formation"],
+        "previous_foundation": stage["previous_foundation"],
+        "long_range": stage["long_range"],
+        "dimensions": [{key: value for key, value in section.items() if key not in {"audit", "id", "title", "confidence"}} for section in dimensions],
+    }, ensure_ascii=False)
+    for keyword in topic_keywords:
+        if protected_focus_text.count(keyword) > 2:
+            raise ValueError(f"用户当前问题关键词“{keyword}”过度进入六领域基础分析；请只在第4页、逐年观察与行动建议中重点回应")
 
     outlook = data["yearly_outlook"]
     for key in ("start_year", "end_year", "summary", "years"):
@@ -329,6 +368,12 @@ def validate(data: dict[str, Any]) -> None:
     actual = [item.get("year") for item in years]
     if actual != expected or len(years) != 20:
         raise ValueError("yearly_outlook.years 必须是连续20年并匹配起止年份")
+    consistency = data["cross_output_consistency"]
+    relationship_years = consistency.get("relationship_opportunity_years")
+    if not isinstance(relationship_years, list) or relationship_years != sorted(set(relationship_years)):
+        raise ValueError("cross_output_consistency.relationship_opportunity_years 必须是升序且不重复的年份列表")
+    if any(not isinstance(year, int) or year not in expected for year in relationship_years):
+        raise ValueError("cross_output_consistency.relationship_opportunity_years 必须位于报告20年范围内")
     for index, item in enumerate(years):
         where = f"yearly_outlook.years[{index}]"
         for key in ("year", "theme", "carry_in", "likely_expression", "seed_for_next", "confidence"):
@@ -347,11 +392,13 @@ def validate(data: dict[str, Any]) -> None:
         require(guide, key, "action_guide")
     for index, item in enumerate(list_length(guide["priority_actions"], 3, 3, "action_guide.priority_actions")):
         length(item, 18, 75, f"action_guide.priority_actions[{index}]")
+    reject_past_years(guide["priority_actions"], generated_on.year, "action_guide.priority_actions")
     length(guide["reduce"], 18, 80, "action_guide.reduce")
     for index, item in enumerate(list_length(guide["traditional_preferences"], 2, 5, "traditional_preferences")):
         require(item, "area", f"traditional_preferences[{index}]")
         require(item, "advice", f"traditional_preferences[{index}]")
         length(item["advice"], 18, 80, f"traditional_preferences[{index}].advice")
+    reject_past_years(guide["traditional_preferences"], generated_on.year, "action_guide.traditional_preferences")
     for index, item in enumerate(list_length(data["open_questions"], 2, 5, "open_questions")):
         length(item, 10, 80, f"open_questions[{index}]")
 
@@ -370,6 +417,9 @@ def validate(data: dict[str, Any]) -> None:
         if f'"{old_field}"' in serialized:
             raise ValueError(f"Old report field found: {old_field}")
     visible = json.dumps(visible_payload(data), ensure_ascii=False)
+    bad_glyphs = sorted(glyph for glyph in UNSUPPORTED_GLYPHS if glyph in visible)
+    if bad_glyphs:
+        raise ValueError("用户可见正文包含缺字或替代方框：" + "、".join(bad_glyphs))
     found = sorted(term for term in BANNED if term in visible)
     if found:
         raise ValueError("Banned language found: " + "、".join(found))
@@ -378,9 +428,10 @@ def validate(data: dict[str, Any]) -> None:
         raise ValueError("AI-style jargon found: " + "、".join(jargon))
     if re.search(r"\b(?:c\d+|candidate[_-]?\w*)\b", visible, re.IGNORECASE):
         raise ValueError("用户可见正文泄露内部候选编号")
-    term_hits = sum(visible.count(term) for term in MINGLI_TERMS)
-    if term_hits > 12:
-        raise ValueError(f"正文命理术语过多：{term_hits}次，最多12次")
+    found_mingli = sorted(term for term in MINGLI_TERMS if term in visible)
+    pattern_hits = sorted(set(MINGLI_PATTERN.findall(visible)))
+    if found_mingli or pattern_hits:
+        raise ValueError("用户可见正文不得直接出现内部命理术语：" + "、".join(found_mingli + pattern_hits))
     total_cjk = cjk_count(visible)
     if mode == "full_calibrated" and not 4500 <= total_cjk <= 6500:
         raise ValueError(f"正式报告正文应为4500—6500个汉字，当前{total_cjk}")

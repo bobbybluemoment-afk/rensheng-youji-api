@@ -40,6 +40,17 @@ def main() -> int:
         for key in ("analysis_id", "core_version"):
             if report_source.get(key) != card_source.get(key):
                 raise ValueError(f"报告与新版卡片不是来自同一Core母稿：source.{key}不一致")
+        report_relationship_years = report.get("cross_output_consistency", {}).get("relationship_opportunity_years")
+        card_relationship_years = [
+            item.get("year")
+            for item in free_card.get("trend_panel", {}).get("years", [])
+            if item.get("peach", {}).get("highlight") is True
+        ]
+        if report_relationship_years != card_relationship_years:
+            raise ValueError(
+                "报告中的明显关系机会年份与新版卡片桃花年份不一致："
+                f"report={report_relationship_years} card={card_relationship_years}"
+            )
         output = args.out_dir.resolve()
         output.mkdir(parents=True, exist_ok=True)
         markdown = output / ("rensheng-youji-full-report.md" if report.get("document_mode") == "full_calibrated" else "rensheng-youji-preliminary.md")
@@ -50,7 +61,7 @@ def main() -> int:
         run([sys.executable, str(REPO_ROOT / "scripts/generate_card.py"), "--input", str(args.free_card), "--output", str(card)])
         run([sys.executable, str(SKILL_ROOT / "scripts/render_report.py"), str(args.report), "--out", str(markdown)])
         files = {"card_png": str(card), "markdown": str(markdown)}
-        checks = {"new_card_size": [1242, 1660], "report_json_valid": True}
+        checks = {"new_card_size": [1242, 1660], "report_json_valid": True, "relationship_years_match_card": True}
         if report.get("document_mode") == "full_calibrated":
             command = [sys.executable, str(SKILL_ROOT / "scripts/render_report_pdf.py"), str(args.report), "--card", str(card), "--out", str(pdf)]
             if args.keep_pages:

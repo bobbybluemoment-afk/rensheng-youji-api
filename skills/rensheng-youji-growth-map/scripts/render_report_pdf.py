@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -17,7 +18,7 @@ SKILL_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = SKILL_ROOT.parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from render_report import FIXED_REPORT_INTRO, specific_lines, validate  # noqa: E402
+from render_report import FIXED_REPORT_INTRO, cjk_count, specific_lines, validate  # noqa: E402
 
 
 WIDTH, HEIGHT = 1240, 1754
@@ -33,6 +34,12 @@ FONT_PATH = REPO_ROOT / "assets/fonts/noto/NotoSansCJKsc-Regular.otf"
 WECHAT_PATH = REPO_ROOT / "assets/wechat-contact.jpg"
 LOGO_PATH = REPO_ROOT / "assets/rensheng-youji-logo.png"
 ASSET_MANIFEST_PATH = REPO_ROOT / "assets/asset-manifest.json"
+
+
+def normalize_display_text(value: Any) -> str:
+    text = str(value).translate(str.maketrans({"％": "%", "﹪": "%", "–": "-", "‑": "-"}))
+    text = re.sub(r"(\d+(?:\.\d+)?)%\s*[—-]\s*(\d+(?:\.\d+)?)%", r"百分之\1到百分之\2", text)
+    return re.sub(r"(\d+(?:\.\d+)?)%", r"百分之\1", text)
 
 
 def canonical_wechat_asset() -> tuple[Path, str]:
@@ -77,7 +84,7 @@ def font(size: int) -> ImageFont.FreeTypeFont:
 
 def wrap(draw: ImageDraw.ImageDraw, text: str, text_font: ImageFont.FreeTypeFont, width: int) -> list[str]:
     lines: list[str] = []
-    for paragraph in str(text).splitlines() or [""]:
+    for paragraph in normalize_display_text(text).splitlines() or [""]:
         if not paragraph:
             lines.append("")
             continue
@@ -145,6 +152,21 @@ class Page:
         self._space(10)
         self.draw.line((MARGIN_X, self.y, WIDTH - MARGIN_X, self.y), fill=LIGHT_TEAL, width=3)
         self.y += 20
+
+    def callout(self, label: str, text: str, *, size: int = 27, fill: str = "#E7EFEA") -> None:
+        text_font = font(size)
+        lines = wrap(self.draw, text, text_font, WIDTH - 2 * (MARGIN_X + 34))
+        line_height = size + 14
+        height = 62 + len(lines) * line_height + 30
+        self._ensure(height)
+        top = self.y
+        self.draw.rounded_rectangle((MARGIN_X, top, WIDTH - MARGIN_X, top + height), 22, fill=fill)
+        self.draw.text((MARGIN_X + 30, top + 22), label, font=font(23), fill=TEAL, stroke_width=1)
+        text_y = top + 62
+        for line in lines:
+            self.draw.text((MARGIN_X + 30, text_y), line, font=text_font, fill=INK)
+            text_y += line_height
+        self.y = top + height + 18
 
     def _space(self, amount: int) -> None:
         self._ensure(amount)
@@ -227,31 +249,36 @@ def card_page(card_path: Path) -> Image.Image:
 def page_three(data: dict[str, Any]) -> Image.Image:
     page = Page(3, "能力、资源与形成过程")
     summary = data["executive_summary"]
-    page.heading("完整人生主线", color=TEAL)
-    page.paragraph(summary["life_theme"], size=25, indent=True)
-    page.divider()
-    page.heading("你已经带来的能力")
-    for item in summary["capabilities_resources"]:
-        page.bullet(item)
-    page.divider()
-    page.heading("这些方式怎样形成", color=TEAL)
-    page.paragraph(summary["formation"], indent=True)
-    page.heading("校准后的现实线索", color=PINK)
     calibration = data["calibration"]
+    load = cjk_count(summary["life_theme"]) + cjk_count(summary["capabilities_resources"]) + cjk_count(summary["formation"]) + cjk_count(calibration["confirmed"] + calibration["partial"])
+    body_size = 24 if load > 520 else 27
+    bullet_size = 23 if load > 520 else 26
+    page.heading("完整人生主线", color=TEAL, size=32)
+    page.callout("这条主线怎样贯穿不同阶段", summary["life_theme"], size=body_size)
+    page.divider()
+    page.heading("你已经带来的能力", size=31)
+    for item in summary["capabilities_resources"]:
+        page.bullet(item, size=bullet_size)
+    page.divider()
+    page.heading("这些方式怎样形成", color=TEAL, size=31)
+    page.paragraph(summary["formation"], size=body_size, indent=True, gap=20)
+    page.heading("校准后的现实线索", color=PINK, size=29)
     for item in (calibration["confirmed"] + calibration["partial"])[:4]:
-        page.bullet(item, accent=PINK)
+        page.bullet(item, size=bullet_size - 1, accent=PINK)
     return page.finish()
 
 
 def page_four(data: dict[str, Any]) -> Image.Image:
     page = Page(4, "当前阶段与问题回应")
     summary, stage = data["executive_summary"], data["stage_story"]
-    page.paragraph("你想问｜" + data["profile"]["question"], size=24, color=PINK)
-    page.heading("对当前问题的直接回应")
-    page.paragraph(summary["direct_answer"], size=29)
-    page.heading("阶段怎样一步步走到现在", color=TEAL)
+    load = cjk_count(summary["direct_answer"]) + sum(cjk_count(stage[key]) for key in stage)
+    answer_size = 27 if load > 520 else 31
+    label_size = 21 if load > 520 else 24
+    page.paragraph("你想问｜" + data["profile"]["question"], size=26, color=PINK, gap=18)
+    page.callout("对当前问题的直接回应", summary["direct_answer"], size=answer_size, fill="#F2E4E6")
+    page.heading("阶段怎样一步步走到现在", color=TEAL, size=31)
     for label, key in [("上一阶段", "previous_foundation"), ("近几年", "recent_development"), ("现在", "present_task"), ("未来两三年", "next_direction"), ("更长阶段", "long_range")]:
-        page.label(label, stage[key])
+        page.label(label, stage[key], size=label_size)
     return page.finish()
 
 

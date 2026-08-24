@@ -10,7 +10,7 @@ description: 根据姓名（可选）、出生年月日时、性别、出生地�
 - 始终复用仓库根目录的确定性排盘与 `rensheng-youji-mingli-core`，不得维护第二套四柱、大运、流年或命理分析规则。
 - Core 负责生成完整 `analysis_bundle`；本 Skill 只负责现实校准、报告取材、篇幅组织与渲染。
 - 报告与免费卡片必须来自同一套 Core，人生主线可以扩写，不能得出相反结论。
-- 用户选择的关注方向只决定第4页“当前阶段与问题回应”的重点，不得改写完整人生主线、能力资源、形成过程或其他领域的基础判断。
+- 用户选择的关注方向只决定第4页“当前阶段与问题回应”、对应逐年提醒与行动优先级，不得改写完整人生主线、能力资源、形成过程或六个领域的基础判断。
 - Skill 免费公开运行，不索要验证码，不调用人生有迹服务器。若当前AI不能运行Skill，可提示用户联系景行获得人工代生成、校准、排版与解释服务。
 - 使用普通中文、条件式表达和可验证现实场景，不承诺事件，不用恐吓引导咨询。
 
@@ -99,10 +99,10 @@ python skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.p
    - [prosperity-guide.md](references/prosperity-guide.md)：现实行动建议；
    - [brand-and-conversion.md](references/brand-and-conversion.md)：免费使用与人工服务入口；
    - [safety-language.md](references/safety-language.md)：健康、财务、关系和隐私边界。
-2. 从已校验的 Core 母稿提取 `report.json`。正式报告使用 `schema_version=2.3.0`、`document_mode=full_calibrated`；必须填写固定 `focus_scope`，明确用户关注方向不得进入完整人生主线、能力资源与形成过程。六个领域必须填写各自的 `specific_judgments`，让性格落到习惯和处理方式、事业落到行业/岗位/任务候选、财务落到收入来源、关系落到吸引与互动、家庭教育落到角色与路径。不得重新推命，不得从人口常见路径补造用户经历。
+2. 从已校验的 Core 母稿提取 `report.json`。正式报告使用 `schema_version=2.3.1`、`document_mode=full_calibrated`；必须填写固定 `focus_scope`，并从当前问题提取1—4个具体 `topic_keywords`。这些关键词在完整人生主线、能力形成和六领域基础正文中合计不得反复出现，只能在第4页、逐年提醒与行动优先级中重点展开。六个领域必须填写各自的 `specific_judgments`，让性格落到习惯和处理方式、事业落到一般适配的行业/岗位/任务候选、财务落到通常的收入来源、关系落到吸引与互动、家庭教育落到角色与路径。不得重新推命，不得从人口常见路径补造用户经历。
 3. 完整人生主线先根据原局全局、根苗花果、资源关系、家庭教育、事业财富、亲密关系和长期时运综合生成，再在第4页单独回答用户选择的问题。不得先确定用户关注方向，再反向筛选整份报告的证据。
 4. 时间分析使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系；同时概括更长的大运阶段。
-5. 从同一份校准后 Core 母稿依次运行 `rensheng-youji-free-card-output` 与 `rensheng-youji-free-card-renderer` 的现有新版流程，生成 `work/free-card-output.json`。不得复制旧卡片，也不得在报告目录另写卡片算法。
+5. 从同一份校准后 Core 母稿依次运行 `rensheng-youji-free-card-output` 与 `rensheng-youji-free-card-renderer` 的现有新版流程，生成 `work/free-card-output.json`。将卡片中实际高亮的桃花年份原样写入 `report.json.cross_output_consistency.relationship_opportunity_years`；若卡片全部留白则填写空列表，报告不得把其他年份写成明显关系进入或发展机会。不得复制旧卡片，也不得在报告目录另写卡片算法。
 6. 运行统一交付命令：
 
 ```bash
@@ -153,6 +153,9 @@ python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
 - 六个领域的具体判断槽位全部通过语义验收；行业、岗位、财富来源和吸引类型不能只写宽泛类别；
 - 完整人生主线与能力形成部分至少覆盖六个现实领域，不能围绕用户关注方向集中取材；
 - 用户关注方向只在第4页、逐年回应与行动优先级中加重，不改变其他领域篇幅与基础结论；
+- 用户可见正文不得出现日主、十神、天干地支、透干、身强身弱等内部命理术语；这些只保留在Core与审计字段中；
+- “现在最值得做的三件事”、当前重点与未来方向不得把过去年份写成尚待执行的建议；
+- 报告明显关系机会年份与卡片桃花年份完全一致；百分号等常用符号渲染后不得出现缺字方框；
 - 校准答案选择了哪个现实候选，相关章节就引用哪个候选或用户补充事实，不得只提高置信度；
 - 已确认事实、命理推断、社会先验和待验证候选没有混写；
 - 当前问题在开篇和相关章节获得直接回应；

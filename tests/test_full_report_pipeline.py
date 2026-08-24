@@ -22,6 +22,8 @@ REPORT_RENDERER = ROOT / "skills/rensheng-youji-growth-map/scripts/render_report
 CALIBRATION_VALIDATOR = ROOT / "skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py"
 DELIVERY_GENERATOR = ROOT / "skills/rensheng-youji-growth-map/scripts/generate_full_report.py"
 PREFLIGHT = ROOT / "skills/rensheng-youji-growth-map/scripts/preflight_report.py"
+sys.path.insert(0, str(ROOT / "skills/rensheng-youji-growth-map/scripts"))
+from render_report_pdf import normalize_display_text  # noqa: E402
 
 
 def _repeat(seed: str, target: int) -> str:
@@ -122,7 +124,7 @@ def _report() -> dict:
         for year in range(2021, 2041)
     ]
     return {
-        "schema_version": "2.3.0",
+        "schema_version": "2.3.1",
         "document_mode": "full_calibrated",
         "source": {"analysis_id": "fixture-v2-pipeline", "core_version": "0.3.0", "analysis_as_of": "2026-08-20", "calibration_status": "calibrated"},
         "title": "人生有迹｜完整报告",
@@ -133,9 +135,11 @@ def _report() -> dict:
         "focus_scope": {
             "selected_focus": "事业发展",
             "emphasis_sections": ["executive_summary.current_situation", "executive_summary.direct_answer", "stage_story.present_task", "stage_story.next_direction", "yearly_outlook", "action_guide.priority_actions"],
-            "excluded_sections": ["executive_summary.life_theme", "executive_summary.capabilities_resources", "executive_summary.formation", "stage_story.previous_foundation", "stage_story.long_range"],
+            "excluded_sections": ["executive_summary.life_theme", "executive_summary.capabilities_resources", "executive_summary.formation", "stage_story.previous_foundation", "stage_story.long_range", "dimensions"],
             "overview_domains": ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"],
+            "topic_keywords": ["承担新责任"],
         },
+        "cross_output_consistency": {"relationship_opportunity_years": [2026, 2032, 2037]},
         "chart": {"pillars": ["甲戌", "癸酉", "丁卯", "丁未"], "luck_start": "1998-01-01 00:00:00", "current_luck_cycle": "阶段示例（2024—2033）", "time_basis": "普通钟表时间输入，已进行真太阳时校正", "uncertainty": "不接近时辰边界", "formal_report_allowed": True},
         "calibration": {
             "summary": "五题均已作答，其中四题形成较清楚的现实路径，一题仍不确定。",
@@ -166,7 +170,7 @@ def _report() -> dict:
         "dimensions": dimensions,
         "yearly_outlook": {"start_year": 2021, "end_year": 2040, "summary": _repeat("这二十年更像一段持续积累、调整责任并逐步留下结果的过程。年份之间存在前后联系，变化主要来自已经形成的能力、关系与现实选择，不宜单独判断某年一定好或坏。", 95), "years": years},
         "action_guide": {
-            "priority_actions": [_repeat("明确下一阶段最希望增加的一项能力，以及它能形成什么现实结果。", 38), _repeat("比较不同选择能否带来职位、收入、作品或更清楚的职责范围。", 38), _repeat("为工作、关系与休息分别保留固定时间，每月核对一次真实投入。", 38)],
+            "priority_actions": [_repeat("明确下一阶段最希望增加的一项能力，以及它能形成什么现实结果。", 38), "将每月可支配收入的20％—30％先转入独立储蓄账户，再安排可以承受损失的尝试预算。", _repeat("为工作、关系与休息分别保留固定时间，每月核对一次真实投入。", 38)],
             "reduce": _repeat("减少在信息不足时同时准备过多方案，先验证最关键的一个条件。", 38),
             "traditional_preferences": [{"area": "家居与工作区", "advice": _repeat("保持明亮整洁，并为重要任务留出固定位置和连续时间。", 32)}, {"area": "人情往来", "advice": _repeat("重要责任提前说清范围，减少模糊答应后再独自完成。", 32)}],
         },
@@ -318,6 +322,54 @@ class FullReportPipelineTest(unittest.TestCase):
             result = subprocess.run([sys.executable, str(CALIBRATION_VALIDATOR), str(source)], cwd=ROOT, text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 3)
             self.assertIn("至少覆盖四个生活领域", result.stdout)
+
+    def test_past_year_cannot_appear_in_current_actions(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rensheng-youji-past-action-") as temp_dir:
+            source = Path(temp_dir) / "report.json"
+            report = _report()
+            report["action_guide"]["priority_actions"][0] = _repeat("2025年先准备服务样板，再根据反馈调整下一步。", 30)
+            source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("不得使用过去年份", result.stdout)
+
+    def test_visible_mingli_terms_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rensheng-youji-mingli-leak-") as temp_dir:
+            source = Path(temp_dir) / "report.json"
+            report = _report()
+            report["dimensions"][2]["analysis"][0] = _repeat("丙午透出以后食伤更明显，因此适合开始承担新的工作责任。", 120)
+            source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("不得直接出现内部命理术语", result.stdout)
+
+    def test_question_keywords_cannot_dominate_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rensheng-youji-topic-leak-") as temp_dir:
+            source = Path(temp_dir) / "report.json"
+            report = _report()
+            report["profile"]["question"] = "未来两年是否适合开展玄学副业并形成收入"
+            report["focus_scope"]["topic_keywords"] = ["玄学副业"]
+            for index in range(3):
+                report["dimensions"][2]["analysis"][index % 2] = _repeat("玄学副业需要先完成服务样板并核对真实反馈。", 120)
+            source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("过度进入六领域基础分析", result.stdout)
+
+    def test_fullwidth_percent_is_normalized_for_pdf(self) -> None:
+        self.assertEqual(normalize_display_text("每月转入20％—30％"), "每月转入百分之20到百分之30")
+
+    def test_report_relationship_years_must_match_card(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rensheng-youji-relationship-match-") as temp_dir:
+            work = Path(temp_dir)
+            report = _report()
+            report["cross_output_consistency"]["relationship_opportunity_years"] = []
+            report_json = work / "report.json"
+            report_json.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+            free_card = _assemble_free_card(work)
+            result = subprocess.run([sys.executable, str(DELIVERY_GENERATOR), "--report", str(report_json), "--free-card", str(free_card), "--out-dir", str(work / "delivery")], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("明显关系机会年份与新版卡片桃花年份不一致", result.stdout)
 
     def test_unapproved_wechat_asset_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-qr-") as temp_dir:

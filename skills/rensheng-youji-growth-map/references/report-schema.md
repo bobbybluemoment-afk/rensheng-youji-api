@@ -1,4 +1,4 @@
-# 人生有迹报告 JSON v2.3
+# 人生有迹报告 JSON v2.3.1
 
 把已校验的 Core 母稿提取为 UTF-8 `report.json`。内部 `audit` 只用于核对来源，永远不进入正文。
 
@@ -11,7 +11,7 @@
 
 ```json
 {
-  "schema_version": "2.3.0",
+  "schema_version": "2.3.1",
   "document_mode": "full_calibrated",
   "source": {
     "analysis_id": "与Core一致",
@@ -46,11 +46,16 @@
       "executive_summary.capabilities_resources",
       "executive_summary.formation",
       "stage_story.previous_foundation",
-      "stage_story.long_range"
+      "stage_story.long_range",
+      "dimensions"
     ],
     "overview_domains": [
       "self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"
-    ]
+    ],
+    "topic_keywords": ["深耕专业", "尝试管理"]
+  },
+  "cross_output_consistency": {
+    "relationship_opportunity_years": [2027, 2031]
   },
   "chart": {
     "pillars": ["辛未", "丁酉", "庚戌", "丁亥"],
@@ -163,7 +168,10 @@
 
 ## 固定校验
 
-- `focus_scope` 三组列表必须与示例完全一致，`selected_focus` 必须等于 `profile.focus`。关注方向只决定第4页“当前阶段与问题回应”、相关年度提醒及行动优先级，不得改写完整人生主线、能力资源、形成过程、长期主线或六领域基础判断。
+- `focus_scope` 三组列表必须与示例完全一致，`selected_focus` 必须等于 `profile.focus`。`topic_keywords` 提取1—4个当前问题里的具体对象或选项，不能使用“事业、感情、发展、选择”等宽泛类别。每个关键词在受保护章节中最多出现两次。关注方向只决定第4页“当前阶段与问题回应”、相关年度提醒及行动优先级，不得改写完整人生主线、能力资源、形成过程、长期主线或六领域基础判断。
+- `cross_output_consistency.relationship_opportunity_years` 必须与 `free-card-output.json.trend_panel.years` 中 `peach.highlight=true` 的年份完全一致。空列表表示卡片留白，报告也不得把某年写成明显关系进入或发展机会。
+- `source.analysis_as_of` 必须等于 `generated_on`。当前问题回应、当前重点、未来方向和行动建议不得使用早于 `generated_on` 的年份；过去年份只允许放在上一阶段、近几年和逐年回顾中。
+- 用户可见正文不得出现日主、十神、天干地支、身强身弱、透干等内部命理术语；只保留现实判断。百分比由PDF渲染器统一写成“百分之20”这类中文形式，并拒绝 `□` 或乱码替代字符。
 - 第1页使用渲染器内置的固定产品介绍与 Logo，不读取 `life_theme`、`current_situation`、四柱或关注方向。第3页先呈现完整人生主线，再呈现能力、资源与形成过程。
 
 - 六个领域固定顺序为 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`；每个领域可见正文330—520个汉字。
