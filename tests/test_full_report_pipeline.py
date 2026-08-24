@@ -225,6 +225,16 @@ def _assemble_free_card(work: Path) -> Path:
 
 
 class FullReportPipelineTest(unittest.TestCase):
+    def test_skill_keeps_reality_details_optional(self) -> None:
+        skill_text = (ROOT / "skills/rensheng-youji-growth-map/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("两轮收集输入", skill_text)
+        self.assertIn("学历、专业、当前职业或学习状态；每项都非必答", skill_text)
+        self.assertIn("当前关系状态、反复出现的相处情况；每项都非必答", skill_text)
+        self.assertIn("相关家庭关系、正在发生的矛盾或责任；每项都非必答", skill_text)
+        self.assertIn("用户可以只回复五个字母，忽略全部可选补充", skill_text)
+        self.assertIn("不得再次追问、降低交付规格", skill_text)
+        self.assertNotIn("不知道时明确写“不知道”", skill_text)
+
     def test_boundary_preflight_blocks_formal_report(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-preflight-") as temp_dir:
             source = Path(temp_dir) / "core-input.json"

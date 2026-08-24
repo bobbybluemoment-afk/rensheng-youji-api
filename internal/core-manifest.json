@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "visibility": "internal",
   "stages": [
     {
