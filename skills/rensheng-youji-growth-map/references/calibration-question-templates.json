@@ -1,0 +1,192 @@
+{
+  "schema_version": "1.0.0",
+  "templates": [
+    {
+      "id": "career.unclear_task_response",
+      "domain": "事业与组织",
+      "candidate_domains": ["career", "learning"],
+      "comparison_axis": "目标不清时的第一处理动作",
+      "time_window": "长期重复出现的工作或学习情境",
+      "selection_rule": "只选最先采取、且最常决定后续行动的一项",
+      "answer_type": "first_response",
+      "evidence_mode": "stable_pattern",
+      "prompt": "工作或学习任务的目标还不清楚时，你最先通常会怎么处理？",
+      "choices": [
+        {"key": "A", "value_code": "research_plan", "text": "先查资料、列条件和步骤，想清楚后再开始"},
+        {"key": "B", "value_code": "prototype_feedback", "text": "先做出一个小版本，再根据真实反馈继续修改"},
+        {"key": "C", "value_code": "people_alignment", "text": "先找关键的人确认要求，方向一致后再推进"}
+      ],
+      "calibration_targets": ["complete_self_portrait.cognition_and_decision", "complete_self_portrait.action_and_execution"]
+    },
+    {
+      "id": "career.primary_work_setting",
+      "domain": "事业与组织",
+      "candidate_domains": ["career"],
+      "comparison_axis": "当前主要工作环境",
+      "time_window": "目前或最近一份主要工作",
+      "selection_rule": "按实际工作时间占比最高的环境选择一项",
+      "answer_type": "primary_environment",
+      "evidence_mode": "objective_state",
+      "prompt": "以目前或最近一份主要工作为准，你实际待得最久的是哪种环境？",
+      "choices": [
+        {"key": "A", "value_code": "public_large_system", "text": "机关事业、国企或规则和职级都很明确的大平台"},
+        {"key": "B", "value_code": "mature_market_company", "text": "成熟民企、互联网或按业务结果考核的市场化公司"},
+        {"key": "C", "value_code": "small_independent", "text": "小团队、创业公司、自由职业或主要靠自己接项目"}
+      ],
+      "calibration_targets": ["environment_and_mobility", "reality_domains.career"]
+    },
+    {
+      "id": "career.primary_task_mode",
+      "domain": "事业与组织",
+      "candidate_domains": ["career"],
+      "comparison_axis": "工作时间的主要去向",
+      "time_window": "最近一年",
+      "selection_rule": "按实际花费时间最多的一类任务选择",
+      "answer_type": "dominant_activity",
+      "evidence_mode": "objective_state",
+      "prompt": "最近一年，你在工作中实际花时间最多的是哪一类事情？",
+      "choices": [
+        {"key": "A", "value_code": "specialist_analysis", "text": "研究分析、专业判断、写方案或处理复杂资料"},
+        {"key": "B", "value_code": "project_coordination", "text": "推进项目、协调多人、盯进度并负责最终交付"},
+        {"key": "C", "value_code": "client_business", "text": "接触客户、争取资源、谈合作或直接承担经营结果"}
+      ],
+      "calibration_targets": ["complete_self_portrait.environment_fit", "reality_domains.career"]
+    },
+    {
+      "id": "finance.primary_income_source",
+      "domain": "财务",
+      "candidate_domains": ["finance_resources"],
+      "comparison_axis": "实际到账收入的主要来源",
+      "time_window": "过去一年",
+      "selection_rule": "按实际到账金额占比最高的一类选择",
+      "answer_type": "dominant_source",
+      "evidence_mode": "objective_state",
+      "prompt": "过去一年，你实际到账的收入主要来自哪一类？",
+      "choices": [
+        {"key": "A", "value_code": "salary_performance", "text": "固定工资、津贴以及单位发放的年度绩效"},
+        {"key": "B", "value_code": "project_business", "text": "项目奖金、提成、接单收入或自己经营所得"},
+        {"key": "C", "value_code": "family_assets", "text": "家庭支持、租金、理财收益或其他资产收入"}
+      ],
+      "calibration_targets": ["resource_relationship.material", "reality_domains.wealth"]
+    },
+    {
+      "id": "finance.primary_pressure",
+      "domain": "财务",
+      "candidate_domains": ["finance_resources"],
+      "comparison_axis": "最主要的财务压力来源",
+      "time_window": "过去一年",
+      "selection_rule": "按金额或持续时间影响最大的一类选择",
+      "answer_type": "primary_reason",
+      "evidence_mode": "objective_state",
+      "prompt": "过去一年，对你影响最大的财务压力主要来自哪一类？",
+      "choices": [
+        {"key": "A", "value_code": "daily_fixed_cost", "text": "房租、日常生活和固定账单持续占用收入"},
+        {"key": "B", "value_code": "family_housing", "text": "住房、教育、照护家人或其他家庭责任支出"},
+        {"key": "C", "value_code": "business_investment", "text": "经营投入、项目垫款、投资波动或收入不稳定"}
+      ],
+      "calibration_targets": ["resource_relationship.material", "reality_domains.wealth"]
+    },
+    {
+      "id": "relationship.first_attraction_signal",
+      "domain": "关系",
+      "candidate_domains": ["love_partner"],
+      "comparison_axis": "产生明显好感的第一触发点",
+      "time_window": "最近两次明显心动或认真接触",
+      "selection_rule": "只选最先出现、且最能决定是否继续接触的一项",
+      "answer_type": "first_response",
+      "evidence_mode": "stable_pattern",
+      "prompt": "回想最近两次明显心动，最先让你想继续接触的通常是哪一点？",
+      "choices": [
+        {"key": "A", "value_code": "stability_planning", "text": "做事稳定、有长期规划，也愿意把安排说清楚"},
+        {"key": "B", "value_code": "action_cooperation", "text": "行动直接、愿意一起解决问题，并能把事情做成"},
+        {"key": "C", "value_code": "intensity_novelty", "text": "外形或气场吸引很强，相处有新鲜感和明显张力"}
+      ],
+      "calibration_targets": ["partner_profiles.attraction", "relationship_system.attraction_process"]
+    },
+    {
+      "id": "relationship.primary_conflict",
+      "domain": "关系",
+      "candidate_domains": ["love_partner"],
+      "comparison_axis": "关系摩擦最常见的第一原因",
+      "time_window": "过去的重要关系或反复出现的相处经历",
+      "selection_rule": "选择最早引发矛盾、出现次数最多的一项",
+      "answer_type": "most_common_pattern",
+      "evidence_mode": "stable_pattern",
+      "prompt": "关系开始出现摩擦时，最常先卡在哪一类事情上？",
+      "choices": [
+        {"key": "A", "value_code": "time_response", "text": "回复、见面频率和彼此投入的时间不一致"},
+        {"key": "B", "value_code": "money_city_future", "text": "金钱安排、所在城市或未来计划没有谈清楚"},
+        {"key": "C", "value_code": "control_boundary", "text": "一方替另一方决定，个人空间和边界受到影响"}
+      ],
+      "calibration_targets": ["relationship_system.conflict_pattern", "interaction_dynamics.conflict_triggers"]
+    },
+    {
+      "id": "family.primary_role",
+      "domain": "家庭与教育",
+      "candidate_domains": ["family_growth"],
+      "comparison_axis": "家庭实际事务中的主要位置",
+      "time_window": "近几年反复出现的家庭事务",
+      "selection_rule": "按承担次数最多、家人最常默认你负责的位置选择",
+      "answer_type": "most_common_pattern",
+      "evidence_mode": "objective_state",
+      "prompt": "家里遇到需要处理的实际事务时，你最常处在哪个位置？",
+      "choices": [
+        {"key": "A", "value_code": "decision_resource", "text": "负责作决定、出钱或提供关键资源"},
+        {"key": "B", "value_code": "coordinate_execute", "text": "负责联系各方、跑流程、执行和最后收尾"},
+        {"key": "C", "value_code": "limited_involvement", "text": "较少参与核心安排，主要把自己的事情处理好"}
+      ],
+      "calibration_targets": ["family_system.role_position", "family_system.independence_and_boundaries"]
+    },
+    {
+      "id": "mobility.recent_move_reason",
+      "domain": "迁移",
+      "candidate_domains": ["mobility"],
+      "comparison_axis": "最近一次跨城变化的主要原因",
+      "time_window": "过去五年",
+      "selection_rule": "只按已经发生的最近一次长期跨城变化选择主要原因",
+      "answer_type": "actual_event",
+      "evidence_mode": "timed_event",
+      "prompt": "过去五年若发生过跨城搬迁或长期离开原住地，最主要原因是什么？",
+      "choices": [
+        {"key": "A", "value_code": "work_study", "text": "已经因为工作机会、单位安排或学习而跨城"},
+        {"key": "B", "value_code": "family_relationship", "text": "已经因为伴侣、婚姻或家庭责任而跨城"},
+        {"key": "C", "value_code": "housing_lifestyle", "text": "已经因为住房成本或生活方式选择而跨城"}
+      ],
+      "calibration_targets": ["environment_and_mobility", "annual_theme_activation"]
+    },
+    {
+      "id": "wellbeing.first_stress_response",
+      "domain": "身心",
+      "candidate_domains": ["body_emotion"],
+      "comparison_axis": "压力上升时最先出现的反应",
+      "time_window": "近一年反复出现的高压情境",
+      "selection_rule": "只选最先出现、通常早于其他反应的一项",
+      "answer_type": "first_response",
+      "evidence_mode": "stable_pattern",
+      "prompt": "压力突然上来时，最先出现的反应通常是哪一种？",
+      "choices": [
+        {"key": "A", "value_code": "body_withdraw", "text": "睡眠、胃口或身体先有反应，并想减少交流"},
+        {"key": "B", "value_code": "organize_overwork", "text": "马上整理清单和顺序，继续做事直到处理完"},
+        {"key": "C", "value_code": "talk_emotion", "text": "先找人说清情况，或情绪和语气先变得明显"}
+      ],
+      "calibration_targets": ["complete_self_portrait.stress_and_recovery", "reality_domains.health"]
+    },
+    {
+      "id": "career.recent_change_carrier",
+      "domain": "事业与组织",
+      "candidate_domains": ["career"],
+      "comparison_axis": "近三年最大工作变化的现实载体",
+      "time_window": "过去三年",
+      "selection_rule": "选择实际影响时间最长或改变最大的一项",
+      "answer_type": "actual_event",
+      "evidence_mode": "timed_event",
+      "prompt": "过去三年，已经发生且影响最大的工作变化主要是哪一种？",
+      "choices": [
+        {"key": "A", "value_code": "organization_role", "text": "换单位、换部门、升降职或岗位身份改变"},
+        {"key": "B", "value_code": "responsibility_project", "text": "单位没变，但职责、项目或管理范围明显增加"},
+        {"key": "C", "value_code": "income_contract", "text": "工作形式、收入结构或合同稳定性明显改变"}
+      ],
+      "calibration_targets": ["reality_domains.career", "annual_theme_activation"]
+    }
+  ]
+}

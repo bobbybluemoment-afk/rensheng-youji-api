@@ -89,19 +89,30 @@ python internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py w
 ## 五条现实校准
 
 1. 完整读取 [calibration.md](references/calibration.md)。
-2. 从 Core 的 `reality_candidate_pool` 选择五组区分度最高的候选，写入同时包含 `display` 与 `audit` 的 `work/calibration-questions.json`；每题用A、B、C三个互斥的具体行为或经历候选加D“都不符合／不确定”，不再询问宽泛描述是否符合。五题至少覆盖四个生活领域，同一领域最多两题，用户关注方向最多两题；每条至少使用两个独立证据视角，不能只依赖日主旺衰。
-3. 运行 `validate_calibration_questions.py`，只把它生成的 `work/calibration-visible.md` 发给用户：
+2. 从 Core 的 `reality_candidate_pool` 选择最有信息量的现实分歧，读取固定题型库 `references/calibration-question-templates.json`，只生成内部 `work/calibration-plan.json`。不得自行撰写题干和选项。五题至少覆盖四个生活领域，同一领域最多两题，用户关注方向最多两题；至少两题核对客观状态或已经发生的事件，至少一题使用带时间窗口的已发生事件校准大运流年执行。
+3. 运行构建器，把题型和Core候选的影响关系转换为 `schema_version=2.1.0` 的正式问题：
+
+```bash
+python skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py \
+  --plan work/calibration-plan.json \
+  --analysis work/analysis-output-initial.json \
+  --output work/calibration-questions.json
+```
+
+4. 运行 `validate_calibration_questions.py`，再次回查候选是否真实存在、领域是否一致、时间题是否绑定时运候选，并且只把生成的 `work/calibration-visible.md` 发给用户：
 
 ```bash
 python skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py \
-  work/calibration-questions.json --visible-out work/calibration-visible.md
+  work/calibration-questions.json \
+  --analysis work/analysis-output-initial.json \
+  --visible-out work/calibration-visible.md
 ```
 
 不得自行把 `audit`、候选编号、盘面支持、置信度、替代解释或任何命理证据附在问题后面。
-4. 让用户只回复题号和字母；鼓励在最关心的一至两题后补充一个具体事实或年份，但不能要求用户先懂命理。
-5. 将五个选择完整写入 Core 输入的 `calibration` 和报告的 `calibration.responses`；A/B/C记录对应候选编号，D记录为空候选。用户补充内容同时写入 `reality_context` 与 `responses.user_note`。保留未选择候选，不得为了迎合反馈修改四柱、原局结构或大运流年事实。
-6. 在初始完整母稿上只更新校准状态、用户事实、受影响的现实映射与置信度，保留其余已完成章节；生成并校验 `work/analysis-output-calibrated.json`，避免把没有变化的32个章节整份重新写一遍。
-7. 用户跳过任何一条时，`document_mode` 必须为 `preliminary_uncalibrated`，标题必须为“人生有迹｜初步分析”，只交付初步 Markdown 和新版卡片；不得生成或称为正式完整PDF。
+5. 让用户只回复题号和字母；鼓励在最关心的一至两题后补充一个具体事实或年份，但不能要求用户先懂命理。
+6. 将五个选择完整写入 Core 输入的 `calibration` 和报告的 `calibration.responses`。A/B/C记录固定 `template_id`、`selected_value` 与该选项对应的 `candidate_updates`；D记录 `selected_value=uncertain` 和空更新列表。用户补充内容同时写入 `reality_context` 与 `responses.user_note`。不得为了迎合反馈修改四柱、原局结构或大运流年事实。
+7. 在初始完整母稿上只更新校准状态、用户事实、受影响的现实映射与置信度，保留其余已完成章节；生成并校验 `work/analysis-output-calibrated.json`。每道已回答问题必须实际改变对应候选状态或相关现实翻译；不能只提高整章置信度。
+8. 用户跳过任何一条时，`document_mode` 必须为 `preliminary_uncalibrated`，标题必须为“人生有迹｜初步分析”，只交付初步 Markdown 和新版卡片；不得生成或称为正式完整PDF。
 
 ## 报告提取与输出
 
@@ -113,7 +124,7 @@ python skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.p
    - [prosperity-guide.md](references/prosperity-guide.md)：现实行动建议；
    - [brand-and-conversion.md](references/brand-and-conversion.md)：免费使用与人工服务入口；
    - [safety-language.md](references/safety-language.md)：健康、财务、关系和隐私边界。
-2. 从已校验的 Core 母稿提取 `report.json`。正式报告使用 `schema_version=2.4.0`、`document_mode=full_calibrated`；必须填写固定 `focus_scope`，并从当前问题提取1—4个具体 `topic_keywords`。这些关键词在完整人生主线、能力形成和六领域基础正文中合计不得反复出现，只能在第4页、逐年提醒与行动优先级中重点展开。六个领域统一填写一个 `main_verdict`、一个 `reality_anchor`、一段 `pattern_and_cost` 和一个 `verification_point`。先判断工作或互动机制，再在证据允许的精度内使用大型国企、成熟科技公司、项目管理、固定工资、见面频率、住房安排等现实名词；不得为了明确而随意点名行业、岗位、对象身份或家庭经历。
+2. 从已校验的 Core 母稿提取 `report.json`。正式报告使用 `schema_version=2.5.0`、`document_mode=full_calibrated`；必须填写固定 `focus_scope`，并从当前问题提取1—4个具体 `topic_keywords`。这些关键词在完整人生主线、能力形成和六领域基础正文中合计不得反复出现，只能在第4页、逐年提醒与行动优先级中重点展开。六个领域统一填写一个 `main_verdict`、一个 `reality_anchor`、一段 `pattern_and_cost` 和一个 `verification_point`。先判断工作或互动机制，再在证据允许的精度内使用大型国企、成熟科技公司、项目管理、固定工资、见面频率、住房安排等现实名词；不得为了明确而随意点名行业、岗位、对象身份或家庭经历。
 3. 完整人生主线先根据原局全局、根苗花果、资源关系、家庭教育、事业财富、亲密关系和长期时运综合生成，再在第4页单独回答用户选择的问题。不得先确定用户关注方向，再反向筛选整份报告的证据。
 4. 时间分析使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系；同时概括更长的大运阶段。
 5. 从同一份校准后 Core 母稿依次运行 `rensheng-youji-free-card-output` 与 `rensheng-youji-free-card-renderer` 的现有新版流程，生成 `work/free-card-output.json`。将卡片中实际高亮的桃花年份原样写入 `report.json.cross_output_consistency.relationship_opportunity_years`；若卡片全部留白则填写空列表，报告不得把其他年份写成明显关系进入或发展机会。不得复制旧卡片，也不得在报告目录另写卡片算法。
@@ -123,6 +134,7 @@ python skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.p
 python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
   --report work/report.json \
   --free-card work/free-card-output.json \
+  --calibration-questions work/calibration-questions.json \
   --out-dir work/delivery \
   --keep-pages
 ```
@@ -162,6 +174,8 @@ python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
 - 第2页为同一 Core 生成的新版人生卡片，卡片尺寸为1242×1660；
 - PDF恰好10页，所有正文无截断，微信二维码实际嵌入，标题/重点/正文有稳定颜色层级；
 - 用户可见校准题中没有候选编号、置信度、盘面支持或命理证据；
+- 用户可见题干和A/B/C来自固定题型库，模型没有自行改写；每题只比较一个轴，三个答案对应不同的候选更新结果；
+- 五题至少包含两道客观状态或事件题、一道带时间窗口的事件题，并且时间题实际绑定带大运或流年证据的 `timed_event` 候选；
 - 不包含“初始角色、核心配置、主线任务、人物小传”等旧卡片字段；
 - 六个领域均有实质内容或明确写证据不足，不能把事业段落换词复制到其他领域；
 - 六个领域各自只有一个主判断，后续内容用于证明和落地，不再堆叠多组候选描述；

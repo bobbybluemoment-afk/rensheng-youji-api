@@ -1,4 +1,4 @@
-# 人生有迹报告 JSON v2.4.0
+# 人生有迹报告 JSON v2.5.0
 
 把已校验的 Core 母稿提取为 UTF-8 `report.json`。内部 `audit` 只用于核对来源，永远不进入正文。
 
@@ -11,11 +11,11 @@
 
 ```json
 {
-  "schema_version": "2.4.0",
+  "schema_version": "2.5.0",
   "document_mode": "full_calibrated",
   "source": {
     "analysis_id": "与Core一致",
-    "core_version": "0.3.0",
+    "core_version": "0.4.0",
     "analysis_as_of": "2026-08-20",
     "calibration_status": "calibrated"
   },
@@ -66,15 +66,21 @@
     "formal_report_allowed": true
   },
   "calibration": {
+    "question_schema_version": "2.1.0",
+    "template_version": "1.0.0",
     "summary": "五条中三条符合、一条部分符合、一条不确定。",
     "birth_time_status": "稳定",
     "responses": [
       {
         "question_number": 1,
+        "template_id": "career.unclear_task_response",
         "domain": "事业与组织",
         "choice": "A",
-        "selected_text": "先收集资料和比较风险，想清楚后再行动",
-        "candidate_id": "c011",
+        "selected_text": "先查资料、列条件和步骤，想清楚后再开始",
+        "selected_value": "research_plan",
+        "candidate_updates": [
+          {"candidate_id": "c11", "status": "match"}
+        ],
         "user_note": "用户可选补充的具体事实或年份，没有则为空字符串"
       }
     ],
@@ -166,6 +172,7 @@
 ## 固定校验
 
 - `focus_scope` 三组列表必须与示例完全一致，`selected_focus` 必须等于 `profile.focus`。`topic_keywords` 提取1—4个当前问题里的具体对象或选项，不能使用“事业、感情、发展、选择”等宽泛类别。每个关键词在受保护章节中最多出现两次。关注方向只决定第4页“当前阶段与问题回应”、相关年度提醒及行动优先级，不得改写完整人生主线、能力资源、形成过程、长期主线或六领域基础判断。
+- `calibration` 必须来自 `question_schema_version=2.1.0`、`template_version=1.0.0` 的固定题型。每条响应记录 `template_id`、固定 `selected_value` 和与原问题完全一致的 `candidate_updates`；D只能写 `uncertain` 和空更新。统一交付时必须同时传入原 `calibration-questions.json` 逐项核对。
 - `cross_output_consistency.relationship_opportunity_years` 必须与 `free-card-output.json.trend_panel.years` 中 `peach.highlight=true` 的年份完全一致。空列表表示卡片留白，报告也不得把某年写成明显关系进入或发展机会。
 - `source.analysis_as_of` 必须等于 `generated_on`。当前问题回应、当前重点、未来方向和行动建议不得使用早于 `generated_on` 的年份；过去年份只允许放在上一阶段、近几年和逐年回顾中。
 - 用户可见正文不得出现日主、十神、天干地支、身强身弱、透干等内部命理术语；只保留现实判断。百分比由PDF渲染器统一写成“百分之20”这类中文形式，并拒绝 `□` 或乱码替代字符。

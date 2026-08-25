@@ -205,8 +205,8 @@ def validate(data: Any) -> list[str]:
     meta = data.get("analysis_meta")
     require_keys(meta, {"analysis_id", "request_id", "core_version", "generated_at", "analysis_as_of", "target_range", "input_completeness", "status"}, "analysis_meta", errors)
     if isinstance(meta, dict):
-        if meta.get("core_version") != "0.3.0":
-            errors.append("analysis_meta.core_version 必须为 0.3.0")
+        if meta.get("core_version") != "0.4.0":
+            errors.append("analysis_meta.core_version 必须为 0.4.0")
         if meta.get("status") not in {"complete", "pass_with_flags"}:
             errors.append("analysis_meta.status 必须是 complete 或 pass_with_flags")
         try:
@@ -304,7 +304,7 @@ def validate(data: Any) -> list[str]:
         domains: set[str] = set()
         for index, candidate in enumerate(candidates):
             path = f"reality_candidate_pool[{index}]"
-            require_keys(candidate, {"candidate_id", "domain", "statement", "observable_examples", "alternative_statement", "source_layers", "confidence", "validation_question", "status"}, path, errors)
+            require_keys(candidate, {"candidate_id", "domain", "candidate_kind", "time_scope", "calibration_targets", "statement", "observable_examples", "alternative_statement", "source_layers", "confidence", "validation_question", "status"}, path, errors)
             if isinstance(candidate, dict) and isinstance(candidate.get("candidate_id"), str):
                 ids.append(candidate["candidate_id"])
             if isinstance(candidate, dict) and isinstance(candidate.get("domain"), str):
@@ -322,6 +322,11 @@ def validate(data: Any) -> list[str]:
                 alternative = candidate.get("alternative_statement")
                 if isinstance(statement, str) and isinstance(alternative, str) and statement.strip() == alternative.strip():
                     errors.append(f"{path}.alternative_statement 不能重复主要候选")
+                targets = candidate.get("calibration_targets")
+                if not isinstance(targets, list) or not 1 <= len(targets) <= 4 or len(set(targets)) != len(targets):
+                    errors.append(f"{path}.calibration_targets 必须包含1—4个不同的Core结论路径")
+                if candidate.get("candidate_kind") == "timed_event" and not any(layer in set(layers or []) for layer in {"annual", "luck", "annual_theme_activation", "luck_cycle_themes"}):
+                    errors.append(f"{path}.candidate_kind=timed_event 时必须包含时运证据")
         if len(ids) != len(set(ids)):
             errors.append("reality_candidate_pool.candidate_id 不能重复")
         if len(domains) < 4:
@@ -366,7 +371,8 @@ def self_test_fixture() -> dict[str, Any]:
     pillar_analysis = {"facts": [], "structural_role": "", "activation_keys": [], "possible_manifestations": [], "uncertainties": [], "findings": []}
     resource = {"acquire": [], "preserve": [], "exchange": [], "amplify": [], "loss_risks": [], "findings": []}
     annual = {"year": 2026, "age": 36, "luck_cycle_index": 0, "year_theme": "自检", "luck_theme_link": "自检", "activation_mechanisms": [], "natal_reactions": [], "change_intensity": "low", "direction": "consolidation", "domain_impacts": [], "domain_connections": [], "human_actions": [], "social_feedback": [], "carry_in": [], "carry_out": [], "seed_for_next": [], "confidence": "to_verify", "alternatives": [], "validation": []}
-    candidate = lambda number: {"candidate_id": f"c{number}", "domain": f"self-test-{(number - 1) % 4}", "statement": "遇到模糊任务时先整理信息再开始", "observable_examples": ["先列出步骤和缺少的资料", "交付前会主动核对关键细节"], "alternative_statement": "也可能先行动再根据反馈调整", "source_layers": ["chart", "cross_method"], "confidence": "to_verify", "validation_question": "哪种处理方式更接近实际？", "status": "unverified"}
+    candidate_domains = ["career", "finance_resources", "love_partner", "family_growth", "learning", "mobility", "body_emotion", "self_growth"]
+    candidate = lambda number: {"candidate_id": f"c{number}", "domain": candidate_domains[number - 1], "candidate_kind": "timed_event" if number == 6 else "stable_pattern", "time_scope": "过去五年" if number == 6 else "原局长期", "calibration_targets": ["reality_domains"], "statement": "遇到模糊任务时先整理信息再开始", "observable_examples": ["先列出步骤和缺少的资料", "交付前会主动核对关键细节"], "alternative_statement": "也可能先行动再根据反馈调整", "source_layers": ["annual", "cross_method"] if number == 6 else ["chart", "cross_method"], "confidence": "to_verify", "validation_question": "哪种处理方式更接近实际？", "status": "unverified"}
     partner_profile = {"summary": "自检", "traits": [], "mechanism": [], "benefits": [], "costs": [], "evidence_strength": "insufficient", "alternatives": [], "validation": [], "findings": []}
     complete_self_portrait = {
         "summary": "自检",
@@ -419,7 +425,7 @@ def self_test_fixture() -> dict[str, Any]:
     }
     not_inferable = lambda number: {"item": f"不可推断项{number}", "reason": "自检", "evidence_level": "insufficient", "needed_input": [], "prohibited_claims": ["禁止编造"]}
     data = {
-        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.3.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
+        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.4.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
         "chart_facts": {"day_master": "甲", "pillars": {"year": pillar, "month": pillar, "day": {**pillar, "stem_ten_god": "日主"}, "hour": pillar}, "luck_cycles": [{}], "annual_cycles": [{}]},
         "chart_audit": {"status": "pass", "checks": [], "boundary_dependencies": [], "versions": []},
         "social_context_model": empty_section(),

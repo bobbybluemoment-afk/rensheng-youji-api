@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""校验五条现实校准题，并隔离用户可见文字与内部命理审计。"""
+"""校验模板化现实校准题，并隔离用户可见文字与内部命理审计。"""
 
 from __future__ import annotations
 
 import argparse
 from collections import Counter
-from difflib import SequenceMatcher
 import json
 import re
 from pathlib import Path
 from typing import Any
 
 
+SKILL_ROOT = Path(__file__).resolve().parent.parent
+TEMPLATE_PATH = SKILL_ROOT / "references" / "calibration-question-templates.json"
 VISIBLE_BANNED = {
     "日主", "身强", "身弱", "印旺", "比肩", "劫财", "食神", "伤官",
     "正印", "偏印", "正财", "偏财", "正官", "七杀", "格局", "喜用",
@@ -19,29 +20,63 @@ VISIBLE_BANNED = {
     "根苗花果", "盘面", "证据", "置信", "候选编号", "替代解释",
 }
 CHOICE_KEYS = ["A", "B", "C", "D"]
+ABC_KEYS = CHOICE_KEYS[:3]
 UNCERTAIN_CHOICE = "都不符合／不确定（可补充）"
 DOMAINS = {"家庭与教育", "事业与组织", "关系", "财务", "迁移", "身心"}
 PREFERRED_LENSES = {
-    "root_seed_flower_fruit_map",
-    "resource_relationship",
-    "cross_method_analysis",
-    "luck_cycle_themes",
-    "annual_theme_activation",
-    "domain_connections",
+    "root_seed_flower_fruit_map", "resource_relationship", "cross_method_analysis",
+    "luck_cycle_themes", "annual_theme_activation", "domain_connections",
 }
-OBSERVABLE_MARKERS = {"先", "再", "会", "做", "查", "问", "说", "选", "拒绝", "记录", "讨论", "比较", "核对", "离开", "搬", "换", "借", "存", "付", "等", "联系", "回避", "争论", "负责", "提出"}
+EFFECT_STATUS = {"match", "partial", "reject"}
 
 
-def cjk_count(value: str) -> int:
-    return len(re.findall(r"[\u3400-\u9fff]", value))
+def load_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
-def validate(data: Any) -> list[str]:
+def load_templates() -> dict[str, dict[str, Any]]:
+    data = load_json(TEMPLATE_PATH)
+    if data.get("schema_version") != "1.0.0" or not isinstance(data.get("templates"), list):
+        raise ValueError("校准题模板文件版本或结构无效")
+    templates = {item["id"]: item for item in data["templates"]}
+    if len(templates) != len(data["templates"]):
+        raise ValueError("校准题模板ID不能重复")
+    return templates
+
+
+def candidate_index(analysis: Any) -> dict[str, dict[str, Any]]:
+    if not isinstance(analysis, dict) or not isinstance(analysis.get("reality_candidate_pool"), list):
+        raise ValueError("analysis 必须包含 reality_candidate_pool")
+    result: dict[str, dict[str, Any]] = {}
+    for item in analysis["reality_candidate_pool"]:
+        if isinstance(item, dict) and isinstance(item.get("candidate_id"), str):
+            result[item["candidate_id"]] = item
+    return result
+
+
+def expected_display(template: dict[str, Any], number: int) -> dict[str, Any]:
+    return {
+        "number": number,
+        "domain": template["domain"],
+        "prompt": template["prompt"],
+        "choices": [
+            *[{"key": item["key"], "text": item["text"]} for item in template["choices"]],
+            {"key": "D", "text": UNCERTAIN_CHOICE},
+        ],
+    }
+
+
+def validate(data: Any, analysis: Any) -> list[str]:
     errors: list[str] = []
     if not isinstance(data, dict):
         return ["根节点必须是对象"]
-    if data.get("schema_version") != "2.0.0":
-        errors.append("schema_version 必须为 2.0.0")
+    if data.get("schema_version") != "2.1.0":
+        errors.append("schema_version 必须为 2.1.0")
+    try:
+        templates = load_templates()
+        candidates = candidate_index(analysis)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        return errors + [str(exc)]
     questions = data.get("questions")
     if not isinstance(questions, list) or len(questions) != 5:
         return errors + ["questions 必须恰好包含五条"]
@@ -49,102 +84,109 @@ def validate(data: Any) -> list[str]:
     domains: set[str] = set()
     domain_counts: Counter[str] = Counter()
     numbers: list[int] = []
+    template_ids: list[str] = []
+    evidence_modes: list[str] = []
     for index, question in enumerate(questions):
         path = f"questions[{index}]"
         if not isinstance(question, dict):
             errors.append(f"{path} 必须是对象")
             continue
-        display = question.get("display")
-        audit = question.get("audit")
-        if not isinstance(display, dict):
-            errors.append(f"{path}.display 必须是对象")
+        display, audit = question.get("display"), question.get("audit")
+        if not isinstance(display, dict) or not isinstance(audit, dict):
+            errors.append(f"{path}.display 和 audit 必须是对象")
             continue
-        if not isinstance(audit, dict):
-            errors.append(f"{path}.audit 必须是对象")
+        template_id = audit.get("template_id")
+        template = templates.get(template_id)
+        if template is None:
+            errors.append(f"{path}.audit.template_id 不在固定题型库中")
             continue
+        template_ids.append(template_id)
+        evidence_modes.append(template["evidence_mode"])
 
         number = display.get("number")
-        domain = display.get("domain")
-        prompt = display.get("prompt")
-        choices = display.get("choices")
-        if not isinstance(number, int):
-            errors.append(f"{path}.display.number 必须是整数")
-        else:
+        if isinstance(number, int):
             numbers.append(number)
+        else:
+            errors.append(f"{path}.display.number 必须是整数")
+            continue
+        if display != expected_display(template, number):
+            errors.append(f"{path}.display 必须由固定题型 {template_id} 原样生成，禁止模型自行改写题干或选项")
+        domain = display.get("domain")
         if domain not in DOMAINS:
             errors.append(f"{path}.display.domain 不在允许范围")
         else:
             domains.add(domain)
             domain_counts[domain] += 1
-        visible_parts: list[str] = []
-        if not isinstance(prompt, str):
-            errors.append(f"{path}.display.prompt 必须是文字")
-        else:
-            count = cjk_count(prompt)
-            if not 8 <= count <= 45:
-                errors.append(f"{path}.display.prompt 应为8—45个汉字，当前{count}")
-            visible_parts.append(prompt)
-        if not isinstance(choices, list) or len(choices) != 4:
-            errors.append(f"{path}.display.choices 必须恰好包含A—D四项")
-        else:
-            keys = [choice.get("key") for choice in choices if isinstance(choice, dict)]
-            if keys != CHOICE_KEYS:
-                errors.append(f"{path}.display.choices 必须依次使用A、B、C、D")
-            abc_texts: list[str] = []
-            for choice_index, choice in enumerate(choices):
-                choice_path = f"{path}.display.choices[{choice_index}]"
-                if not isinstance(choice, dict) or set(choice) != {"key", "text"}:
-                    errors.append(f"{choice_path} 必须只包含key和text")
-                    continue
-                choice_text = choice.get("text")
-                if not isinstance(choice_text, str):
-                    errors.append(f"{choice_path}.text 必须是文字")
-                    continue
-                visible_parts.append(choice_text)
-                if choice_index < 3:
-                    count = cjk_count(choice_text)
-                    if not 8 <= count <= 38:
-                        errors.append(f"{choice_path}.text 应为8—38个汉字，当前{count}")
-                    abc_texts.append(re.sub(r"[，。；、\s]", "", choice_text))
-                elif choice_text != UNCERTAIN_CHOICE:
-                    errors.append(f"{choice_path}.text 必须为{UNCERTAIN_CHOICE}")
-            if len(set(abc_texts)) != len(abc_texts):
-                errors.append(f"{path}.display A、B、C不能使用重复选项")
-            for choice_index, choice_text in enumerate(abc_texts):
-                if not any(marker in choice_text for marker in OBSERVABLE_MARKERS):
-                    errors.append(f"{path}.display.choices[{choice_index}] 必须包含可观察动作，不能只写性格标签")
-            for left in range(len(abc_texts)):
-                for right in range(left + 1, len(abc_texts)):
-                    if SequenceMatcher(None, abc_texts[left], abc_texts[right]).ratio() > 0.72:
-                        errors.append(f"{path}.display A、B、C区分度不足")
-        for visible_text in visible_parts:
-            found = sorted(term for term in VISIBLE_BANNED if term in visible_text)
-            if found:
-                errors.append(f"{path}.display 泄露内部术语：{'、'.join(found)}")
-            if re.search(r"\b(?:c\d+|candidate[_-]?\w*)\b", visible_text, re.IGNORECASE):
-                errors.append(f"{path}.display 泄露内部候选编号")
+        visible = json.dumps(display, ensure_ascii=False)
+        found = sorted(term for term in VISIBLE_BANNED if term in visible)
+        if found:
+            errors.append(f"{path}.display 泄露内部术语：{'、'.join(found)}")
+        if re.search(r"\b(?:c\d+|candidate[_-]?\w*)\b", visible, re.IGNORECASE):
+            errors.append(f"{path}.display 泄露内部候选编号")
 
-        required_audit = {
-            "candidate_ids", "choice_meanings", "evidence_lenses", "core_sections", "alternatives",
-            "birth_time_dependency", "confidence",
+        fixed_fields = {
+            "comparison_axis": template["comparison_axis"],
+            "time_window": template["time_window"],
+            "selection_rule": template["selection_rule"],
+            "answer_type": template["answer_type"],
+            "evidence_mode": template["evidence_mode"],
+            "calibration_targets": template["calibration_targets"],
         }
-        missing = sorted(required_audit - set(audit))
-        if missing:
-            errors.append(f"{path}.audit 缺少：{','.join(missing)}")
-            continue
-        candidate_ids = audit.get("candidate_ids")
-        if not isinstance(candidate_ids, list) or len(candidate_ids) != 3 or not all(isinstance(item, str) and re.fullmatch(r"c\d+", item) for item in candidate_ids):
-            errors.append(f"{path}.audit.candidate_ids 必须包含三个形如c01的候选编号")
-        choice_meanings = audit.get("choice_meanings")
-        if not isinstance(choice_meanings, dict) or list(choice_meanings) != CHOICE_KEYS:
-            errors.append(f"{path}.audit.choice_meanings 必须依次映射A、B、C、D")
-        elif isinstance(candidate_ids, list) and ([choice_meanings.get(key) for key in CHOICE_KEYS[:3]] != candidate_ids or choice_meanings.get("D") != "uncertain"):
-            errors.append(f"{path}.audit.choice_meanings 必须把A—C对应candidate_ids，D对应uncertain")
+        for key, expected_value in fixed_fields.items():
+            if audit.get(key) != expected_value:
+                errors.append(f"{path}.audit.{key} 必须与固定题型一致")
+        expected_meanings = {item["key"]: item["value_code"] for item in template["choices"]} | {"D": "uncertain"}
+        if audit.get("choice_meanings") != expected_meanings:
+            errors.append(f"{path}.audit.choice_meanings 必须使用固定题型的互斥值编码")
+
+        effects = audit.get("candidate_effects")
+        used_ids: list[str] = []
+        signatures: list[tuple[tuple[str, str], ...]] = []
+        if not isinstance(effects, dict) or list(effects) != ABC_KEYS:
+            errors.append(f"{path}.audit.candidate_effects 必须依次包含A、B、C")
+        else:
+            for key in ABC_KEYS:
+                items = effects[key]
+                signature: list[tuple[str, str]] = []
+                if not isinstance(items, list) or not 1 <= len(items) <= 3:
+                    errors.append(f"{path}.audit.candidate_effects.{key} 必须包含1—3条候选影响")
+                    continue
+                for effect_index, effect in enumerate(items):
+                    effect_path = f"{path}.audit.candidate_effects.{key}[{effect_index}]"
+                    if not isinstance(effect, dict) or set(effect) != {"candidate_id", "status"}:
+                        errors.append(f"{effect_path} 必须只包含candidate_id和status")
+                        continue
+                    candidate_id, status = effect["candidate_id"], effect["status"]
+                    if status not in EFFECT_STATUS:
+                        errors.append(f"{effect_path}.status 必须为match/partial/reject")
+                    candidate = candidates.get(candidate_id)
+                    if candidate is None:
+                        errors.append(f"{effect_path}.candidate_id 不存在于Core候选池")
+                    elif candidate.get("domain") not in set(template["candidate_domains"]):
+                        errors.append(f"{effect_path} 候选领域与题型 {template_id} 不一致")
+                    used_ids.append(candidate_id)
+                    signature.append((candidate_id, status))
+                signatures.append(tuple(sorted(signature)))
+            if len(signatures) == 3 and len(set(signatures)) != 3:
+                errors.append(f"{path}.audit A、B、C对命理候选产生的校准结果必须不同")
+        expected_ids = list(dict.fromkeys(used_ids))
+        if audit.get("candidate_ids") != expected_ids:
+            errors.append(f"{path}.audit.candidate_ids 必须按首次出现顺序汇总candidate_effects")
+        if template["evidence_mode"] == "timed_event":
+            linked = [candidates.get(item) for item in expected_ids]
+            if not any(item and item.get("candidate_kind") == "timed_event" for item in linked):
+                errors.append(f"{path} 带时间窗口的题型必须绑定至少一个 timed_event Core候选")
+
         lenses = audit.get("evidence_lenses")
         if not isinstance(lenses, list) or len(set(lenses)) < 2:
             errors.append(f"{path}.audit.evidence_lenses 至少包含两个独立视角")
         elif not (set(lenses) & PREFERRED_LENSES):
             errors.append(f"{path}.audit.evidence_lenses 必须包含根苗花果、资源、交叉方法或时运视角")
+        core_sections = audit.get("core_sections")
+        if not isinstance(core_sections, list) or len(set(core_sections)) < 2:
+            errors.append(f"{path}.audit.core_sections 至少包含两个Core来源")
+        if not isinstance(audit.get("alternatives"), list) or not audit["alternatives"]:
+            errors.append(f"{path}.audit.alternatives 至少保留一个替代解释")
         if audit.get("birth_time_dependency") not in {"none", "partial", "high"}:
             errors.append(f"{path}.audit.birth_time_dependency 值无效")
         if audit.get("confidence") not in {"high", "medium", "to_verify"}:
@@ -152,18 +194,24 @@ def validate(data: Any) -> list[str]:
 
     if numbers != [1, 2, 3, 4, 5]:
         errors.append("五条题目的 number 必须依次为1—5")
+    if len(template_ids) != len(set(template_ids)):
+        errors.append("五道校准题不得重复使用同一个固定题型")
     if len(domains) < 4:
         errors.append("五条题目至少覆盖四个生活领域")
     for domain, count in domain_counts.items():
         if count > 2:
             errors.append(f"同一生活领域最多两题：{domain} 当前{count}题")
+    if "timed_event" not in evidence_modes:
+        errors.append("五道题至少包含一道已发生事件的时间窗口题，用于校准大运流年的现实执行")
+    if sum(mode in {"objective_state", "timed_event"} for mode in evidence_modes) < 2:
+        errors.append("五道题至少包含两道客观状态或已发生事件题，不能全部询问性格偏好")
     return errors
 
 
 def render_visible(data: dict[str, Any]) -> str:
-    """只输出 display；audit 永远不进入用户可见文本。"""
     lines = [
-        "为了让报告更贴近你的真实经历，请选择每个场景中更接近你的一项。",
+        "为了让报告更贴近你的真实经历，请按题目限定的时间和场景选择最接近的一项。",
+        "A、B、C只比较同一件事；如果两项都发生过，请按题目中的“最先、最多或主要”规则选择。",
         "只需回复题号和字母；最关心的一两题也可以补充一个具体例子或年份。",
         "",
     ]
@@ -179,20 +227,21 @@ def render_visible(data: dict[str, Any]) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="校验并生成用户可见的五条现实校准题")
+    parser = argparse.ArgumentParser(description="校验并生成模板化的五条现实校准题")
     parser.add_argument("input", type=Path)
+    parser.add_argument("--analysis", type=Path, required=True, help="已校验的Core analysis-output-initial.json")
     parser.add_argument("--visible-out", type=Path)
     args = parser.parse_args()
     try:
-        data = json.loads(args.input.read_text(encoding="utf-8"))
-        errors = validate(data)
+        data, analysis = load_json(args.input), load_json(args.analysis)
+        errors = validate(data, analysis)
         if errors:
             print(json.dumps({"status": "validation_error", "errors": errors}, ensure_ascii=False, indent=2))
             return 3
         if args.visible_out:
             args.visible_out.parent.mkdir(parents=True, exist_ok=True)
             args.visible_out.write_text(render_visible(data), encoding="utf-8")
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False))
         return 2
     print(json.dumps({"status": "ok", "questions": 5, "visible_output": str(args.visible_out) if args.visible_out else None}, ensure_ascii=False))

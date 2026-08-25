@@ -29,12 +29,34 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="生成人生有迹新版卡片与完整报告")
     parser.add_argument("--report", type=Path, required=True, help="report.json")
     parser.add_argument("--free-card", type=Path, required=True, help="free-card-output.json")
+    parser.add_argument("--calibration-questions", type=Path, required=True, help="已通过2.1.0校验的calibration-questions.json")
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--keep-pages", action="store_true", help="保留10页PNG用于视觉验收")
     args = parser.parse_args()
     try:
         report = json.loads(args.report.read_text(encoding="utf-8"))
         free_card = json.loads(args.free_card.read_text(encoding="utf-8"))
+        calibration_questions = json.loads(args.calibration_questions.read_text(encoding="utf-8"))
+        if calibration_questions.get("schema_version") != "2.1.0" or calibration_questions.get("template_version") != "1.0.0":
+            raise ValueError("交付必须使用2.1.0固定题型校准结果")
+        questions = calibration_questions.get("questions")
+        responses = report.get("calibration", {}).get("responses", [])
+        if not isinstance(questions, list) or len(questions) != 5:
+            raise ValueError("calibration-questions.json 必须包含五道固定题型")
+        if report.get("document_mode") == "full_calibrated" and len(responses) != 5:
+            raise ValueError("正式报告必须包含五道校准响应")
+        for index, response in enumerate(responses):
+            question = questions[index]
+            display, audit = question.get("display", {}), question.get("audit", {})
+            if response.get("question_number") != display.get("number") or response.get("template_id") != audit.get("template_id") or response.get("domain") != display.get("domain"):
+                raise ValueError(f"第{index + 1}条报告响应与固定校准题不一致")
+            choice = response.get("choice")
+            choices = {item.get("key"): item.get("text") for item in display.get("choices", [])}
+            if response.get("selected_text") != choices.get(choice) or response.get("selected_value") != audit.get("choice_meanings", {}).get(choice):
+                raise ValueError(f"第{index + 1}条报告响应的文本或值编码与用户实际选择不一致")
+            expected_updates = [] if choice == "D" else audit.get("candidate_effects", {}).get(choice)
+            if response.get("candidate_updates") != expected_updates:
+                raise ValueError(f"第{index + 1}条报告响应没有忠实回写该选项的Core候选影响")
         report_source = report.get("source", {})
         card_source = free_card.get("source", {})
         for key in ("analysis_id", "core_version"):
@@ -61,7 +83,7 @@ def main() -> int:
         run([sys.executable, str(REPO_ROOT / "scripts/generate_card.py"), "--input", str(args.free_card), "--output", str(card)])
         run([sys.executable, str(SKILL_ROOT / "scripts/render_report.py"), str(args.report), "--out", str(markdown)])
         files = {"card_png": str(card), "markdown": str(markdown)}
-        checks = {"new_card_size": [1242, 1660], "report_json_valid": True, "relationship_years_match_card": True}
+        checks = {"new_card_size": [1242, 1660], "report_json_valid": True, "relationship_years_match_card": True, "calibration_questions_match_report": True}
         if report.get("document_mode") == "full_calibrated":
             command = [sys.executable, str(SKILL_ROOT / "scripts/render_report_pdf.py"), str(args.report), "--card", str(card), "--out", str(pdf)]
             if args.keep_pages:

@@ -1,98 +1,87 @@
-# 五条事实校准规范
+# 五条事实校准规范 v2.1
 
-## 目的
+## 目的与边界
 
-从 Core 的 `reality_candidate_pool` 中选择五条最值得核对的事实，用于确认现实落点、调整置信度，并识别出生时间或排盘口径的不确定性。校准不重新推命，也不修改四柱、原局结构或时运事实。
+校准用于在 Core 已经支持的多种现实表现中确认实际落点，并判断当前大运、流年通过什么现实载体执行。它可以调整现实映射、候选状态、排序和置信度，但不能修改四柱、原局结构或时运事实，也不能把用户答案倒推成命理证据。
 
-## 选择规则
+五题至少覆盖四个生活领域，同一领域最多两题，用户关注方向最多两题。至少两题必须核对客观状态或已经发生的事件，至少一题必须带明确时间窗口并绑定 `candidate_kind=timed_event` 的 Core 候选。这样五题不会退化成性格问卷。
 
-1. 五条至少覆盖家庭与教育、事业与组织、关系、财务、迁移或身心中的四个领域；同一领域最多两题。
-2. 优先选择能用短回答确认的客观经历、现实模式或时间窗口，不问“你是不是想得多”等泛化感受。
-3. 每条必须在内部 `audit` 保留 Core 候选编号、证据视角、来源章节、替代解释、时柱依赖和原置信度；这些内容永远不进入用户可见问题。
-4. 带年份的候选只有在原局、大运、流年和现实年龄共同支持时才进入首轮，并允许前后约一年误差。
-5. 健康、重大财务与婚姻结果属于高风险内容，不进入绝对判断。
-6. 若出生时间接近边界，最多使用一条问题区分相邻时柱，不告诉用户哪一选项对应哪个时柱。
+## 固定题型而不是自由写题
 
-## 提问格式
+用户模型不得自行撰写题干和选项。完整读取 [calibration-question-templates.json](calibration-question-templates.json)，只负责：
 
-五题不再询问“这段宽泛描述是否符合”，而要让用户在三个互斥、可观察的现实模式中选择更接近的一项：
+1. 从 Core 候选池判断哪五个比较轴最有信息量；
+2. 选择五个不重复的 `template_id`；
+3. 把A、B、C分别绑定到候选状态变化；
+4. 填写内部证据、来源、替代解释和时柱依赖；
+5. 运行构建器生成固定用户可见文字。
 
-> **校准1｜工作中的做法**
->
-> 当任务目标还不清楚时，你通常更接近哪一种？
->
-> A. 先查资料、拆步骤，想清楚后再开始
->
-> B. 先做出一个版本，再根据反馈修改
->
-> C. 先找相关的人讨论，确认方向后推进
->
-> D. 都不符合／不确定（可补充）
+固定题型已经为每题锁定：生活领域、比较轴、时间窗口、选择规则、题干、A/B/C互斥值、受影响的Core结论和证据类型。用户模型不能改写“过去一年”为“近几年”，不能把收入来源、投资习惯和收入趋势混进同一道题，也不能把家庭财务矛盾放进身心题。
 
-每题只区分一个主要机制。A、B、C必须是同一场景下的不同处理方式、不同经历路径或不同现实来源，不能把三个都容易成立的好话并列。D固定为“都不符合／不确定（可补充）”。
+## Core候选要求
 
-用户可见题目只允许出现：题号、生活领域、一个具体场景问题和四个选项。禁止出现日主、身强身弱、十神、格局、大运流年、根苗花果、盘面支持、证据、候选编号、置信度和替代解释。
+每条 `reality_candidate_pool` 候选必须包含：
 
-## 校准题 JSON 契约
+- `domain`：固定为八个现实领域之一；
+- `candidate_kind`：`stable_pattern`、`objective_state`、`timed_event` 或 `current_stage`；
+- `time_scope`：长期、当前阶段或明确年份范围；
+- `calibration_targets`：答案实际会调整的1—4个Core结论路径；
+- 原有结论、可观察表现、替代解释、来源、置信度、验证问题和状态。
+
+带时间窗口的题必须绑定至少一个 `timed_event` 候选，且该候选必须具有大运或流年证据。只由日主旺衰或单个十神支持的候选不得进入五题。
+
+## calibration-plan.json
+
+模型只生成内部计划，不生成用户可见题目：
 
 ```json
 {
-  "schema_version": "2.0.0",
+  "schema_version": "1.0.0",
   "questions": [
     {
-      "display": {
-        "number": 1,
-        "domain": "事业与组织",
-        "prompt": "当任务目标还不清楚时，你通常更接近哪一种？",
-        "choices": [
-          {"key": "A", "text": "先查资料、拆步骤，想清楚后再开始"},
-          {"key": "B", "text": "先做出一个版本，再根据反馈修改"},
-          {"key": "C", "text": "先找相关的人讨论，确认方向后推进"},
-          {"key": "D", "text": "都不符合／不确定（可补充）"}
-        ]
+      "template_id": "finance.primary_income_source",
+      "candidate_effects": {
+        "A": [{"candidate_id": "c07", "status": "match"}],
+        "B": [{"candidate_id": "c07", "status": "partial"}],
+        "C": [{"candidate_id": "c07", "status": "reject"}]
       },
-      "audit": {
-        "candidate_ids": ["c01", "c02", "c03"],
-        "choice_meanings": {
-          "A": "c01",
-          "B": "c02",
-          "C": "c03",
-          "D": "uncertain"
-        },
-        "evidence_lenses": ["root_seed_flower_fruit_map", "resource_relationship"],
-        "core_sections": ["reality_candidate_pool", "reality_domains.career"],
-        "alternatives": ["当前组织分工本身造成类似体验"],
-        "birth_time_dependency": "partial",
-        "confidence": "medium"
-      }
+      "evidence_lenses": ["resource_relationship", "cross_method_analysis"],
+      "core_sections": ["reality_candidate_pool", "reality_domains.wealth"],
+      "alternatives": ["现实职业结构也会直接影响收入来源"],
+      "birth_time_dependency": "none",
+      "confidence": "medium"
     }
   ]
 }
 ```
 
-`display` 是唯一可发送给用户的部分。`audit` 只供程序校验和报告来源追溯。运行 `scripts/validate_calibration_questions.py` 生成用户可见 Markdown，不允许模型自行拼接问题和解释。
+每个选项必须对至少一个真实 Core 候选产生 `match`、`partial` 或 `reject` 影响；A、B、C的影响组合不得完全相同。三项可以作用于同一个候选，也可以分别支持不同候选，但所有候选必须存在于初始母稿并与题型领域一致。
 
-五题中用户最关心的领域最多两题，避免校准题把整份报告带向单一方向。至少三题必须区分具体行为、收入来源、家庭角色、关系互动或现实经历，不能只区分抽象态度。若用户愿意，可在最关心的一至两题后补充一个具体例子或年份；补充事实优先于选择字母。
+## 确定性生成与校验
 
-每题至少使用两个独立证据视角，并至少包含根苗花果、资源关系、交叉方法、大运主题、流年执行或领域联动中的一个。只由日主旺衰或单个十神支持的候选不得进入五题。
+先构建，再校验并生成唯一可发给用户的Markdown：
 
-## 回写 Core
+```bash
+python skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py \
+  --plan work/calibration-plan.json \
+  --analysis work/analysis-output-initial.json \
+  --output work/calibration-questions.json
 
-将回答写回 Core 输入：
+python skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py \
+  work/calibration-questions.json \
+  --analysis work/analysis-output-initial.json \
+  --visible-out work/calibration-visible.md
+```
 
-- A、B或C：只确认该选项映射的候选；同题其他候选标记为未选择，不自动视为完全否定；
-- D：标记 `uncertain`，不得当作支持；
-- 用户补充的年份或经历：同时写入 `confirmed_events`，注明来自用户陈述。
+`calibration-questions.json` 使用 `schema_version=2.1.0`。构建器从模板原样填充 `display`，校验器逐字比对；任何模型自行改写的题干或选项都会失败。内部候选编号、命理证据、置信度和替代解释永远不进入 `calibration-visible.md`。
 
-重新运行 Core 后，检查 `calibration_state.confirmed/partial/rejected/uncertain/updates` 是否忠实反映回答。不得把失败候选换词包装成命中。
+## 回写规则
 
-## 如何调整置信度
+- A、B或C：记录对应 `template_id`、固定 `selected_value` 和该选项的 `candidate_updates`；
+- D：`selected_value=uncertain`、`candidate_updates=[]`，不能默认支持最接近的候选；
+- 用户补充事实：同时写入 `reality_context`、报告 `user_note` 和相关Core候选的用户事实来源；
+- `match` 只提高对应候选，`partial` 保留条件，`reject` 降低或删除该现实映射；
+- 用户选择不能让无关领域顺带提高置信度；
+- 多题与Core时运候选持续冲突时，复查地点、真太阳时、起运和相邻时柱，而不是修改既定盘面迎合答案。
 
-- A、B或C只支持对应的现实候选，不代表整张命盘“正确”；
-- 用户补充的具体事实或年份与候选一致时，相关现实映射可以提高，其他领域不得顺带提高；
-- 选择D的题目保持待验证，不能把D解释为默认支持最接近的候选；
-- 多题选择与Core候选都无法形成一致路径时，暂停高指向性结论，复查地点、时区、真太阳时、起运及相邻时柱；
-- 分歧集中在一个领域时，优先调整该领域的现实映射，不否定其他已验证领域；
-- 分歧集中在时柱或年份时，提高出生时间依赖与不确定性标记。
-
-校准只使用“高置信／中等置信／待验证”，不生成准确率百分比。用户跳过任一题时，所有依赖现实落点的结论最高为“中等置信”，输出必须标为“人生有迹｜初步分析”，不得生成或声称已经生成正式完整PDF。
+报告中的每条校准响应必须能够回答：“这道题改变了哪个现实候选和哪一段报告？”如果选择A、B、C后报告完全不变，这道题没有实现校准功能。

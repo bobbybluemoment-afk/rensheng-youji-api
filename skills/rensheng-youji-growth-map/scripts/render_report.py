@@ -44,6 +44,11 @@ GENERIC_ANCHORS = {"能力", "专业", "技术", "业务", "管理", "表达", "
 ANCHOR_PRECISION = {"user_confirmed", "multi_method", "category_only"}
 HEDGE_TERMS = ("可能", "更可能", "倾向", "容易", "较像", "更像", "适合")
 HEDGE_PATTERN = re.compile("|".join(sorted(map(re.escape, HEDGE_TERMS), key=len, reverse=True)))
+TEMPLATE_PATH = Path(__file__).resolve().parent.parent / "references" / "calibration-question-templates.json"
+CALIBRATION_TEMPLATES = {
+    item["id"]: item
+    for item in json.loads(TEMPLATE_PATH.read_text(encoding="utf-8"))["templates"]
+}
 
 
 def require(obj: dict[str, Any], key: str, where: str = "root") -> Any:
@@ -103,8 +108,8 @@ def validate(data: dict[str, Any]) -> None:
     required = ("schema_version", "document_mode", "source", "title", "subtitle", "generated_on", "brand", "profile", "focus_scope", "cross_output_consistency", "chart", "calibration", "executive_summary", "stage_story", "dimensions", "yearly_outlook", "action_guide", "open_questions", "author", "boundaries")
     for key in required:
         require(data, key)
-    if data["schema_version"] != "2.4.0":
-        raise ValueError("schema_version must be 2.4.0")
+    if data["schema_version"] != "2.5.0":
+        raise ValueError("schema_version must be 2.5.0")
     try:
         generated_on = date.fromisoformat(data["generated_on"])
     except (TypeError, ValueError) as exc:
@@ -119,8 +124,8 @@ def validate(data: dict[str, Any]) -> None:
     source = data["source"]
     for key in ("analysis_id", "core_version", "analysis_as_of", "calibration_status"):
         require(source, key, "source")
-    if source["core_version"] != "0.3.0":
-        raise ValueError("完整报告必须来自 core_version=0.3.0 的母稿")
+    if source["core_version"] != "0.4.0":
+        raise ValueError("完整报告必须来自 core_version=0.4.0 的母稿")
     if source["analysis_as_of"] != data["generated_on"]:
         raise ValueError("source.analysis_as_of 必须与 generated_on 为同一天，避免行动建议使用过期年份")
     expected_status = "calibrated" if mode == "full_calibrated" else "skipped"
@@ -156,9 +161,11 @@ def validate(data: dict[str, Any]) -> None:
         raise ValueError("正式报告必须通过时间边界预检")
 
     calibration = data["calibration"]
-    for key in ("summary", "birth_time_status", "responses", "confirmed", "partial", "rejected", "uncertain"):
+    for key in ("question_schema_version", "template_version", "summary", "birth_time_status", "responses", "confirmed", "partial", "rejected", "uncertain"):
         if key not in calibration:
             raise ValueError(f"Missing required field: calibration.{key}")
+    if calibration["question_schema_version"] != "2.1.0" or calibration["template_version"] != "1.0.0":
+        raise ValueError("calibration 必须来自2.1.0固定题型校准链路")
     answers = sum(len(calibration[key]) for key in ("confirmed", "partial", "rejected", "uncertain"))
     if mode == "full_calibrated" and answers != 5:
         raise ValueError("正式报告必须记录五条校准结果")
@@ -172,18 +179,29 @@ def validate(data: dict[str, Any]) -> None:
         where = f"calibration.responses[{index}]"
         if not isinstance(response, dict):
             raise ValueError(f"{where} 必须是对象")
-        for key in ("question_number", "domain", "choice", "selected_text", "candidate_id", "user_note"):
+        for key in ("question_number", "template_id", "domain", "choice", "selected_text", "selected_value", "candidate_updates", "user_note"):
             if key not in response:
                 raise ValueError(f"Missing required field: {where}.{key}")
         response_numbers.append(response["question_number"])
         if response["choice"] not in {"A", "B", "C", "D"}:
             raise ValueError(f"{where}.choice 必须为A、B、C或D")
-        length(response["selected_text"], 8, 65, f"{where}.selected_text")
+        template = CALIBRATION_TEMPLATES.get(response["template_id"])
+        if template is None or response["domain"] != template["domain"]:
+            raise ValueError(f"{where}.template_id或domain不属于固定题型")
+        template_choices = {item["key"]: item for item in template["choices"]}
         if response["choice"] == "D":
-            if response["candidate_id"] not in (None, ""):
-                raise ValueError(f"{where}.candidate_id 在选择D时必须为空")
-        elif not isinstance(response["candidate_id"], str) or not re.fullmatch(r"c\d+", response["candidate_id"]):
-            raise ValueError(f"{where}.candidate_id 在选择A—C时必须形如c01")
+            if response["selected_text"] != "都不符合／不确定（可补充）" or response["selected_value"] != "uncertain" or response["candidate_updates"] != []:
+                raise ValueError(f"{where} 选择D时必须记录固定不确定文本、uncertain和空更新")
+        else:
+            expected_choice = template_choices[response["choice"]]
+            if response["selected_text"] != expected_choice["text"] or response["selected_value"] != expected_choice["value_code"]:
+                raise ValueError(f"{where} 的选择文本和值编码必须来自固定题型")
+            updates = list_length(response["candidate_updates"], 1, 3, f"{where}.candidate_updates")
+            for update_index, update in enumerate(updates):
+                if not isinstance(update, dict) or set(update) != {"candidate_id", "status"}:
+                    raise ValueError(f"{where}.candidate_updates[{update_index}] 必须只含candidate_id和status")
+                if not re.fullmatch(r"c\d+", str(update["candidate_id"])) or update["status"] not in {"match", "partial", "reject"}:
+                    raise ValueError(f"{where}.candidate_updates[{update_index}] 值无效")
         if not isinstance(response["user_note"], str):
             raise ValueError(f"{where}.user_note 必须是字符串")
         if response["user_note"]:
