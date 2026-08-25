@@ -13,6 +13,22 @@ from typing import Any
 
 
 DIMENSION_IDS = ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]
+DIMENSION_PARAGRAPHS = {
+    "self_growth": ["behavior_and_decision", "formation_and_experience", "recurring_challenge_and_change", "response"],
+    "love_partner": ["attraction_and_needs", "interaction_and_experience", "conflict_and_change", "response"],
+    "career": ["ability_and_formation", "organization_role_environment", "recurring_problem_and_change", "response"],
+    "finance_resources": ["resource_start_and_attitude", "income_and_accumulation", "leakage_and_change", "response"],
+    "body_emotion": ["trigger_and_signal", "coping_and_cycle", "impact_and_change", "response"],
+    "family_growth": ["climate_and_resources", "role_and_boundary", "repeated_issue_and_change", "response"],
+}
+DIMENSION_HEADINGS = {
+    "self_growth": ["你怎样做决定", "这些习惯怎样形成", "容易反复遇到的情况", "可以怎样调整"],
+    "love_partner": ["你会被什么样的人吸引", "你怎样建立和维持关系", "关系里容易出现的问题", "可以怎样处理"],
+    "career": ["能力怎样形成", "更适合的单位、岗位与环境", "工作中容易反复出现的问题", "接下来的应对"],
+    "finance_resources": ["你怎样看待和使用钱", "钱主要从哪里来", "最容易出现损耗的地方", "接下来的积累方式"],
+    "body_emotion": ["压力通常从哪里开始", "你怎样反应和恢复", "容易形成的循环与变化", "可以怎样照顾自己"],
+    "family_growth": ["家庭提供的资源与影响", "你在家庭中的角色和边界", "容易反复出现的问题", "可以怎样处理"],
+}
 FOCUS_EMPHASIS_SECTIONS = [
     "executive_summary.current_situation", "executive_summary.direct_answer",
     "stage_story.present_task", "stage_story.next_direction", "yearly_outlook",
@@ -34,6 +50,7 @@ FOCUS_TERMS = {
 CONFIDENCE = {"高置信", "中等置信", "待验证"}
 BANNED = {"百分之百准确", "保证发财", "保证复合", "必然离婚", "命中注定", "改命消灾", "克夫", "克妻", "婚灾", "大凶"}
 AI_JARGON = {"卡点", "卡住", "换轨", "兑现", "承接", "赛道", "抓手", "底层逻辑", "显化", "能量场"}
+EDITORIAL_BANNED = {"现实落点", "核对点", "好处是", "代价是", "资源持续", "平台节奏", "稳定位置", "能力变现"}
 MINGLI_TERMS = {"日主", "身强", "身弱", "比肩", "劫财", "食神", "伤官", "食伤", "正印", "偏印", "正财", "偏财", "正官", "七杀", "格局", "喜用", "忌神", "大运", "流年", "藏干", "透干", "透出", "得令", "刑冲合害", "根苗花果", "财多身弱"}
 MINGLI_PATTERN = re.compile(r"(?:[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥][木火土金水])")
 FOCUS_GENERIC_KEYWORDS = {"事业", "工作", "职业", "感情", "关系", "恋爱", "财务", "财富", "收入", "家庭", "健康", "身体", "情绪", "发展", "方向", "问题", "未来", "当前", "进展", "选择"}
@@ -105,11 +122,11 @@ def visible_payload(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def validate(data: dict[str, Any]) -> None:
-    required = ("schema_version", "document_mode", "source", "title", "subtitle", "generated_on", "brand", "profile", "focus_scope", "cross_output_consistency", "chart", "calibration", "executive_summary", "stage_story", "dimensions", "yearly_outlook", "action_guide", "open_questions", "author", "boundaries")
+    required = ("schema_version", "document_mode", "source", "title", "subtitle", "generated_on", "brand", "profile", "focus_scope", "cross_output_consistency", "chart", "calibration", "editorial_review", "executive_summary", "stage_story", "dimensions", "yearly_outlook", "action_guide", "open_questions", "author", "boundaries")
     for key in required:
         require(data, key)
-    if data["schema_version"] != "2.5.0":
-        raise ValueError("schema_version must be 2.5.0")
+    if data["schema_version"] != "2.6.0":
+        raise ValueError("schema_version must be 2.6.0")
     try:
         generated_on = date.fromisoformat(data["generated_on"])
     except (TypeError, ValueError) as exc:
@@ -210,6 +227,17 @@ def validate(data: dict[str, Any]) -> None:
     if mode == "full_calibrated" and response_numbers != [1, 2, 3, 4, 5]:
         raise ValueError("calibration.responses.question_number 必须依次为1—5")
 
+    editorial = data["editorial_review"]
+    expected_editorial = {
+        "version": "1.0.0",
+        "fact_preservation_checked": True,
+        "calibration_paraphrased": True,
+        "natural_chinese_checked": True,
+        "template_repetition_checked": True,
+    }
+    if editorial != expected_editorial:
+        raise ValueError("editorial_review 必须完成事实保留、校准改写、自然中文和重复句式四项检查")
+
     summary = data["executive_summary"]
     for key in ("life_theme", "capabilities_resources", "formation", "current_situation", "direct_answer"):
         require(summary, key, "executive_summary")
@@ -246,22 +274,28 @@ def validate(data: dict[str, Any]) -> None:
     audited_user_facts: set[str] = set()
     for index, section in enumerate(dimensions):
         where = f"dimensions[{index}]"
-        for key in ("title", "main_verdict", "reality_anchor", "pattern_and_cost", "verification_point", "confidence", "audit"):
+        for key in ("title", "overview", "paragraphs", "confidence", "audit"):
             require(section, key, where)
         if section["confidence"] not in CONFIDENCE:
             raise ValueError(f"Invalid confidence in {where}")
-        length(section["main_verdict"], 22, 90, f"{where}.main_verdict")
-        if len(HEDGE_PATTERN.findall(section["main_verdict"])) > 1:
-            raise ValueError(f"{where}.main_verdict 只能保留一个必要的条件词，不能连续弱化判断")
-        length(section["reality_anchor"], 30, 140, f"{where}.reality_anchor")
-        length(section["pattern_and_cost"], 45, 170, f"{where}.pattern_and_cost")
-        length(section["verification_point"], 18, 85, f"{where}.verification_point")
-        if section["id"] == "body_emotion" and not any(term in section["pattern_and_cost"] + section["verification_point"] for term in ("不能", "不足", "不作", "不等于")):
+        length(section["overview"], 45, 95, f"{where}.overview")
+        if len(HEDGE_PATTERN.findall(section["overview"])) > 2:
+            raise ValueError(f"{where}.overview 条件词过多，判断被连续弱化")
+        paragraphs = section["paragraphs"]
+        expected_paragraphs = DIMENSION_PARAGRAPHS[section["id"]]
+        if not isinstance(paragraphs, dict) or list(paragraphs) != expected_paragraphs:
+            raise ValueError(f"{where}.paragraphs 必须按领域固定顺序完整填写：{expected_paragraphs}")
+        for paragraph_key, paragraph in paragraphs.items():
+            length(paragraph, 45, 105, f"{where}.paragraphs.{paragraph_key}")
+            sentences = [part for part in re.split(r"[。！？；]", paragraph) if cjk_count(part)]
+            if any(cjk_count(sentence) > 68 for sentence in sentences):
+                raise ValueError(f"{where}.paragraphs.{paragraph_key} 存在超过68个汉字的长句，请改成自然短句")
+        visible_text = section["overview"] + "".join(paragraphs.values())
+        section_count = cjk_count(visible_text)
+        if not 270 <= section_count <= 500:
+            raise ValueError(f"{where} 可见正文应为270—500个汉字，当前{section_count}")
+        if section["id"] == "body_emotion" and not any(term in visible_text for term in ("不能据此诊断", "不构成疾病诊断", "应以正规医疗评估为准")):
             raise ValueError(f"{where} 必须明确身体与情绪判断不构成疾病诊断")
-        visible_section = {key: value for key, value in section.items() if key not in {"audit", "id", "title", "confidence"}}
-        section_count = cjk_count(json.dumps(visible_section, ensure_ascii=False))
-        if not 125 <= section_count <= 360:
-            raise ValueError(f"{where} 可见正文应为125—360个汉字，当前{section_count}")
         audit = section["audit"]
         for key in ("core_sections", "evidence_lenses", "verdict_sources", "reality_anchor_terms", "reality_anchor_sources", "anchor_precision", "user_facts", "social_priors", "needs_validation"):
             if key not in audit:
@@ -286,16 +320,16 @@ def validate(data: dict[str, Any]) -> None:
             length(term, 2, 14, f"{where}.audit.reality_anchor_terms[{term_index}]")
             if re.sub(r"[\s、，。]", "", term) in GENERIC_ANCHORS:
                 raise ValueError(f"{where}.audit.reality_anchor_terms[{term_index}] 过于宽泛，必须写可核对的组织、任务、收入、关系安排或生活场景")
-            if term not in section["reality_anchor"]:
-                raise ValueError(f"{where}.reality_anchor 必须实际出现审计中的现实名词“{term}”")
+            if term not in visible_text:
+                raise ValueError(f"{where} 正文必须实际出现审计中的现实名词“{term}”")
             sources = anchor_sources[term]
             needed_sources = 1 if precision == "user_confirmed" else 2
             if not isinstance(sources, list) or len(set(sources)) < needed_sources:
                 raise ValueError(f"{where}.audit.reality_anchor_sources.{term} 至少包含{needed_sources}个来源")
         if precision == "user_confirmed" and not audit["user_facts"]:
             raise ValueError(f"{where}.audit.anchor_precision=user_confirmed 时必须有用户明确事实")
-        if precision == "category_only" and not any(term in section["verification_point"] for term in ("不足以", "暂不", "还需", "只能", "不能继续缩小")):
-            raise ValueError(f"{where}.verification_point 在证据只到类别层时必须明确收窄边界")
+        if precision == "category_only" and not any(term in audit["needs_validation"] for term in ("不足以", "暂不", "还需", "需要", "只能", "不能继续缩小")):
+            raise ValueError(f"{where}.audit.needs_validation 在证据只到类别层时必须明确收窄边界")
         all_anchor_terms.extend(re.sub(r"[\W_]+", "", term) for term in anchor_terms)
         audited_user_facts.update(item for item in audit["user_facts"] if isinstance(item, str))
     for needed in ("root_seed_flower_fruit_map", "cross_method_analysis"):
@@ -393,6 +427,15 @@ def validate(data: dict[str, Any]) -> None:
     jargon = sorted(term for term in AI_JARGON if term in visible)
     if jargon:
         raise ValueError("AI-style jargon found: " + "、".join(jargon))
+    editorial_terms = sorted(term for term in EDITORIAL_BANNED if term in visible)
+    if editorial_terms:
+        raise ValueError("用户可见正文含有生硬模板词，请改成自然中文：" + "、".join(editorial_terms))
+    copied_calibration = sorted({
+        response["selected_text"] for response in responses
+        if response["choice"] != "D" and len(response["selected_text"]) >= 8 and response["selected_text"] in visible
+    })
+    if copied_calibration:
+        raise ValueError("校准选项只能用于更新判断，不能原句复制进报告正文")
     if re.search(r"\b(?:c\d+|candidate[_-]?\w*)\b", visible, re.IGNORECASE):
         raise ValueError("用户可见正文泄露内部候选编号")
     found_mingli = sorted(term for term in MINGLI_TERMS if term in visible)
@@ -400,8 +443,8 @@ def validate(data: dict[str, Any]) -> None:
     if found_mingli or pattern_hits:
         raise ValueError("用户可见正文不得直接出现内部命理术语：" + "、".join(found_mingli + pattern_hits))
     total_cjk = cjk_count(visible)
-    if mode == "full_calibrated" and not 3400 <= total_cjk <= 5600:
-        raise ValueError(f"正式报告正文应为3400—5600个汉字，当前{total_cjk}")
+    if mode == "full_calibrated" and not 4300 <= total_cjk <= 6500:
+        raise ValueError(f"正式报告正文应为4300—6500个汉字，当前{total_cjk}")
 
 
 def bullets(items: list[str], bold: bool = False) -> str:
@@ -427,16 +470,14 @@ def render(data: dict[str, Any]) -> str:
         f"- **现在正在处理：** {stage['present_task']}", f"- **未来两三年的可能方向：** {stage['next_direction']}", f"- **更长阶段的主线：** {stage['long_range']}", "",
     ]
     for section in data["dimensions"]:
-        lines.extend([
-            f"## {section['title']}", "", f"**{section['main_verdict']}**", "",
-            f"**现实落点：** {section['reality_anchor']}", "", section["pattern_and_cost"], "",
-            f"*核对点：{section['verification_point']}*", "", f"*判断等级：{section['confidence']}*", "",
-        ])
+        lines.extend([f"## {section['title']}", "", f"**{section['overview']}**", ""])
+        for key, heading in zip(DIMENSION_PARAGRAPHS[section["id"]], DIMENSION_HEADINGS[section["id"]]):
+            lines.extend([f"### {heading}", "", section["paragraphs"][key], ""])
     outlook = data["yearly_outlook"]
-    lines.extend(["## 阶段与逐年观察", "", outlook["summary"], "", "| 年份 | 年度主题 | 从上一年带入 | 现实落点 | 留给下一年 | 判断等级 |", "|---|---|---|---|---|---|"])
+    lines.extend(["## 阶段与逐年观察", "", outlook["summary"], "", "| 年份 | 年度主题 | 上一年带来的影响 | 这一年的主要表现 | 给下一年留下什么 |", "|---|---|---|---|---|"])
     for item in outlook["years"]:
         year_label = f"★ {item['year']}" if item["key_year"] else str(item["year"])
-        lines.append(f"| {year_label} | {item['theme']} | {item['carry_in']} | {item['real_world_signal']} | {item['seed_for_next']} | {item['confidence']} |")
+        lines.append(f"| {year_label} | {item['theme']} | {item['carry_in']} | {item['real_world_signal']} | {item['seed_for_next']} |")
     guide = data["action_guide"]
     lines.extend(["", "## 现实行动建议", "", "### 现在最值得做的三件事", "", bullets(guide["priority_actions"]), "", "### 需要减少的一种消耗", "", guide["reduce"], "", "### 传统生活偏好", ""])
     for item in guide["traditional_preferences"]:

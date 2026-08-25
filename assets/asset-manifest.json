@@ -14,6 +14,11 @@
       "width": 256,
       "height": 256,
       "purpose": "人生有迹完整报告固定封面Logo"
+    },
+    "report_body_font": {
+      "path": "assets/fonts/lxgw/LXGWWenKai-Regular.ttf",
+      "sha256": "39ad71264b588165b469e35e6afb162a378dacd1f95348160240ba9038ac3009",
+      "purpose": "人生有迹完整报告固定中文正文字体"
     }
   }
 }

@@ -99,6 +99,8 @@ def main() -> int:
                 "cover_logo_embedded": pdf_result["logo_embedded"],
                 "cover_logo_asset": pdf_result["logo_asset"],
                 "cover_logo_sha256": pdf_result["logo_sha256"],
+                "body_font": pdf_result["body_font"],
+                "body_font_sha256": pdf_result["body_font_sha256"],
                 "overflow": False,
             })
         else:

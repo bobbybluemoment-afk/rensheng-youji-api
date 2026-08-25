@@ -121,14 +121,16 @@ python skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.p
    - [report-schema.md](references/report-schema.md)：报告JSON契约；
    - [audience-continuity-language.md](references/audience-continuity-language.md)：白话和时间连续性；
    - [reality-anchor-language.md](references/reality-anchor-language.md)：事实型断语、现实名词精度与年度载体；
+   - [chinese-editorial.md](references/chinese-editorial.md)：中文编辑、事实保留和生硬表达清理；
    - [prosperity-guide.md](references/prosperity-guide.md)：现实行动建议；
    - [brand-and-conversion.md](references/brand-and-conversion.md)：免费使用与人工服务入口；
    - [safety-language.md](references/safety-language.md)：健康、财务、关系和隐私边界。
-2. 从已校验的 Core 母稿提取 `report.json`。正式报告使用 `schema_version=2.5.0`、`document_mode=full_calibrated`；必须填写固定 `focus_scope`，并从当前问题提取1—4个具体 `topic_keywords`。这些关键词在完整人生主线、能力形成和六领域基础正文中合计不得反复出现，只能在第4页、逐年提醒与行动优先级中重点展开。六个领域统一填写一个 `main_verdict`、一个 `reality_anchor`、一段 `pattern_and_cost` 和一个 `verification_point`。先判断工作或互动机制，再在证据允许的精度内使用大型国企、成熟科技公司、项目管理、固定工资、见面频率、住房安排等现实名词；不得为了明确而随意点名行业、岗位、对象身份或家庭经历。
+2. 从已校验的 Core 母稿提取 `report.json`。正式报告使用 `schema_version=2.6.0`、`document_mode=full_calibrated`；必须填写固定 `focus_scope`，并从当前问题提取1—4个具体 `topic_keywords`。这些关键词在完整人生主线、能力形成和六领域基础正文中合计不得反复出现，只能在第4页、逐年提醒与行动优先级中重点展开。六个领域分别按 `report-schema.md` 的固定内容槽位写满：先概括该领域的整体特征，再分别写行为模式、形成经历、现实环境、重复问题、阶段变化和应对。不能再把一个领域压缩成“主判断—现实落点—好处—代价—核对点”。
 3. 完整人生主线先根据原局全局、根苗花果、资源关系、家庭教育、事业财富、亲密关系和长期时运综合生成，再在第4页单独回答用户选择的问题。不得先确定用户关注方向，再反向筛选整份报告的证据。
 4. 时间分析使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系；同时概括更长的大运阶段。
-5. 从同一份校准后 Core 母稿依次运行 `rensheng-youji-free-card-output` 与 `rensheng-youji-free-card-renderer` 的现有新版流程，生成 `work/free-card-output.json`。将卡片中实际高亮的桃花年份原样写入 `report.json.cross_output_consistency.relationship_opportunity_years`；若卡片全部留白则填写空列表，报告不得把其他年份写成明显关系进入或发展机会。不得复制旧卡片，也不得在报告目录另写卡片算法。
-6. 运行统一交付命令：
+5. 初稿完成后，按 `chinese-editorial.md` 单独执行中文编辑。不得直接复制校准题选项，不得使用“现实落点、核对点、资源持续、平台节奏、稳定位置、能力变现”等内部或生硬表达；编辑只能改写可见文字，不能新增或删除有证据的事实与判断。完成后填写 `editorial_review` 四项检查。
+6. 从同一份校准后 Core 母稿依次运行 `rensheng-youji-free-card-output` 与 `rensheng-youji-free-card-renderer` 的现有新版流程，生成 `work/free-card-output.json`。将卡片中实际高亮的桃花年份原样写入 `report.json.cross_output_consistency.relationship_opportunity_years`；若卡片全部留白则填写空列表，报告不得把其他年份写成明显关系进入或发展机会。不得复制旧卡片，也不得在报告目录另写卡片算法。
+7. 运行统一交付命令：
 
 ```bash
 python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
@@ -139,7 +141,7 @@ python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
   --keep-pages
 ```
 
-7. 正式交付固定包含新版1242×1660卡片PNG、Markdown、恰好10页的PDF和 `report-delivery-manifest.json`。PDF第2页必须嵌入刚刚生成的同一张新版卡片；不得让用户模型自行决定版式、页数、换行、颜色或二维码位置。
+8. 正式交付固定包含新版1242×1660卡片PNG、Markdown、恰好10页的PDF和 `report-delivery-manifest.json`。PDF第2页必须嵌入刚刚生成的同一张新版卡片；不得让用户模型自行决定版式、页数、换行、颜色或二维码位置。
 
 ## 用户可见进度
 
@@ -178,7 +180,10 @@ python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
 - 五题至少包含两道客观状态或事件题、一道带时间窗口的事件题，并且时间题实际绑定带大运或流年证据的 `timed_event` 候选；
 - 不包含“初始角色、核心配置、主线任务、人物小传”等旧卡片字段；
 - 六个领域均有实质内容或明确写证据不足，不能把事业段落换词复制到其他领域；
-- 六个领域各自只有一个主判断，后续内容用于证明和落地，不再堆叠多组候选描述；
+- 六个领域各自具有完整人物分析：概括整体特征，并覆盖该领域规定的行为模式、形成或经历、现实条件、重复挑战、阶段变化与应对；
+- 每个领域可见正文为270—500个汉字，不能靠重复同一句判断凑字数；
+- 最终正文没有“现实落点、核对点、判断等级”等内部栏目，也没有固定“好处—代价”句式；
+- 已执行独立中文编辑，校准题只用于更新判断，没有原句复制进正文；
 - 每个现实名词都进入来源审计；大型国企、互联网大厂、事业单位、具体岗位、收入形式等名词只有在用户事实或至少两个独立Core视角支持时才能出现；
 - 事业、财务、关系、家庭与压力节奏均落到各自可核对的名词，不能只写“能力、资源、平台、稳定、成长”等宽泛类别；
 - 完整人生主线与能力形成部分至少覆盖六个现实领域，不能围绕用户关注方向集中取材；

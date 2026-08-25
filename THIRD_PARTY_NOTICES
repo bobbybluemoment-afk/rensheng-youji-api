@@ -33,7 +33,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-二、其他第三方内容
+二、霞鹜文楷字体
+
+本项目的完整报告正文使用霞鹜文楷（LXGW WenKai），原项目采用 SIL Open Font License 1.1。
+许可证全文见 assets/fonts/lxgw/OFL.txt。
+
+三、其他第三方内容
 
 lunar_python、Pillow 与 Noto 字体等第三方依赖或素材仍适用其各自的许可证。
 “人生有迹有限个人使用许可”不改变这些第三方内容原有的授权范围。

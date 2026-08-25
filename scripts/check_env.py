@@ -23,6 +23,7 @@ def main() -> int:
     required = [
         ROOT / "assets/icon.svg",
         ROOT / "assets/fonts/noto/NotoSansCJKsc-Regular.otf",
+        ROOT / "assets/fonts/lxgw/LXGWWenKai-Regular.ttf",
         ROOT / "internal/rensheng-youji-mingli-core/SKILL.md",
         ROOT / "internal/rensheng-youji-free-card-output/SKILL.md",
         ROOT / "internal/rensheng-youji-free-card-renderer/SKILL.md",

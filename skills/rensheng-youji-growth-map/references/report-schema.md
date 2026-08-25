@@ -1,4 +1,4 @@
-# 人生有迹报告 JSON v2.5.0
+# 人生有迹报告 JSON v2.6.0
 
 把已校验的 Core 母稿提取为 UTF-8 `report.json`。内部 `audit` 只用于核对来源，永远不进入正文。
 
@@ -11,7 +11,7 @@
 
 ```json
 {
-  "schema_version": "2.5.0",
+  "schema_version": "2.6.0",
   "document_mode": "full_calibrated",
   "source": {
     "analysis_id": "与Core一致",
@@ -89,6 +89,13 @@
     "rejected": [],
     "uncertain": ["仍不确定内容"]
   },
+  "editorial_review": {
+    "version": "1.0.0",
+    "fact_preservation_checked": true,
+    "calibration_paraphrased": true,
+    "natural_chinese_checked": true,
+    "template_repetition_checked": true
+  },
   "executive_summary": {
     "life_theme": "35—120个汉字的人生主线。",
     "capabilities_resources": ["每项16—65个汉字，共2—3项"],
@@ -107,10 +114,13 @@
     {
       "id": "self_growth",
       "title": "1｜性格与内在成长",
-      "main_verdict": "22—90个汉字，只下一个最重要判断",
-      "reality_anchor": "30—140个汉字，写现实机制与有证据的具体名词",
-      "pattern_and_cost": "45—170个汉字，写行为顺序、重复情境与结果或代价",
-      "verification_point": "18—85个汉字，只留一个能收窄结论的核对点",
+      "overview": "45—95个汉字，概括该领域最鲜明的整体特征",
+      "paragraphs": {
+        "behavior_and_decision": "45—105个汉字，写做决定和处理事情的具体方式",
+        "formation_and_experience": "45—105个汉字，写家庭、教育与既往经历怎样形成这些习惯",
+        "recurring_challenge_and_change": "45—105个汉字，写反复出现的情况、挑战和当前变化",
+        "response": "45—105个汉字，写与前文判断直接对应的现实应对"
+      },
       "confidence": "中等置信",
       "audit": {
         "core_sections": ["complete_self_portrait", "root_seed_flower_fruit_map"],
@@ -178,14 +188,23 @@
 - 用户可见正文不得出现日主、十神、天干地支、身强身弱、透干等内部命理术语；只保留现实判断。百分比由PDF渲染器统一写成“百分之20”这类中文形式，并拒绝 `□` 或乱码替代字符。
 - 第1页使用渲染器内置的固定产品介绍与 Logo，不读取 `life_theme`、`current_situation`、四柱或关注方向。第3页先呈现完整人生主线，再呈现能力、资源与形成过程。
 
-- 六个领域固定顺序为 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`；每个领域可见正文125—360个汉字。
-- 每个领域只保留一个 `main_verdict`，后续字段用于落地、解释和核对，不再列2—4组互相分散的候选。主判断最多使用一个“可能、倾向、容易、更像、适合”等条件词。
-- `reality_anchor_terms` 必须含1—4个现实可核对名词，并原样出现在 `reality_anchor`。不能用“能力、技术、管理、资源、平台、岗位、组织、稳定、成长”等宽泛词单独充当现实落点。
-- `anchor_precision=user_confirmed` 时必须有用户明确事实；`multi_method` 时每个名词至少有两个独立来源；`category_only` 时必须在核对点中明确目前不足以收窄到唯一行业、岗位、对象或经历。
+- `editorial_review` 四项布尔检查必须全部为 `true`。编辑只改可见文字，不得改变Core来源、校准状态、年份或判断方向。
+- 六个领域固定顺序为 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`；每个领域可见正文270—500个汉字。
+- 每个领域必须有 `overview` 和四个按领域固定的 `paragraphs`。每段45—105个汉字，分别覆盖行为、形成或经历、现实条件、挑战变化和应对，不能用同一个“好处—代价”模板替代。
+- 六个领域的固定段落键分别为：
+  - `self_growth`：`behavior_and_decision`、`formation_and_experience`、`recurring_challenge_and_change`、`response`；
+  - `love_partner`：`attraction_and_needs`、`interaction_and_experience`、`conflict_and_change`、`response`；
+  - `career`：`ability_and_formation`、`organization_role_environment`、`recurring_problem_and_change`、`response`；
+  - `finance_resources`：`resource_start_and_attitude`、`income_and_accumulation`、`leakage_and_change`、`response`；
+  - `body_emotion`：`trigger_and_signal`、`coping_and_cycle`、`impact_and_change`、`response`；
+  - `family_growth`：`climate_and_resources`、`role_and_boundary`、`repeated_issue_and_change`、`response`。
+- `reality_anchor_terms` 必须含1—4个现实可核对名词，并原样出现在该领域的 `overview` 或四段正文中。不能用“能力、技术、管理、资源、平台、岗位、组织、稳定、成长”等宽泛词单独充当现实名词。
+- `anchor_precision=user_confirmed` 时必须有用户明确事实；`multi_method` 时每个名词至少有两个独立来源；`category_only` 时必须在 `audit.needs_validation` 中明确目前不足以收窄到唯一行业、岗位、对象或经历。
 - 事业名词先由工作机制推出，再写大型国企、事业单位、互联网大厂、成熟科技公司、项目管理、风控合规等组织或岗位指向；这些只是可用名词类型，不是固定候选词库。关系不得猜对象具体职业，家庭不得猜父母职业，身体情绪不得诊断疾病。
 - 六个领域合计必须实际引用 `root_seed_flower_fruit_map` 与 `cross_method_analysis`；每个领域至少两个Core来源和两个独立证据视角。
-- 正式报告可见正文3400—5600个汉字；逐年观察恰好连续20年。
+- 正式报告可见正文4300—6500个汉字；逐年观察恰好连续20年。
 - 年度主题使用现实语言，不直接写十神、大运或流年名词。
 - 年度 `real_world_signal` 必须包含1—3个 `signal_terms`，用项目交付、岗位调整、考试证书、合同、搬家、见父母、回款等现实载体表示连续变化；普通年份不强行虚构事件，`key_year=true` 的重点年才增加细节。
 - 内部候选编号、盘面支持、置信推理和替代解释不得进入用户可见正文。
+- 校准题的 `selected_text` 不能原句复制进用户可见正文；不得出现“现实落点、核对点、判断等级、资源持续、平台节奏、稳定位置、能力变现”等内部或生硬表达。
 - `render_report_pdf.py` 只接受正式校准报告，固定生成10页；第2页嵌入同一流程生成的新版1242×1660卡片。

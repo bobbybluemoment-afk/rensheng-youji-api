@@ -1,6 +1,6 @@
 interface:
   display_name: "人生有迹完整报告"
-  short_description: "用固定互斥五题校准生成卡片与10页事实型报告"
-  default_prompt: "使用 $rensheng-youji-deep-report，先只询问我的出生时间、出生城市、性别和关注问题，再从固定互斥题型中选择五道最有命理校准价值的问题；学历、职业、关系与家庭状态均为可选。每个领域只给一个主判断，并在证据允许时落到具体组织、岗位、收入、关系安排或生活场景，生成新版人生卡片和固定10页的人生有迹完整报告。"
+  short_description: "用固定五题校准生成卡片与自然中文10页报告"
+  default_prompt: "使用 $rensheng-youji-deep-report，先只询问我的出生时间、出生城市、性别和关注问题，再从固定互斥题型中选择五道最有命理校准价值的问题；学历、职业、关系与家庭状态均为可选。六个领域分别写清特征、行为、形成经历、现实方向、挑战变化和应对，再经过中文编辑生成新版人生卡片和固定10页的人生有迹完整报告。"
   icon_small: "./assets/icon.svg"
   icon_large: "./assets/icon.svg"

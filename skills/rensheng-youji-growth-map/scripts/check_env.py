@@ -25,6 +25,7 @@ def main() -> int:
         SKILL_ROOT / "scripts/build_calibration_questions.py",
         SKILL_ROOT / "scripts/validate_calibration_questions.py",
         REPO_ROOT / "assets/fonts/noto/NotoSansCJKsc-Regular.otf",
+        REPO_ROOT / "assets/fonts/lxgw/LXGWWenKai-Regular.ttf",
         REPO_ROOT / "assets/wechat-contact.jpg",
         REPO_ROOT / "assets/rensheng-youji-logo.png",
         REPO_ROOT / "assets/asset-manifest.json",

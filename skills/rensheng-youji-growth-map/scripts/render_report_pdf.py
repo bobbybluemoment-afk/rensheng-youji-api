@@ -18,7 +18,7 @@ SKILL_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = SKILL_ROOT.parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from render_report import FIXED_REPORT_INTRO, cjk_count, validate  # noqa: E402
+from render_report import DIMENSION_HEADINGS, DIMENSION_PARAGRAPHS, FIXED_REPORT_INTRO, cjk_count, validate  # noqa: E402
 
 
 WIDTH, HEIGHT = 1240, 1754
@@ -30,7 +30,8 @@ GOLD = "#B89552"
 PINK = "#D77F91"
 MUTED = "#74736E"
 LIGHT_TEAL = "#DDE8E5"
-FONT_PATH = REPO_ROOT / "assets/fonts/noto/NotoSansCJKsc-Regular.otf"
+HEADING_FONT_PATH = REPO_ROOT / "assets/fonts/noto/NotoSansCJKsc-Regular.otf"
+BODY_FONT_PATH = REPO_ROOT / "assets/fonts/lxgw/LXGWWenKai-Regular.ttf"
 WECHAT_PATH = REPO_ROOT / "assets/wechat-contact.jpg"
 LOGO_PATH = REPO_ROOT / "assets/rensheng-youji-logo.png"
 ASSET_MANIFEST_PATH = REPO_ROOT / "assets/asset-manifest.json"
@@ -78,8 +79,24 @@ def canonical_logo_asset() -> tuple[Path, str]:
     return LOGO_PATH, digest
 
 
-def font(size: int) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(str(FONT_PATH), size=size)
+def canonical_body_font() -> tuple[Path, str]:
+    if not ASSET_MANIFEST_PATH.exists():
+        raise ValueError("缺少正式资源清单 assets/asset-manifest.json")
+    manifest = json.loads(ASSET_MANIFEST_PATH.read_text(encoding="utf-8"))
+    expected = manifest.get("assets", {}).get("report_body_font", {})
+    if expected.get("path") != "assets/fonts/lxgw/LXGWWenKai-Regular.ttf":
+        raise ValueError("正式资源清单中的报告正文字体路径无效")
+    if not BODY_FONT_PATH.exists():
+        raise ValueError("缺少正式报告正文字体 assets/fonts/lxgw/LXGWWenKai-Regular.ttf")
+    digest = hashlib.sha256(BODY_FONT_PATH.read_bytes()).hexdigest()
+    if digest != expected.get("sha256"):
+        raise ValueError("报告正文字体与正式资源清单不一致")
+    return BODY_FONT_PATH, digest
+
+
+def font(size: int, *, role: str = "body") -> ImageFont.FreeTypeFont:
+    path = HEADING_FONT_PATH if role == "heading" else BODY_FONT_PATH
+    return ImageFont.truetype(str(path), size=size)
 
 
 def wrap(draw: ImageDraw.ImageDraw, text: str, text_font: ImageFont.FreeTypeFont, width: int) -> list[str]:
@@ -113,22 +130,22 @@ class Page:
         self.y = TOP
         self.compact = compact
         self.draw.rounded_rectangle((54, 40, WIDTH - 54, 70), 15, fill=TEAL)
-        self.draw.text((MARGIN_X, 88), title, font=font(38), fill=TEAL, stroke_width=1)
+        self.draw.text((MARGIN_X, 88), title, font=font(38, role="heading"), fill=TEAL)
         self.y = 158
 
     def heading(self, text: str, *, color: str = GOLD, size: int = 30) -> None:
         self._space(12)
-        self.draw.text((MARGIN_X, self.y), text, font=font(size), fill=color, stroke_width=1)
+        self.draw.text((MARGIN_X, self.y), text, font=font(size, role="heading"), fill=color)
         self.y += size + 20
 
     def paragraph(self, text: str, *, size: int | None = None, color: str = INK, gap: int = 14, indent: bool = False, bold: bool = False) -> None:
         size = size or (22 if self.compact else 26)
-        text_font = font(size)
+        text_font = font(size, role="heading" if bold else "body")
         value = ("　　" + text) if indent else text
         line_height = size + (11 if self.compact else 14)
         for line in wrap(self.draw, value, text_font, WIDTH - 2 * MARGIN_X):
             self._ensure(line_height)
-            self.draw.text((MARGIN_X, self.y), line, font=text_font, fill=color, stroke_width=1 if bold else 0)
+            self.draw.text((MARGIN_X, self.y), line, font=text_font, fill=color)
             self.y += line_height
         self.y += gap
 
@@ -157,12 +174,14 @@ class Page:
         text_font = font(size)
         lines = wrap(self.draw, text, text_font, WIDTH - 2 * (MARGIN_X + 34))
         line_height = size + 14
-        height = 62 + len(lines) * line_height + 30
+        label_space = 62 if label else 25
+        height = label_space + len(lines) * line_height + 24
         self._ensure(height)
         top = self.y
         self.draw.rounded_rectangle((MARGIN_X, top, WIDTH - MARGIN_X, top + height), 22, fill=fill)
-        self.draw.text((MARGIN_X + 30, top + 22), label, font=font(23), fill=TEAL, stroke_width=1)
-        text_y = top + 62
+        if label:
+            self.draw.text((MARGIN_X + 30, top + 22), label, font=font(23, role="heading"), fill=TEAL)
+        text_y = top + label_space
         for line in lines:
             self.draw.text((MARGIN_X + 30, text_y), line, font=text_font, fill=INK)
             text_y += line_height
@@ -202,16 +221,16 @@ def cover(data: dict[str, Any]) -> Image.Image:
     logo = logo.resize((270, 270), Image.Resampling.LANCZOS)
     image.paste(logo, ((WIDTH - logo.width) // 2, 135), logo)
 
-    title_font = font(60)
+    title_font = font(60, role="heading")
     title_x = (WIDTH - draw.textlength(data["title"], font=title_font)) / 2
-    draw.text((title_x, 440), data["title"], font=title_font, fill=TEAL, stroke_width=1)
+    draw.text((title_x, 440), data["title"], font=title_font, fill=TEAL)
     subtitle_font = font(28)
     subtitle_x = (WIDTH - draw.textlength(data["subtitle"], font=subtitle_font)) / 2
     draw.text((subtitle_x, 535), data["subtitle"], font=subtitle_font, fill=GOLD)
     draw.line((190, 600, WIDTH - 190, 600), fill=GOLD, width=3)
 
     draw.rounded_rectangle((112, 665, WIDTH - 112, 1115), 28, fill="#E7EFEA")
-    draw.text((154, 710), "关于这份报告", font=font(31), fill=TEAL, stroke_width=1)
+    draw.text((154, 710), "关于这份报告", font=font(31, role="heading"), fill=TEAL)
     intro_y = 780
     for line in wrap(draw, FIXED_REPORT_INTRO, font(28), WIDTH - 308):
         draw.text((154, intro_y), line, font=font(28), fill=INK)
@@ -225,7 +244,7 @@ def cover(data: dict[str, Any]) -> Image.Image:
     meta = f"{name}｜生成日期 {data['generated_on']}"
     meta_font = font(22)
     draw.text(((WIDTH - draw.textlength(meta, font=meta_font)) / 2, 1390), meta, font=meta_font, fill=MUTED)
-    draw.text((112, HEIGHT - 150), "人生有迹 by 景行", font=font(25), fill=TEAL)
+    draw.text((112, HEIGHT - 150), "人生有迹 by 景行", font=font(25, role="heading"), fill=TEAL)
     draw.text((WIDTH - 180, HEIGHT - 150), "1 / 10", font=font(20), fill=MUTED)
     return image
 
@@ -250,9 +269,8 @@ def page_three(data: dict[str, Any]) -> Image.Image:
     page = Page(3, "能力、资源与形成过程")
     summary = data["executive_summary"]
     calibration = data["calibration"]
-    load = cjk_count(summary["life_theme"]) + cjk_count(summary["capabilities_resources"]) + cjk_count(summary["formation"]) + cjk_count(calibration["confirmed"] + calibration["partial"])
-    body_size = 24 if load > 520 else 27
-    bullet_size = 23 if load > 520 else 26
+    body_size = 24
+    bullet_size = 23
     page.heading("完整人生主线", color=TEAL, size=32)
     page.callout("这条主线怎样贯穿不同阶段", summary["life_theme"], size=body_size)
     page.divider()
@@ -261,7 +279,7 @@ def page_three(data: dict[str, Any]) -> Image.Image:
         page.bullet(item, size=bullet_size)
     page.divider()
     page.heading("这些方式怎样形成", color=TEAL, size=31)
-    page.paragraph(summary["formation"], size=body_size, indent=True, gap=20)
+    page.paragraph(summary["formation"], size=body_size, gap=20)
     page.heading("校准后的现实线索", color=PINK, size=29)
     for item in (calibration["confirmed"] + calibration["partial"])[:4]:
         page.bullet(item, size=bullet_size - 1, accent=PINK)
@@ -271,9 +289,8 @@ def page_three(data: dict[str, Any]) -> Image.Image:
 def page_four(data: dict[str, Any]) -> Image.Image:
     page = Page(4, "当前阶段与问题回应")
     summary, stage = data["executive_summary"], data["stage_story"]
-    load = cjk_count(summary["direct_answer"]) + sum(cjk_count(stage[key]) for key in stage)
-    answer_size = 27 if load > 520 else 31
-    label_size = 21 if load > 520 else 24
+    answer_size = 27
+    label_size = 22
     page.paragraph("你想问｜" + data["profile"]["question"], size=26, color=PINK, gap=18)
     page.callout("对当前问题的直接回应", summary["direct_answer"], size=answer_size, fill="#F2E4E6")
     page.heading("阶段怎样一步步走到现在", color=TEAL, size=31)
@@ -286,17 +303,19 @@ def dimensions_page(data: dict[str, Any], number: int, indexes: tuple[int, int])
     page = Page(number, "六个现实领域", compact=True)
     for position, index in enumerate(indexes):
         section = data["dimensions"][index]
-        block_top, block_bottom = ((175, 825), (855, 1580))[position]
+        block_top, block_bottom = ((172, 835), (850, 1584))[position]
         page.draw.rounded_rectangle(
             (MARGIN_X - 18, block_top, WIDTH - MARGIN_X + 18, block_bottom),
             24, fill="#FBF7EF", outline=LIGHT_TEAL, width=3,
         )
-        page.y = block_top + 22
-        page.heading(section["title"], color=TEAL, size=29)
-        page.callout("主判断", section["main_verdict"], size=24, fill="#E7EFEA")
-        page.paragraph("现实落点｜" + section["reality_anchor"], size=23, color=TEAL, gap=14, bold=True)
-        page.paragraph(section["pattern_and_cost"], size=23, gap=14, indent=True)
-        page.paragraph("核对点｜" + section["verification_point"], size=21, color=PINK, gap=8)
+        page.y = block_top + 18
+        page.draw.text((MARGIN_X, page.y), section["title"], font=font(28, role="heading"), fill=TEAL)
+        page.y += 44
+        page.callout("", section["overview"], size=22, fill="#E7EFEA")
+        for key, heading in zip(DIMENSION_PARAGRAPHS[section["id"]], DIMENSION_HEADINGS[section["id"]]):
+            page.draw.text((MARGIN_X, page.y), heading, font=font(19, role="heading"), fill=GOLD)
+            page.y += 29
+            page.paragraph(section["paragraphs"][key], size=20, gap=7)
         if page.y > block_bottom - 16:
             raise ValueError(f"第{number}页领域内容溢出；请压缩第{index + 1}个领域")
     return page.finish()
@@ -310,10 +329,10 @@ def years_page(data: dict[str, Any], number: int, start: int) -> Image.Image:
         page._ensure(32)
         accent = PINK if item["key_year"] else GOLD
         marker = "重点年｜" if item["key_year"] else ""
-        page.draw.text((MARGIN_X, page.y), f"{item['year']}｜{marker}{item['theme']}", font=font(20), fill=accent, stroke_width=1)
+        page.draw.text((MARGIN_X, page.y), f"{item['year']}｜{marker}{item['theme']}", font=font(20, role="heading"), fill=accent)
         page.y += 30
-        story = f"带入：{item['carry_in']}。现实落点：{item['real_world_signal']}。留下：{item['seed_for_next']}。"
-        page.paragraph(story, size=16, gap=3)
+        story = f"上一年留下的影响：{item['carry_in']}。这一年的主要表现：{item['real_world_signal']}。之后会留下：{item['seed_for_next']}。"
+        page.paragraph(story, size=20, gap=3)
     return page.finish()
 
 
@@ -339,10 +358,10 @@ def final_page(data: dict[str, Any]) -> Image.Image:
     qr.thumbnail((330, 420), Image.Resampling.LANCZOS)
     qr_x, qr_y = WIDTH - MARGIN_X - qr.width, min(page.y + 8, HEIGHT - BOTTOM - qr.height - 125)
     page.image.paste(qr, (qr_x, qr_y))
-    page.draw.text((MARGIN_X, qr_y + 22), "工作微信", font=font(24), fill=TEAL, stroke_width=1)
+    page.draw.text((MARGIN_X, qr_y + 22), "工作微信", font=font(24, role="heading"), fill=TEAL)
     page.draw.text((MARGIN_X, qr_y + 66), data["author"]["wechat_note"], font=font(20), fill=INK)
     boundary_y = qr_y + qr.height + 20
-    page.draw.text((MARGIN_X, boundary_y), "阅读边界", font=font(21), fill=GOLD, stroke_width=1)
+    page.draw.text((MARGIN_X, boundary_y), "阅读边界", font=font(21, role="heading"), fill=GOLD)
     boundary_y += 38
     for item in data["boundaries"]:
         for line in wrap(page.draw, item, font(17), WIDTH - 2 * MARGIN_X):
@@ -359,6 +378,7 @@ def render_pdf(data: dict[str, Any], card_path: Path, output: Path, pages_dir: P
         raise ValueError("未完成五条校准时只生成初步分析，不生成正式PDF")
     _, wechat_sha256 = canonical_wechat_asset()
     _, logo_sha256 = canonical_logo_asset()
+    _, body_font_sha256 = canonical_body_font()
     pages = [
         cover(data), card_page(card_path), page_three(data), page_four(data),
         dimensions_page(data, 5, (0, 1)), dimensions_page(data, 6, (2, 3)), dimensions_page(data, 7, (4, 5)),
@@ -372,7 +392,7 @@ def render_pdf(data: dict[str, Any], card_path: Path, output: Path, pages_dir: P
             image.save(pages_dir / f"page-{index:02d}.png", format="PNG")
     output.parent.mkdir(parents=True, exist_ok=True)
     pages[0].save(output, format="PDF", save_all=True, append_images=pages[1:], resolution=150.0, quality=92)
-    return {"pages": 10, "page_size": [WIDTH, HEIGHT], "card_size": [1242, 1660], "wechat_embedded": True, "wechat_asset": "assets/wechat-contact.jpg", "wechat_sha256": wechat_sha256, "logo_embedded": True, "logo_asset": "assets/rensheng-youji-logo.png", "logo_sha256": logo_sha256}
+    return {"pages": 10, "page_size": [WIDTH, HEIGHT], "card_size": [1242, 1660], "wechat_embedded": True, "wechat_asset": "assets/wechat-contact.jpg", "wechat_sha256": wechat_sha256, "logo_embedded": True, "logo_asset": "assets/rensheng-youji-logo.png", "logo_sha256": logo_sha256, "body_font": "assets/fonts/lxgw/LXGWWenKai-Regular.ttf", "body_font_sha256": body_font_sha256}
 
 
 def main() -> int:
