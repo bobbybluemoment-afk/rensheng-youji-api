@@ -18,7 +18,7 @@ SKILL_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = SKILL_ROOT.parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from render_report import FIXED_REPORT_INTRO, cjk_count, specific_lines, validate  # noqa: E402
+from render_report import FIXED_REPORT_INTRO, cjk_count, validate  # noqa: E402
 
 
 WIDTH, HEIGHT = 1240, 1754
@@ -121,14 +121,14 @@ class Page:
         self.draw.text((MARGIN_X, self.y), text, font=font(size), fill=color, stroke_width=1)
         self.y += size + 20
 
-    def paragraph(self, text: str, *, size: int | None = None, color: str = INK, gap: int = 14, indent: bool = False) -> None:
+    def paragraph(self, text: str, *, size: int | None = None, color: str = INK, gap: int = 14, indent: bool = False, bold: bool = False) -> None:
         size = size or (22 if self.compact else 26)
         text_font = font(size)
         value = ("　　" + text) if indent else text
         line_height = size + (11 if self.compact else 14)
         for line in wrap(self.draw, value, text_font, WIDTH - 2 * MARGIN_X):
             self._ensure(line_height)
-            self.draw.text((MARGIN_X, self.y), line, font=text_font, fill=color)
+            self.draw.text((MARGIN_X, self.y), line, font=text_font, fill=color, stroke_width=1 if bold else 0)
             self.y += line_height
         self.y += gap
 
@@ -286,16 +286,19 @@ def dimensions_page(data: dict[str, Any], number: int, indexes: tuple[int, int])
     page = Page(number, "六个现实领域", compact=True)
     for position, index in enumerate(indexes):
         section = data["dimensions"][index]
-        page.heading(section["title"], color=TEAL, size=28)
-        page.paragraph("核心判断｜" + section["finding"], size=23, color=INK, gap=9)
-        for item in specific_lines(section):
-            page.bullet(item, size=18, accent=PINK if index == 1 else GOLD)
-        for paragraph in section["analysis"]:
-            page.paragraph(paragraph, size=21, gap=10, indent=True)
-        page.paragraph("现阶段重点｜" + section["current_focus"], size=21, color=TEAL, gap=8)
-        page.paragraph("可以尝试｜" + "；".join(section["suggestions"]), size=21, gap=8)
-        if position == 0:
-            page.divider()
+        block_top, block_bottom = ((175, 825), (855, 1580))[position]
+        page.draw.rounded_rectangle(
+            (MARGIN_X - 18, block_top, WIDTH - MARGIN_X + 18, block_bottom),
+            24, fill="#FBF7EF", outline=LIGHT_TEAL, width=3,
+        )
+        page.y = block_top + 22
+        page.heading(section["title"], color=TEAL, size=29)
+        page.callout("主判断", section["main_verdict"], size=24, fill="#E7EFEA")
+        page.paragraph("现实落点｜" + section["reality_anchor"], size=23, color=TEAL, gap=14, bold=True)
+        page.paragraph(section["pattern_and_cost"], size=23, gap=14, indent=True)
+        page.paragraph("核对点｜" + section["verification_point"], size=21, color=PINK, gap=8)
+        if page.y > block_bottom - 16:
+            raise ValueError(f"第{number}页领域内容溢出；请压缩第{index + 1}个领域")
     return page.finish()
 
 
@@ -305,9 +308,11 @@ def years_page(data: dict[str, Any], number: int, start: int) -> Image.Image:
         page.paragraph(data["yearly_outlook"]["summary"], size=18, color=TEAL, gap=8)
     for item in data["yearly_outlook"]["years"][start:start + 10]:
         page._ensure(32)
-        page.draw.text((MARGIN_X, page.y), f"{item['year']}｜{item['theme']}", font=font(20), fill=GOLD, stroke_width=1)
+        accent = PINK if item["key_year"] else GOLD
+        marker = "重点年｜" if item["key_year"] else ""
+        page.draw.text((MARGIN_X, page.y), f"{item['year']}｜{marker}{item['theme']}", font=font(20), fill=accent, stroke_width=1)
         page.y += 30
-        story = f"带入：{item['carry_in']}。可能表现：{item['likely_expression']}。留下：{item['seed_for_next']}。"
+        story = f"带入：{item['carry_in']}。现实落点：{item['real_world_signal']}。留下：{item['seed_for_next']}。"
         page.paragraph(story, size=16, gap=3)
     return page.finish()
 

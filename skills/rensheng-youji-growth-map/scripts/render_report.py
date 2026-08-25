@@ -40,55 +40,10 @@ FOCUS_GENERIC_KEYWORDS = {"事业", "工作", "职业", "感情", "关系", "恋
 UNSUPPORTED_GLYPHS = {"□", "�"}
 OLD_FIELDS = {"initial_role", "core_configuration", "main_task", "portrait"}
 PREFERRED_LENSES = {"root_seed_flower_fruit_map", "cross_method_analysis", "resource_relationship", "luck_cycle_themes", "annual_theme_activation", "domain_connections"}
-GENERIC_CANDIDATES = {"专业", "技术", "业务", "管理", "表达", "创意", "资源", "稳定", "成长", "综合岗位", "一般岗位", "相关行业"}
-SPECIFIC_CONTRACTS = {
-    "self_growth": {
-        "daily_habits": ("list", 2, 3),
-        "decision_style": ("text", 18, 80),
-        "conflict_response": ("text", 18, 80),
-        "recovery_pattern": ("text", 18, 80),
-    },
-    "love_partner": {
-        "attraction_traits": ("list", 2, 4),
-        "long_term_traits": ("list", 2, 4),
-        "high_friction_traits": ("list", 2, 4),
-        "interaction_pattern": ("text", 18, 90),
-    },
-    "career": {
-        "industry_candidates": ("candidates", 2, 4),
-        "role_candidates": ("candidates", 2, 4),
-        "task_pattern": ("text", 18, 90),
-        "unsuitable_environment": ("text", 18, 90),
-    },
-    "finance_resources": {
-        "primary_source": ("text", 12, 80),
-        "secondary_source": ("text", 12, 80),
-        "unstable_source": ("text", 12, 80),
-        "leakage_risk": ("text", 18, 90),
-        "retention_method": ("text", 18, 90),
-    },
-    "body_emotion": {
-        "stress_signals": ("list", 2, 3),
-        "recovery_conditions": ("text", 18, 90),
-        "sustainable_rhythm": ("text", 18, 90),
-        "evidence_limit": ("text", 16, 80),
-    },
-    "family_growth": {
-        "support_source": ("text", 18, 90),
-        "expectation_source": ("text", 18, 90),
-        "family_role": ("text", 18, 90),
-        "boundary_pattern": ("text", 18, 90),
-        "education_path_candidate": ("text", 18, 90),
-    },
-}
-SPECIFIC_LABELS = {
-    "daily_habits": "日常习惯", "decision_style": "做决定", "conflict_response": "面对分歧", "recovery_pattern": "压力恢复",
-    "attraction_traits": "容易心动", "long_term_traits": "适合长期", "high_friction_traits": "高吸引高摩擦", "interaction_pattern": "相处方式",
-    "industry_candidates": "行业候选", "role_candidates": "岗位候选", "task_pattern": "适合任务", "unsuitable_environment": "不宜久留",
-    "primary_source": "主要来源", "secondary_source": "第二来源", "unstable_source": "波动来源", "leakage_risk": "容易漏财", "retention_method": "适合留存",
-    "stress_signals": "压力信号", "recovery_conditions": "恢复条件", "sustainable_rhythm": "适合节奏", "evidence_limit": "判断边界",
-    "support_source": "支持来源", "expectation_source": "期待来源", "family_role": "家庭角色", "boundary_pattern": "边界方式", "education_path_candidate": "学习路径",
-}
+GENERIC_ANCHORS = {"能力", "专业", "技术", "业务", "管理", "表达", "创意", "资源", "稳定", "成长", "方向", "平台", "岗位", "组织", "关系", "责任", "节奏", "机会", "相关行业", "综合岗位", "一般岗位"}
+ANCHOR_PRECISION = {"user_confirmed", "multi_method", "category_only"}
+HEDGE_TERMS = ("可能", "更可能", "倾向", "容易", "较像", "更像", "适合")
+HEDGE_PATTERN = re.compile("|".join(sorted(map(re.escape, HEDGE_TERMS), key=len, reverse=True)))
 
 
 def require(obj: dict[str, Any], key: str, where: str = "root") -> Any:
@@ -120,16 +75,6 @@ def reject_past_years(value: Any, current_year: int, where: str) -> None:
         raise ValueError(f"{where} 属于当前或未来行动，不得使用过去年份：{past}")
 
 
-def specific_lines(section: dict[str, Any]) -> list[str]:
-    values = section["specific_judgments"]
-    lines: list[str] = []
-    for key in SPECIFIC_CONTRACTS[section["id"]]:
-        value = values[key]
-        rendered = "、".join(value) if isinstance(value, list) else value
-        lines.append(f"{SPECIFIC_LABELS[key]}｜{rendered}")
-    return lines
-
-
 def flattened_texts(value: Any) -> Iterable[str]:
     if isinstance(value, str):
         yield value
@@ -158,8 +103,8 @@ def validate(data: dict[str, Any]) -> None:
     required = ("schema_version", "document_mode", "source", "title", "subtitle", "generated_on", "brand", "profile", "focus_scope", "cross_output_consistency", "chart", "calibration", "executive_summary", "stage_story", "dimensions", "yearly_outlook", "action_guide", "open_questions", "author", "boundaries")
     for key in required:
         require(data, key)
-    if data["schema_version"] != "2.3.1":
-        raise ValueError("schema_version must be 2.3.1")
+    if data["schema_version"] != "2.4.0":
+        raise ValueError("schema_version must be 2.4.0")
     try:
         generated_on = date.fromisoformat(data["generated_on"])
     except (TypeError, ValueError) as exc:
@@ -251,7 +196,7 @@ def validate(data: dict[str, Any]) -> None:
     for key in ("life_theme", "capabilities_resources", "formation", "current_situation", "direct_answer"):
         require(summary, key, "executive_summary")
     length(summary["life_theme"], 35, 120, "executive_summary.life_theme")
-    for index, item in enumerate(list_length(summary["capabilities_resources"], 3, 5, "executive_summary.capabilities_resources")):
+    for index, item in enumerate(list_length(summary["capabilities_resources"], 2, 3, "executive_summary.capabilities_resources")):
         length(item, 16, 65, f"executive_summary.capabilities_resources[{index}]")
     length(summary["formation"], 70, 240, "executive_summary.formation")
     length(summary["current_situation"], 25, 110, "executive_summary.current_situation")
@@ -279,49 +224,28 @@ def validate(data: dict[str, Any]) -> None:
     if [section.get("id") for section in dimensions] != DIMENSION_IDS:
         raise ValueError("dimensions must use the six fixed ids in order")
     all_core_sections: set[str] = set()
-    all_specific_texts: list[str] = []
+    all_anchor_terms: list[str] = []
     audited_user_facts: set[str] = set()
     for index, section in enumerate(dimensions):
         where = f"dimensions[{index}]"
-        for key in ("title", "finding", "specific_judgments", "analysis", "current_focus", "suggestions", "confidence", "audit"):
+        for key in ("title", "main_verdict", "reality_anchor", "pattern_and_cost", "verification_point", "confidence", "audit"):
             require(section, key, where)
         if section["confidence"] not in CONFIDENCE:
             raise ValueError(f"Invalid confidence in {where}")
-        length(section["finding"], 20, 95, f"{where}.finding")
-        specifics = section["specific_judgments"]
-        contract = SPECIFIC_CONTRACTS[section["id"]]
-        if not isinstance(specifics, dict) or set(specifics) != set(contract):
-            raise ValueError(f"{where}.specific_judgments 必须严格包含该领域固定字段：{'、'.join(contract)}")
-        for key, rule in contract.items():
-            kind, minimum, maximum = rule
-            value = specifics[key]
-            field = f"{where}.specific_judgments.{key}"
-            if kind in {"list", "candidates"}:
-                for item_index, item in enumerate(list_length(value, minimum, maximum, field)):
-                    length(item, 4 if kind == "candidates" else 12, 65, f"{field}[{item_index}]")
-                    if kind == "candidates" and re.sub(r"[\s、，。]", "", item) in GENERIC_CANDIDATES:
-                        raise ValueError(f"{field}[{item_index}] 过于宽泛，必须写具体行业或岗位候选")
-            else:
-                length(value, minimum, maximum, field)
-        if section["id"] == "body_emotion" and not any(term in specifics["evidence_limit"] for term in ("不能", "不足", "不作", "不等于")):
-            raise ValueError(f"{where}.specific_judgments.evidence_limit 必须明确健康判断边界")
-        normalized_specifics = [re.sub(r"[\W_]+", "", item) for item in flattened_texts(specifics)]
-        if len(normalized_specifics) != len(set(normalized_specifics)):
-            raise ValueError(f"{where}.specific_judgments 存在重复判断")
-        all_specific_texts.extend(normalized_specifics)
-        for paragraph_index, paragraph in enumerate(list_length(section["analysis"], 2, 3, f"{where}.analysis")):
-            length(paragraph, 70, 190, f"{where}.analysis[{paragraph_index}]")
-        length(section["current_focus"], 20, 85, f"{where}.current_focus")
-        reject_past_years(section["current_focus"], generated_on.year, f"{where}.current_focus")
-        for item_index, item in enumerate(list_length(section["suggestions"], 1, 3, f"{where}.suggestions")):
-            length(item, 15, 70, f"{where}.suggestions[{item_index}]")
-        reject_past_years(section["suggestions"], generated_on.year, f"{where}.suggestions")
+        length(section["main_verdict"], 22, 90, f"{where}.main_verdict")
+        if len(HEDGE_PATTERN.findall(section["main_verdict"])) > 1:
+            raise ValueError(f"{where}.main_verdict 只能保留一个必要的条件词，不能连续弱化判断")
+        length(section["reality_anchor"], 30, 140, f"{where}.reality_anchor")
+        length(section["pattern_and_cost"], 45, 170, f"{where}.pattern_and_cost")
+        length(section["verification_point"], 18, 85, f"{where}.verification_point")
+        if section["id"] == "body_emotion" and not any(term in section["pattern_and_cost"] + section["verification_point"] for term in ("不能", "不足", "不作", "不等于")):
+            raise ValueError(f"{where} 必须明确身体与情绪判断不构成疾病诊断")
         visible_section = {key: value for key, value in section.items() if key not in {"audit", "id", "title", "confidence"}}
         section_count = cjk_count(json.dumps(visible_section, ensure_ascii=False))
-        if not 330 <= section_count <= 520:
-            raise ValueError(f"{where} 可见正文应为330—520个汉字，当前{section_count}")
+        if not 125 <= section_count <= 360:
+            raise ValueError(f"{where} 可见正文应为125—360个汉字，当前{section_count}")
         audit = section["audit"]
-        for key in ("core_sections", "evidence_lenses", "specific_judgment_sources", "user_facts", "social_priors", "needs_validation"):
+        for key in ("core_sections", "evidence_lenses", "verdict_sources", "reality_anchor_terms", "reality_anchor_sources", "anchor_precision", "user_facts", "social_priors", "needs_validation"):
             if key not in audit:
                 raise ValueError(f"Missing required field: {where}.audit.{key}")
         core_sections = set(audit["core_sections"])
@@ -331,19 +255,37 @@ def validate(data: dict[str, Any]) -> None:
             raise ValueError(f"{where}.audit 必须包含至少两个 Core 来源和两个独立证据视角")
         if not (core_sections | lenses) & PREFERRED_LENSES:
             raise ValueError(f"{where}.audit 缺少根苗花果、交叉方法、资源关系或时运证据")
-        specific_sources = audit["specific_judgment_sources"]
-        if not isinstance(specific_sources, dict) or set(specific_sources) != set(contract):
-            raise ValueError(f"{where}.audit.specific_judgment_sources 必须逐项覆盖具体判断字段")
-        for key, sources in specific_sources.items():
-            if not isinstance(sources, list) or len(set(sources)) < 2:
-                raise ValueError(f"{where}.audit.specific_judgment_sources.{key} 至少包含两个独立来源")
+        if not isinstance(audit["verdict_sources"], list) or len(set(audit["verdict_sources"])) < 2:
+            raise ValueError(f"{where}.audit.verdict_sources 至少包含两个独立来源")
+        precision = audit["anchor_precision"]
+        if precision not in ANCHOR_PRECISION:
+            raise ValueError(f"{where}.audit.anchor_precision 值无效")
+        anchor_terms = list_length(audit["reality_anchor_terms"], 1, 4, f"{where}.audit.reality_anchor_terms")
+        anchor_sources = audit["reality_anchor_sources"]
+        if not isinstance(anchor_sources, dict) or set(anchor_sources) != set(anchor_terms):
+            raise ValueError(f"{where}.audit.reality_anchor_sources 必须逐项覆盖现实名词")
+        for term_index, term in enumerate(anchor_terms):
+            length(term, 2, 14, f"{where}.audit.reality_anchor_terms[{term_index}]")
+            if re.sub(r"[\s、，。]", "", term) in GENERIC_ANCHORS:
+                raise ValueError(f"{where}.audit.reality_anchor_terms[{term_index}] 过于宽泛，必须写可核对的组织、任务、收入、关系安排或生活场景")
+            if term not in section["reality_anchor"]:
+                raise ValueError(f"{where}.reality_anchor 必须实际出现审计中的现实名词“{term}”")
+            sources = anchor_sources[term]
+            needed_sources = 1 if precision == "user_confirmed" else 2
+            if not isinstance(sources, list) or len(set(sources)) < needed_sources:
+                raise ValueError(f"{where}.audit.reality_anchor_sources.{term} 至少包含{needed_sources}个来源")
+        if precision == "user_confirmed" and not audit["user_facts"]:
+            raise ValueError(f"{where}.audit.anchor_precision=user_confirmed 时必须有用户明确事实")
+        if precision == "category_only" and not any(term in section["verification_point"] for term in ("不足以", "暂不", "还需", "只能", "不能继续缩小")):
+            raise ValueError(f"{where}.verification_point 在证据只到类别层时必须明确收窄边界")
+        all_anchor_terms.extend(re.sub(r"[\W_]+", "", term) for term in anchor_terms)
         audited_user_facts.update(item for item in audit["user_facts"] if isinstance(item, str))
     for needed in ("root_seed_flower_fruit_map", "cross_method_analysis"):
         if needed not in all_core_sections:
             raise ValueError(f"六个领域的来源审计必须实际使用 {needed}")
-    repeated = {item for item in all_specific_texts if all_specific_texts.count(item) > 1}
+    repeated = {item for item in all_anchor_terms if all_anchor_terms.count(item) > 1}
     if repeated:
-        raise ValueError("不同领域出现完全相同的具体判断，疑似套用模板")
+        raise ValueError("不同领域重复使用完全相同的现实名词，疑似套用模板")
     missing_notes = reported_user_notes - audited_user_facts
     if missing_notes:
         raise ValueError("用户在校准中补充的具体事实没有进入相关章节来源审计")
@@ -376,13 +318,20 @@ def validate(data: dict[str, Any]) -> None:
         raise ValueError("cross_output_consistency.relationship_opportunity_years 必须位于报告20年范围内")
     for index, item in enumerate(years):
         where = f"yearly_outlook.years[{index}]"
-        for key in ("year", "theme", "carry_in", "likely_expression", "seed_for_next", "confidence"):
+        for key in ("year", "theme", "carry_in", "real_world_signal", "signal_terms", "key_year", "seed_for_next", "confidence"):
             require(item, key, where)
         if item["confidence"] not in CONFIDENCE:
             raise ValueError(f"Invalid confidence in {where}")
         length(item["theme"], 4, 14, f"{where}.theme")
         length(item["carry_in"], 10, 50, f"{where}.carry_in")
-        length(item["likely_expression"], 22, 80, f"{where}.likely_expression")
+        length(item["real_world_signal"], 22, 90, f"{where}.real_world_signal")
+        signal_terms = list_length(item["signal_terms"], 1, 3, f"{where}.signal_terms")
+        for term_index, term in enumerate(signal_terms):
+            length(term, 2, 14, f"{where}.signal_terms[{term_index}]")
+            if term not in item["real_world_signal"]:
+                raise ValueError(f"{where}.real_world_signal 必须实际出现年度现实载体“{term}”")
+        if not isinstance(item["key_year"], bool):
+            raise ValueError(f"{where}.key_year 必须是布尔值")
         length(item["seed_for_next"], 10, 50, f"{where}.seed_for_next")
         if any(term in item["theme"] for term in MINGLI_TERMS):
             raise ValueError(f"{where}.theme 必须使用现实主题，不得直接使用命理术语")
@@ -433,8 +382,8 @@ def validate(data: dict[str, Any]) -> None:
     if found_mingli or pattern_hits:
         raise ValueError("用户可见正文不得直接出现内部命理术语：" + "、".join(found_mingli + pattern_hits))
     total_cjk = cjk_count(visible)
-    if mode == "full_calibrated" and not 4500 <= total_cjk <= 6500:
-        raise ValueError(f"正式报告正文应为4500—6500个汉字，当前{total_cjk}")
+    if mode == "full_calibrated" and not 3400 <= total_cjk <= 5600:
+        raise ValueError(f"正式报告正文应为3400—5600个汉字，当前{total_cjk}")
 
 
 def bullets(items: list[str], bold: bool = False) -> str:
@@ -460,14 +409,16 @@ def render(data: dict[str, Any]) -> str:
         f"- **现在正在处理：** {stage['present_task']}", f"- **未来两三年的可能方向：** {stage['next_direction']}", f"- **更长阶段的主线：** {stage['long_range']}", "",
     ]
     for section in data["dimensions"]:
-        lines.extend([f"## {section['title']}", "", f"**核心判断：{section['finding']}**", "", "### 可以核对的具体判断", "", bullets(specific_lines(section), True), ""])
-        for paragraph in section["analysis"]:
-            lines.extend([paragraph, ""])
-        lines.extend([f"**现阶段重点：** {section['current_focus']}", "", "**可以尝试：**", "", bullets(section["suggestions"]), "", f"*判断等级：{section['confidence']}*", ""])
+        lines.extend([
+            f"## {section['title']}", "", f"**{section['main_verdict']}**", "",
+            f"**现实落点：** {section['reality_anchor']}", "", section["pattern_and_cost"], "",
+            f"*核对点：{section['verification_point']}*", "", f"*判断等级：{section['confidence']}*", "",
+        ])
     outlook = data["yearly_outlook"]
-    lines.extend(["## 阶段与逐年观察", "", outlook["summary"], "", "| 年份 | 年度主题 | 从上一年带入 | 现实中可能怎样表现 | 留给下一年 | 判断等级 |", "|---|---|---|---|---|---|"])
+    lines.extend(["## 阶段与逐年观察", "", outlook["summary"], "", "| 年份 | 年度主题 | 从上一年带入 | 现实落点 | 留给下一年 | 判断等级 |", "|---|---|---|---|---|---|"])
     for item in outlook["years"]:
-        lines.append(f"| {item['year']} | {item['theme']} | {item['carry_in']} | {item['likely_expression']} | {item['seed_for_next']} | {item['confidence']} |")
+        year_label = f"★ {item['year']}" if item["key_year"] else str(item["year"])
+        lines.append(f"| {year_label} | {item['theme']} | {item['carry_in']} | {item['real_world_signal']} | {item['seed_for_next']} | {item['confidence']} |")
     guide = data["action_guide"]
     lines.extend(["", "## 现实行动建议", "", "### 现在最值得做的三件事", "", bullets(guide["priority_actions"]), "", "### 需要减少的一种消耗", "", guide["reduce"], "", "### 传统生活偏好", ""])
     for item in guide["traditional_preferences"]:

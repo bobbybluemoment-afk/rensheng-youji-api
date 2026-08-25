@@ -40,62 +40,66 @@ def _repeat(seed: str, target: int) -> str:
 
 
 def _dimension(identifier: str, title: str, extra_source: str) -> dict:
-    specifics = {
-        "self_growth": {
-            "daily_habits": ["接到模糊任务时先列步骤和缺少的资料", "交付前会反复核对容易出错的细节"],
-            "decision_style": "先比较风险、时间和后续影响，确认关键条件后才决定",
-            "conflict_response": "被催促或质疑时先把事情做完，之后才说明自己的不同意见",
-            "recovery_pattern": "压力大时需要暂时减少社交，通过独处、整理或规律作息恢复",
-        },
-        "love_partner": {
-            "attraction_traits": ["说话直接并愿意把现实安排讲清楚", "做事有自己的专业标准和稳定节奏"],
-            "long_term_traits": ["遇到分歧愿意讨论而不是突然失联回避", "能够共同商量金钱、城市与家庭边界"],
-            "high_friction_traits": ["行动果断但习惯替别人决定重要事情", "吸引力强却不愿说明关系和未来安排"],
-            "interaction_pattern": "通常先观察对方是否可靠，确认回应稳定后才逐步增加投入和表达",
-        },
-        "career": {
-            "industry_candidates": ["金融与风险管理", "数据与研究服务"],
-            "role_candidates": ["产品策划与项目运营", "研究分析与风险控制"],
-            "task_pattern": "更适合把复杂资料整理成方案、规则或可交付成果，并持续跟进结果",
-            "unsuitable_environment": "不适合长期处在职责模糊、只靠人情推动且成果归属不清的团队",
-        },
-        "finance_resources": {
-            "primary_source": "主要依靠稳定工资和专业能力形成的职位溢价",
-            "secondary_source": "第二来源较像项目奖金、绩效或阶段性合作收入",
-            "unstable_source": "朋友合作、短期机会或未经验证的投资回报波动更大",
-            "leakage_risk": "容易在人情往来、模糊分工或先垫付后结算的情形中损失钱和时间",
-            "retention_method": "适合先固定储蓄和长期账户，再安排可以承受损失的尝试预算",
-        },
-        "body_emotion": {
-            "stress_signals": ["连续忙碌后容易睡前仍反复整理未完成事项", "任务堆积时更容易减少休息或回避交流"],
-            "recovery_conditions": "先减少同时处理的任务数量，再通过规律睡眠和轻度活动恢复",
-            "sustainable_rhythm": "适合有明确截止时间，也能保留固定休息和独处时间的生活安排",
-            "evidence_limit": "这些只是压力与恢复方式候选，不能据此诊断任何器官或疾病",
-        },
-        "family_growth": {
-            "support_source": "支持更可能来自愿意提供教育信息、实际安排或关键费用的家庭角色",
-            "expectation_source": "压力更可能来自强调结果、稳定收入和家庭责任的权威角色",
-            "family_role": "家里遇到需要协调或收尾的事情时，容易成为被询问和托付的人",
-            "boundary_pattern": "常先把家人的需要处理好，再说明自己的时间和选择边界",
-            "education_path_candidate": "学习路径更像先完成较稳妥的学历训练，再通过实习、证书或项目调整方向",
-        },
+    content = {
+        "self_growth": (
+            "你不是边做边想的人；遇到重要选择，先把风险与步骤排清楚才会行动。",
+            "现实里最常见的是任务清单和交付复核：接到模糊任务先补资料，提交前再查一遍容易出错的细节。",
+            "这让你在复杂事务中很少漏项，但被连续催促时会先压住分歧把事情做完，事后才说明不满，责任因此容易越接越多。",
+            "可核对最近三次临时任务，你是否都先整理条件，并在完成后才表达异议。",
+            ["任务清单", "交付复核"],
+        ),
+        "love_partner": (
+            "你真正看重的不是一时热烈，而是对方能否把承诺变成稳定回应和现实安排。",
+            "判断一段关系时，你会看见面频率、城市选择和金钱安排，而不是只听口头表态；这三件事比浪漫表达更影响投入。",
+            "你会被做事利落、标准明确的人吸引，但若对方习惯替你决定或回避未来计划，最初的欣赏很快会变成控制与失望。",
+            "可核对过往最深的一次关系摩擦，是否最终落在时间、城市或钱没有说清。",
+            ["见面频率", "城市选择", "金钱安排"],
+        ),
+        "career": (
+            "你的优势不在泛泛协调，而在把复杂信息整理成规则、方案并盯到可交付结果。",
+            "现实落点优先看大型国企或成熟科技公司的产品运营、项目管理与风险控制；核心任务是项目交付，不是单纯维系人情。",
+            "这类岗位给你明确标准和积累路径，做久后能形成信誉；职责模糊、成果归属不清的团队则会让你不断收尾，却换不来职位或收入。",
+            "若用户没有真实职业资料，组织与岗位只能作为同一工作机制下的优先方向，还需用履历收窄。",
+            ["大型国企", "成熟科技公司", "项目交付"],
+        ),
+        "finance_resources": (
+            "你的钱主要靠长期职业积累，而不是靠一次机会翻倍；收入增长先跟职责和专业定价走。",
+            "最能留下来的来源是固定工资、年度绩效和项目奖金；朋友合作或口头约定的分成不适合作为主要预算。",
+            "只要分工和结算日期不清楚，你就容易先垫时间甚至垫钱，最后得到人情却没有完整回款；这也是比消费冲动更明显的漏财处。",
+            "可核对最近两笔额外收入，是否有书面范围、结算日期，以及实际到账是否晚于交付。",
+            ["固定工资", "年度绩效", "项目奖金"],
+        ),
+        "body_emotion": (
+            "你的压力往往不是当场爆发，而是白天继续处理，到了晚上仍停不下对未完成事项的复盘。",
+            "现实里先看睡前反复想工作、颈肩紧张和三餐推迟；这三类信号通常在并行任务过多时一起出现。",
+            "你靠减少输入、独处和恢复固定睡眠比继续娱乐更容易缓过来；这些只是压力节奏的观察，不能据此诊断器官或疾病。",
+            "若不忙时仍长期失眠、疼痛或食欲异常，应以正规医疗评估为准，报告不作疾病判断。",
+            ["睡前反复想工作", "颈肩紧张", "三餐推迟"],
+        ),
+        "family_growth": (
+            "你在家中较容易成为处理实际问题的人，支持与压力都围绕是否能把事情安排妥当。",
+            "常见载体是学费证书、住房安排和长辈照护：家里愿意在关键费用或信息上帮忙，也会期待你回报稳定和责任。",
+            "你通常先接下任务再谈自己的时间，久而久之会被默认负责协调；真正的边界不是减少联系，而是把谁出钱、谁执行、何时完成说清。",
+            "可核对近一年一次家庭任务，最后是否由你负责联系、付款或收尾中的至少一项。",
+            ["学费证书", "住房安排", "长辈照护"],
+        ),
     }[identifier]
+    verdict, anchor, pattern, verification, anchor_terms = content
     return {
         "id": identifier,
         "title": title,
-        "finding": _repeat("这个领域需要把已有能力、现实责任和自己的选择放在一起判断。", 35),
-        "specific_judgments": specifics,
-        "analysis": [
-            _repeat("这种方式不是由单一性格决定，更可能受到家庭要求、教育训练、工作分工和近年经历共同影响。它带来可靠与细致，也可能让你在责任增加时忽略自己的需要。", 120),
-            _repeat("当前阶段更值得观察的是，投入能否形成清楚结果，以及相关的人、时间和收入安排是否可持续。条件改变以后，同一套能力也可能表现为更主动的选择，而不是被动增加任务。", 120),
-        ],
-        "current_focus": _repeat("先把正在面对的选择拆成可以核对的现实条件。", 30),
-        "suggestions": [_repeat("连续记录两周实际投入、得到的支持和形成的结果，再决定下一步。", 28)],
+        "main_verdict": verdict,
+        "reality_anchor": anchor,
+        "pattern_and_cost": pattern,
+        "verification_point": verification,
         "confidence": "中等置信",
         "audit": {
             "core_sections": [extra_source, "root_seed_flower_fruit_map", "cross_method_analysis"],
             "evidence_lenses": ["root_seed_flower_fruit_map", "cross_method_analysis"],
-            "specific_judgment_sources": {key: [extra_source, "root_seed_flower_fruit_map"] for key in specifics},
+            "verdict_sources": [extra_source, "cross_method_analysis"],
+            "reality_anchor_terms": anchor_terms,
+            "reality_anchor_sources": {term: [extra_source, "root_seed_flower_fruit_map"] for term in anchor_terms},
+            "anchor_precision": "multi_method",
             "user_facts": [],
             "social_priors": [],
             "needs_validation": "需要真实经历继续确认。",
@@ -117,14 +121,16 @@ def _report() -> dict:
             "year": year,
             "theme": "积累形成清楚结果",
             "carry_in": _repeat("上一年留下的能力、责任和待处理选择继续影响现在。", 25),
-            "likely_expression": _repeat("这一年可能继续处理工作、收入与关系之间的时间分配，并在行动反馈中逐步确认什么更值得长期投入。", 48),
+            "real_world_signal": _repeat("这一年的变化主要落在项目交付：责任是否写进职责、成果是否能换来职位或收入，会比口头评价更重要。", 48),
+            "signal_terms": ["项目交付"],
+            "key_year": year in {2026, 2030, 2034, 2038},
             "seed_for_next": _repeat("留下更清楚的选择条件和可以继续使用的经验。", 24),
             "confidence": "中等置信",
         }
         for year in range(2021, 2041)
     ]
     return {
-        "schema_version": "2.3.1",
+        "schema_version": "2.4.0",
         "document_mode": "full_calibrated",
         "source": {"analysis_id": "fixture-v2-pipeline", "core_version": "0.3.0", "analysis_as_of": "2026-08-20", "calibration_status": "calibrated"},
         "title": "人生有迹｜完整报告",
@@ -300,15 +306,58 @@ class FullReportPipelineTest(unittest.TestCase):
             self.assertNotIn("初始角色", rendered)
             self.assertNotIn("主线任务", rendered)
 
-    def test_vague_career_candidates_are_rejected(self) -> None:
+    def test_vague_reality_anchor_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-vague-") as temp_dir:
             source = Path(temp_dir) / "report.json"
             report = _report()
-            report["dimensions"][2]["specific_judgments"]["industry_candidates"] = ["相关行业", "综合岗位"]
+            report["dimensions"][2]["audit"]["reality_anchor_terms"] = ["相关行业"]
+            report["dimensions"][2]["audit"]["reality_anchor_sources"] = {"相关行业": ["reality_domains.career", "root_seed_flower_fruit_map"]}
+            report["dimensions"][2]["reality_anchor"] = _repeat("现实落点仍是相关行业，需要以后继续核对。", 40)
             source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
             result = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")], cwd=ROOT, text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 1)
             self.assertIn("过于宽泛", result.stdout)
+
+    def test_reality_anchor_requires_audited_source(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rensheng-youji-anchor-source-") as temp_dir:
+            source = Path(temp_dir) / "report.json"
+            report = _report()
+            report["dimensions"][2]["audit"]["reality_anchor_sources"].pop("大型国企")
+            source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("必须逐项覆盖现实名词", result.stdout)
+
+    def test_main_verdict_cannot_stack_hedges(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rensheng-youji-hedges-") as temp_dir:
+            source = Path(temp_dir) / "report.json"
+            report = _report()
+            report["dimensions"][2]["main_verdict"] = "你可能更适合在规则清楚的组织里负责复杂任务，并把它推进到交付。"
+            source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("只能保留一个必要的条件词", result.stdout)
+
+    def test_category_only_anchor_requires_boundary(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rensheng-youji-category-boundary-") as temp_dir:
+            source = Path(temp_dir) / "report.json"
+            report = _report()
+            report["dimensions"][2]["audit"]["anchor_precision"] = "category_only"
+            report["dimensions"][2]["verification_point"] = "可核对过往工作是否也以复杂资料、跨部门推进和最终交付为主。"
+            source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("必须明确收窄边界", result.stdout)
+
+    def test_year_signal_term_must_be_visible(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rensheng-youji-year-signal-") as temp_dir:
+            source = Path(temp_dir) / "report.json"
+            report = _report()
+            report["yearly_outlook"]["years"][0]["signal_terms"] = ["岗位调整"]
+            source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("必须实际出现年度现实载体", result.stdout)
 
     def test_focus_scope_rejects_overfocused_life_theme(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-focus-") as temp_dir:
@@ -347,7 +396,7 @@ class FullReportPipelineTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-mingli-leak-") as temp_dir:
             source = Path(temp_dir) / "report.json"
             report = _report()
-            report["dimensions"][2]["analysis"][0] = _repeat("丙午透出以后食伤更明显，因此适合开始承担新的工作责任。", 120)
+            report["dimensions"][2]["pattern_and_cost"] = _repeat("丙午透出以后食伤更明显，因此适合开始承担新的工作责任。", 90)
             source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
             result = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")], cwd=ROOT, text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 1)
@@ -360,7 +409,7 @@ class FullReportPipelineTest(unittest.TestCase):
             report["profile"]["question"] = "未来两年是否适合开展玄学副业并形成收入"
             report["focus_scope"]["topic_keywords"] = ["玄学副业"]
             for index in range(3):
-                report["dimensions"][2]["analysis"][index % 2] = _repeat("玄学副业需要先完成服务样板并核对真实反馈。", 120)
+                report["dimensions"][2]["pattern_and_cost"] = _repeat("玄学副业需要先完成服务样板并核对真实反馈。", 120)
             source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
             result = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")], cwd=ROOT, text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 1)
