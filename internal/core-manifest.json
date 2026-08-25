@@ -1,11 +1,23 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "visibility": "internal",
   "stages": [
     {
       "name": "rensheng-youji-mingli-core",
       "entry": "rensheng-youji-mingli-core/SKILL.md"
+    },
+    {
+      "name": "rensheng-youji-report-content-brief",
+      "entry": "rensheng-youji-report-content-brief/SKILL.md"
+    },
+    {
+      "name": "rensheng-youji-report-writer",
+      "entry": "rensheng-youji-report-writer/SKILL.md"
+    },
+    {
+      "name": "rensheng-youji-chinese-editor",
+      "entry": "rensheng-youji-chinese-editor/SKILL.md"
     },
     {
       "name": "rensheng-youji-free-card-output",
@@ -25,12 +37,12 @@
     "pdf_renderer": "../skills/rensheng-youji-growth-map/scripts/render_report_pdf.py",
     "pages": 10,
     "card_page": 2,
-    "report_schema_version": "2.6.0",
-    "editorial_review_version": "1.0.0",
+    "report_schema_version": "2.7.0",
+    "editorial_review_version": "2.0.0",
     "calibration_schema_version": "2.1.0",
     "calibration_template_version": "1.0.0",
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "确定性排盘与同一Core母稿同时支持新版免费卡片和固定10页完整报告；五题校准由固定互斥题型生成并回查Core候选；六个现实领域采用完整分段分析并经过中文编辑验收。公开免费版在用户环境运行，不使用验证码、MCP或人生有迹云端接口。"
+  "notes": "确定性排盘与同一Core母稿同时支持新版免费卡片和固定10页完整报告；Core提供开放现实候选、人物形成链和报告判断台账；五题校准只更新候选且不进入用户报告；报告依次经过事实提纲、人物写作和可追溯中文编辑。公开免费版在用户环境运行，不使用验证码、MCP或人生有迹云端接口。"
 }

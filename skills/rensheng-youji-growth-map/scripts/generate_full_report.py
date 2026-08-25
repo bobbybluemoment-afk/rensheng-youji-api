@@ -28,6 +28,10 @@ def run(command: list[str]) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description="生成人生有迹新版卡片与完整报告")
     parser.add_argument("--report", type=Path, required=True, help="report.json")
+    parser.add_argument("--content-brief", type=Path, help="report-content-brief.json，v2.7.0正式报告必填")
+    parser.add_argument("--report-draft", type=Path, help="report-draft.json，v2.7.0正式报告必填")
+    parser.add_argument("--editorial-review", type=Path, help="editorial-review.json，v2.7.0正式报告必填")
+    parser.add_argument("--analysis", type=Path, help="analysis-output-calibrated.json，v2.7.0正式报告必填")
     parser.add_argument("--free-card", type=Path, required=True, help="free-card-output.json")
     parser.add_argument("--calibration-questions", type=Path, required=True, help="已通过2.1.0校验的calibration-questions.json")
     parser.add_argument("--out-dir", type=Path, required=True)
@@ -37,6 +41,32 @@ def main() -> int:
         report = json.loads(args.report.read_text(encoding="utf-8"))
         free_card = json.loads(args.free_card.read_text(encoding="utf-8"))
         calibration_questions = json.loads(args.calibration_questions.read_text(encoding="utf-8"))
+        is_v27 = report.get("schema_version") == "2.7.0"
+        if is_v27:
+            required_artifacts = {
+                "--content-brief": args.content_brief,
+                "--report-draft": args.report_draft,
+                "--editorial-review": args.editorial_review,
+                "--analysis": args.analysis,
+            }
+            missing = [name for name, value in required_artifacts.items() if value is None]
+            if missing:
+                raise ValueError("v2.7.0正式报告缺少来源文件：" + "、".join(missing))
+            run([
+                sys.executable,
+                str(REPO_ROOT / "internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py"),
+                str(args.content_brief), "--analysis", str(args.analysis),
+            ])
+            run([
+                sys.executable,
+                str(REPO_ROOT / "internal/rensheng-youji-report-writer/scripts/validate_report_draft.py"),
+                str(args.report_draft), "--brief", str(args.content_brief),
+            ])
+            run([
+                sys.executable,
+                str(REPO_ROOT / "internal/rensheng-youji-chinese-editor/scripts/validate_editorial_review.py"),
+                str(args.editorial_review), "--draft", str(args.report_draft), "--report", str(args.report),
+            ])
         if calibration_questions.get("schema_version") != "2.1.0" or calibration_questions.get("template_version") != "1.0.0":
             raise ValueError("交付必须使用2.1.0固定题型校准结果")
         questions = calibration_questions.get("questions")
@@ -84,6 +114,13 @@ def main() -> int:
         run([sys.executable, str(SKILL_ROOT / "scripts/render_report.py"), str(args.report), "--out", str(markdown)])
         files = {"card_png": str(card), "markdown": str(markdown)}
         checks = {"new_card_size": [1242, 1660], "report_json_valid": True, "relationship_years_match_card": True, "calibration_questions_match_report": True}
+        if is_v27:
+            checks.update({
+                "content_brief_valid": True,
+                "report_draft_valid": True,
+                "traceable_editorial_review_valid": True,
+                "calibration_hidden_from_visible_report": True,
+            })
         if report.get("document_mode") == "full_calibrated":
             command = [sys.executable, str(SKILL_ROOT / "scripts/render_report_pdf.py"), str(args.report), "--card", str(card), "--out", str(pdf)]
             if args.keep_pages:

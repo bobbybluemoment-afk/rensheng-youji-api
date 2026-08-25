@@ -16,6 +16,9 @@ def main() -> int:
     required = [
         REPO_ROOT / "internal/core-manifest.json",
         REPO_ROOT / "internal/rensheng-youji-mingli-core/SKILL.md",
+        REPO_ROOT / "internal/rensheng-youji-report-content-brief/SKILL.md",
+        REPO_ROOT / "internal/rensheng-youji-report-writer/SKILL.md",
+        REPO_ROOT / "internal/rensheng-youji-chinese-editor/SKILL.md",
         REPO_ROOT / "scripts/prepare_core_input.py",
         SKILL_ROOT / "references/report-schema.md",
         SKILL_ROOT / "references/calibration-question-templates.json",

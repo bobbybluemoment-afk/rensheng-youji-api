@@ -25,6 +25,9 @@ def main() -> int:
         ROOT / "assets/fonts/noto/NotoSansCJKsc-Regular.otf",
         ROOT / "assets/fonts/lxgw/LXGWWenKai-Regular.ttf",
         ROOT / "internal/rensheng-youji-mingli-core/SKILL.md",
+        ROOT / "internal/rensheng-youji-report-content-brief/SKILL.md",
+        ROOT / "internal/rensheng-youji-report-writer/SKILL.md",
+        ROOT / "internal/rensheng-youji-chinese-editor/SKILL.md",
         ROOT / "internal/rensheng-youji-free-card-output/SKILL.md",
         ROOT / "internal/rensheng-youji-free-card-renderer/SKILL.md",
         ROOT / "skills/rensheng-youji-growth-map/SKILL.md",
@@ -64,7 +67,7 @@ def main() -> int:
             sys.executable,
             "-m",
             "unittest",
-            "tests.test_full_report_pipeline.FullReportPipelineTest.test_new_card_and_fixed_ten_page_pdf",
+            "tests.test_report_v27_pipeline.ReportV27PipelineTest.test_v27_full_delivery",
         ],
         cwd=ROOT,
         text=True,
@@ -72,10 +75,18 @@ def main() -> int:
         check=False,
     )
     if report_test.returncode:
-        print("FAILED: v2 card -> fixed 10-page report pipeline")
+        print("FAILED: Core v0.5 -> content brief -> writing -> editorial -> fixed 10-page report pipeline")
         print(report_test.stdout or report_test.stderr)
         return 6
-    print("READY: dependencies, chart, v2 card, fixed cover and 10-page report pipeline passed")
+    core_test = subprocess.run(
+        [sys.executable, str(ROOT / "internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py"), "--self-test"],
+        cwd=ROOT, text=True, capture_output=True, check=False,
+    )
+    if core_test.returncode:
+        print("FAILED: v0.5.0 Core report-grade source bundle")
+        print(core_test.stdout or core_test.stderr)
+        return 7
+    print("READY: dependencies, chart, v2 card, Core v0.5 report sources and fixed 10-page report pipeline passed")
     return 0
 
 

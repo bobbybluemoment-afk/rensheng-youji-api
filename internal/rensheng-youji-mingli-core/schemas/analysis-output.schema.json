@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rensheng-youji.local/schemas/analysis-output.schema.json",
-  "title": "人生有迹完整命理分析母稿 v0.4.0",
-  "description": "内置分析核心返回的统一 analysis_bundle。包含完整人物画像、领域联动、可观察现实候选与校准审计。",
+  "title": "人生有迹完整命理分析母稿 v0.5.0",
+  "description": "内置分析核心返回的统一 analysis_bundle。包含完整人物画像、开放现实候选、报告判断台账、形成链、领域联动与校准审计。",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -32,6 +32,10 @@
     "monthly_theme_activation",
     "life_stages",
     "turning_points",
+    "report_claim_ledger",
+    "formation_chains",
+    "domain_linkage_chains",
+    "report_source_bundle",
     "reality_candidate_pool",
     "calibration_state",
     "not_inferable_register",
@@ -516,10 +520,59 @@
         "$ref": "#/$defs/turningPoint"
       }
     },
+    "report_claim_ledger": {
+      "type": "array",
+      "minItems": 24,
+      "items": {
+        "$ref": "#/$defs/reportClaim"
+      }
+    },
+    "formation_chains": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 6,
+      "items": {
+        "$ref": "#/$defs/formationChain"
+      }
+    },
+    "domain_linkage_chains": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 6,
+      "items": {
+        "$ref": "#/$defs/linkageChain"
+      }
+    },
+    "report_source_bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["life_narrative_source", "dimensions", "current_stage_source"],
+      "properties": {
+        "life_narrative_source": {
+          "$ref": "#/$defs/domainSource"
+        },
+        "dimensions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["self_growth", "career", "finance_resources", "love_partner", "family_growth", "body_emotion"],
+          "properties": {
+            "self_growth": {"$ref": "#/$defs/domainSource"},
+            "career": {"$ref": "#/$defs/domainSource"},
+            "finance_resources": {"$ref": "#/$defs/domainSource"},
+            "love_partner": {"$ref": "#/$defs/domainSource"},
+            "family_growth": {"$ref": "#/$defs/domainSource"},
+            "body_emotion": {"$ref": "#/$defs/domainSource"}
+          }
+        },
+        "current_stage_source": {
+          "$ref": "#/$defs/domainSource"
+        }
+      }
+    },
     "reality_candidate_pool": {
       "type": "array",
-      "minItems": 8,
-      "maxItems": 15,
+      "minItems": 12,
+      "maxItems": 30,
       "items": {
         "$ref": "#/$defs/realityCandidate"
       }
@@ -1405,18 +1458,101 @@
         }
       }
     },
+    "reportClaim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim_id", "domain", "reality_dimension", "claim", "mechanism_chain",
+        "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence",
+        "confidence", "unsupported_extensions", "calibration_status"
+      ],
+      "properties": {
+        "claim_id": {"type": "string", "pattern": "^claim_[a-z0-9_]+$"},
+        "domain": {"type": "string"},
+        "reality_dimension": {"type": "string", "minLength": 2},
+        "claim": {"type": "string", "minLength": 8},
+        "mechanism_chain": {"type": "array", "minItems": 2, "items": {"type": "string"}},
+        "evidence_ids": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "supporting_methods": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "allowed_examples": {"type": "array", "items": {"type": "string"}},
+        "counterevidence": {"type": "array", "items": {"type": "string"}},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "unsupported_extensions": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "calibration_status": {"type": "string", "enum": ["unverified", "match", "partial", "reject", "uncertain"]}
+      }
+    },
+    "formationChain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chain_id", "starting_condition", "adaptation_need", "learned_response", "ability_formed",
+        "constraint", "adult_pattern", "linked_domains", "current_change", "claim_ids", "confidence"
+      ],
+      "properties": {
+        "chain_id": {"type": "string", "pattern": "^formation_[a-z0-9_]+$"},
+        "starting_condition": {"type": "string", "minLength": 6},
+        "adaptation_need": {"type": "string", "minLength": 6},
+        "learned_response": {"type": "string", "minLength": 6},
+        "ability_formed": {"type": "string", "minLength": 6},
+        "constraint": {"type": "string", "minLength": 6},
+        "adult_pattern": {"type": "string", "minLength": 6},
+        "linked_domains": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "current_change": {"type": "string"},
+        "claim_ids": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      }
+    },
+    "linkageChain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chain_id", "trigger", "transmission", "affected_domains", "time_lag",
+        "amplifiers", "buffers", "claim_ids", "confidence"
+      ],
+      "properties": {
+        "chain_id": {"type": "string", "pattern": "^linkage_[a-z0-9_]+$"},
+        "trigger": {"type": "string", "minLength": 4},
+        "transmission": {"type": "array", "minItems": 2, "items": {"type": "string"}},
+        "affected_domains": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "time_lag": {"type": "string"},
+        "amplifiers": {"type": "array", "items": {"type": "string"}},
+        "buffers": {"type": "array", "items": {"type": "string"}},
+        "claim_ids": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      }
+    },
+    "domainSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary_materials", "claim_ids", "formation_chain_ids", "linkage_chain_ids", "concrete_candidates", "coverage", "evidence_gaps"],
+      "properties": {
+        "summary_materials": {"type": "array", "minItems": 4, "items": {"type": "string"}},
+        "claim_ids": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string"}},
+        "formation_chain_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "linkage_chain_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "concrete_candidates": {"type": "array", "items": {"type": "string"}},
+        "coverage": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string"}},
+        "evidence_gaps": {"type": "array", "items": {"type": "string"}}
+      }
+    },
     "realityCandidate": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "candidate_id",
         "domain",
+        "reality_dimension",
+        "parent_category",
+        "label",
+        "attributes",
         "candidate_kind",
         "time_scope",
         "calibration_targets",
         "statement",
         "observable_examples",
         "alternative_statement",
+        "counterevidence",
+        "unsupported_extensions",
         "source_layers",
         "confidence",
         "validation_question",
@@ -1426,6 +1562,27 @@
         "candidate_id": {
           "type": "string",
           "pattern": "^c[0-9]+$"
+        },
+        "reality_dimension": {
+          "type": "string"
+        },
+        "parent_category": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "attributes": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "counterevidence": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "unsupported_extensions": {
+          "type": "array",
+          "items": {"type": "string"}
         },
         "domain": {
           "type": "string",

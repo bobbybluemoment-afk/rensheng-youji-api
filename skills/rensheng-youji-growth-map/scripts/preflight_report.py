@@ -37,7 +37,7 @@ def validate(data: Any, focus: str) -> dict[str, Any]:
         blockers.append("出生时间精度不足")
         followups.append("请尽量提供24小时制的准确出生时间。")
     if missing:
-        followups.append("为了回答当前问题，请补充或明确不知道：" + "、".join(missing))
+        followups.append("以下资料可以自愿补充，也可以直接跳过：" + "、".join(missing))
 
     return {
         "status": "blocked" if blockers else "ready",
@@ -46,6 +46,7 @@ def validate(data: Any, focus: str) -> dict[str, Any]:
         "blockers": blockers,
         "focus": focus,
         "missing_focus_context": missing,
+        "missing_focus_context_is_optional": True,
         "followups": followups,
     }
 

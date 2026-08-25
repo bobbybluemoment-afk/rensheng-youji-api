@@ -50,7 +50,7 @@ FOCUS_TERMS = {
 CONFIDENCE = {"高置信", "中等置信", "待验证"}
 BANNED = {"百分之百准确", "保证发财", "保证复合", "必然离婚", "命中注定", "改命消灾", "克夫", "克妻", "婚灾", "大凶"}
 AI_JARGON = {"卡点", "卡住", "换轨", "兑现", "承接", "赛道", "抓手", "底层逻辑", "显化", "能量场"}
-EDITORIAL_BANNED = {"现实落点", "核对点", "好处是", "代价是", "资源持续", "平台节奏", "稳定位置", "能力变现"}
+EDITORIAL_BANNED = {"现实落点", "核对点", "好处是", "代价是", "资源持续", "平台节奏", "稳定位置", "能力变现", "组织化过劳型", "先扎根后显声", "表达窗口", "能力输出", "可见度", "物质与经营底色", "资源伴随期待", "表达被规训", "花不显"}
 MINGLI_TERMS = {"日主", "身强", "身弱", "比肩", "劫财", "食神", "伤官", "食伤", "正印", "偏印", "正财", "偏财", "正官", "七杀", "格局", "喜用", "忌神", "大运", "流年", "藏干", "透干", "透出", "得令", "刑冲合害", "根苗花果", "财多身弱"}
 MINGLI_PATTERN = re.compile(r"(?:[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥][木火土金水])")
 FOCUS_GENERIC_KEYWORDS = {"事业", "工作", "职业", "感情", "关系", "恋爱", "财务", "财富", "收入", "家庭", "健康", "身体", "情绪", "发展", "方向", "问题", "未来", "当前", "进展", "选择"}
@@ -121,7 +121,7 @@ def visible_payload(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def validate(data: dict[str, Any]) -> None:
+def _validate_v26(data: dict[str, Any]) -> None:
     required = ("schema_version", "document_mode", "source", "title", "subtitle", "generated_on", "brand", "profile", "focus_scope", "cross_output_consistency", "chart", "calibration", "editorial_review", "executive_summary", "stage_story", "dimensions", "yearly_outlook", "action_guide", "open_questions", "author", "boundaries")
     for key in required:
         require(data, key)
@@ -447,12 +447,171 @@ def validate(data: dict[str, Any]) -> None:
         raise ValueError(f"正式报告正文应为4300—6500个汉字，当前{total_cjk}")
 
 
+def _validate_narrative(section: Any, minimum: int, maximum: int, where: str, errors: list[str]) -> None:
+    if not isinstance(section, dict):
+        errors.append(f"{where} 必须是对象")
+        return
+    paragraphs = section.get("paragraphs")
+    if not isinstance(paragraphs, list) or not 2 <= len(paragraphs) <= 4 or any(not isinstance(item, str) for item in paragraphs):
+        errors.append(f"{where}.paragraphs 必须包含2—4个自然段")
+        return
+    count = cjk_count("".join(paragraphs))
+    if not minimum <= count <= maximum:
+        errors.append(f"{where} 应为{minimum}—{maximum}个汉字，当前{count}")
+    for index, paragraph in enumerate(paragraphs):
+        sentences = [part for part in re.split(r"[。！？]", paragraph) if cjk_count(part)]
+        if any(cjk_count(sentence) > 70 for sentence in sentences):
+            errors.append(f"{where}.paragraphs[{index}] 存在超过70个汉字的长句")
+    claim_ids = section.get("source_claim_ids")
+    if not isinstance(claim_ids, list) or len(set(claim_ids)) < 4:
+        errors.append(f"{where}.source_claim_ids 至少包含4个不同判断来源")
+
+
+def _validate_v27(data: dict[str, Any]) -> None:
+    required = ("schema_version", "report_id", "document_mode", "source", "source_artifacts", "title", "subtitle", "generated_on", "brand", "profile", "focus_scope", "cross_output_consistency", "chart", "calibration", "editorial_review", "executive_summary", "current_question_narrative", "stage_story", "dimensions", "yearly_outlook", "action_guide", "open_questions", "author", "boundaries")
+    errors: list[str] = []
+    for key in required:
+        if key not in data or data[key] in (None, "", []):
+            errors.append(f"缺少字段：{key}")
+    if data.get("document_mode") not in {"full_calibrated", "preliminary_uncalibrated"}:
+        errors.append("document_mode 值无效")
+    source = data.get("source", {})
+    if source.get("core_version") != "0.5.0":
+        errors.append("v2.7.0报告必须来自core_version=0.5.0")
+    if source.get("analysis_as_of") != data.get("generated_on"):
+        errors.append("source.analysis_as_of 必须与generated_on一致")
+    artifacts = data.get("source_artifacts", {})
+    for key in ("content_brief_id", "report_draft_id", "editorial_review_id"):
+        if not artifacts.get(key):
+            errors.append(f"source_artifacts.{key} 不能为空")
+    profile = data.get("profile", {})
+    for key in ("identity_option", "birth", "location", "focus", "question"):
+        if not profile.get(key):
+            errors.append(f"profile.{key} 不能为空")
+    chart = data.get("chart", {})
+    for key in ("pillars", "luck_start", "current_luck_cycle", "time_basis"):
+        if not chart.get(key):
+            errors.append(f"chart.{key} 不能为空")
+    if not isinstance(chart.get("pillars"), list) or len(chart.get("pillars") or []) != 4:
+        errors.append("chart.pillars 必须恰好包含四柱")
+    if data.get("document_mode") == "full_calibrated" and chart.get("formal_report_allowed") is not True:
+        errors.append("正式报告必须通过出生时间边界预检")
+    focus = data.get("focus_scope", {})
+    if focus.get("selected_focus") != data.get("profile", {}).get("focus"):
+        errors.append("关注方向来源不一致")
+    if focus.get("protected_sections") != ["life_overview", "dimensions"]:
+        errors.append("完整人生主线和六个领域必须免受关注方向改写")
+    if focus.get("emphasis_sections") != ["current_question_narrative", "stage_story.present_task", "stage_story.next_direction", "yearly_outlook", "action_guide.priority_actions"]:
+        errors.append("关注方向只能进入当前问题、相关年度和行动建议")
+    calibration = data.get("calibration", {})
+    responses = calibration.get("responses")
+    if data.get("document_mode") == "full_calibrated" and (not isinstance(responses, list) or len(responses) != 5):
+        errors.append("正式报告必须保留五道内部校准响应供交付核对")
+    editorial = data.get("editorial_review", {})
+    if editorial.get("version") != "2.0.0" or editorial.get("review_id") != artifacts.get("editorial_review_id"):
+        errors.append("报告必须引用2.0.0可追溯中文编辑记录")
+    summary = data.get("executive_summary", {})
+    _validate_narrative(summary.get("life_overview"), 350, 550, "executive_summary.life_overview", errors)
+    capabilities = summary.get("capabilities_resources")
+    if not isinstance(capabilities, list) or not 2 <= len(capabilities) <= 4:
+        errors.append("executive_summary.capabilities_resources 必须包含2—4项")
+    else:
+        for index, item in enumerate(capabilities):
+            try:
+                length(item, 16, 75, f"executive_summary.capabilities_resources[{index}]")
+            except ValueError as exc:
+                errors.append(str(exc))
+    _validate_narrative(data.get("current_question_narrative"), 280, 600, "current_question_narrative", errors)
+    stage = data.get("stage_story", {})
+    for key in ("previous_foundation", "recent_development", "present_task", "next_direction", "long_range"):
+        if not stage.get(key):
+            errors.append(f"stage_story.{key} 不能为空")
+    dimensions = data.get("dimensions")
+    if not isinstance(dimensions, list) or [item.get("id") for item in dimensions if isinstance(item, dict)] != DIMENSION_IDS:
+        errors.append("dimensions 必须按固定顺序完整包含六个现实领域")
+    else:
+        required_coverage = {"feature", "behavior", "formation", "challenge", "current_change", "response"}
+        for item in dimensions:
+            where = f"dimensions.{item.get('id')}"
+            _validate_narrative(item, 380, 650, where, errors)
+            if not required_coverage.issubset(set(item.get("coverage") or [])):
+                errors.append(f"{where}.coverage 缺少完整人物描述要素")
+            if item.get("confidence") not in CONFIDENCE:
+                errors.append(f"{where}.confidence 值无效")
+            if item.get("id") == "body_emotion" and not any(term in "".join(item.get("paragraphs") or []) for term in ("不构成疾病诊断", "不能据此诊断", "应以正规医疗评估为准")):
+                errors.append("身体与情绪章节必须说明不构成疾病诊断")
+    outlook = data.get("yearly_outlook", {})
+    years = outlook.get("years")
+    if not isinstance(years, list) or len(years) != 20:
+        errors.append("逐年观察必须恰好包含连续20年")
+    elif [item.get("year") for item in years] != list(range(years[0].get("year"), years[0].get("year") + 20)):
+        errors.append("逐年观察年份必须连续")
+    else:
+        for index, item in enumerate(years):
+            for key in ("year", "theme", "carry_in", "real_world_signal", "signal_terms", "key_year", "seed_for_next", "confidence"):
+                if key not in item:
+                    errors.append(f"yearly_outlook.years[{index}].{key} 缺失")
+    relationship_years = data.get("cross_output_consistency", {}).get("relationship_opportunity_years")
+    if not isinstance(relationship_years, list):
+        errors.append("关系机会年份必须是数组")
+    guide = data.get("action_guide", {})
+    if not isinstance(guide.get("priority_actions"), list) or len(guide.get("priority_actions") or []) != 3:
+        errors.append("action_guide.priority_actions 必须恰好三项")
+    for key in ("reduce", "traditional_preferences"):
+        if not guide.get(key):
+            errors.append(f"action_guide.{key} 不能为空")
+    if not isinstance(data.get("open_questions"), list) or not 2 <= len(data.get("open_questions") or []) <= 5:
+        errors.append("open_questions 必须包含2—5项")
+    author = data.get("author", {})
+    for key in ("name", "bio", "github", "web", "wechat_image", "wechat_note"):
+        if not author.get(key):
+            errors.append(f"author.{key} 不能为空")
+    if author.get("wechat_image") != "assets/wechat-contact.jpg":
+        errors.append("微信二维码必须使用仓库正式资源")
+    if not isinstance(data.get("boundaries"), list) or not 2 <= len(data.get("boundaries") or []) <= 3:
+        errors.append("boundaries 必须包含2—3项")
+    visible_data = {
+        "executive_summary": {
+            "life_overview": summary.get("life_overview", {}).get("paragraphs", []),
+            "capabilities_resources": summary.get("capabilities_resources", []),
+        },
+        "current_question_narrative": data.get("current_question_narrative", {}).get("paragraphs", []),
+        "stage_story": data.get("stage_story"),
+        "dimensions": [
+            {"title": item.get("title"), "paragraphs": item.get("paragraphs")}
+            for item in dimensions or [] if isinstance(item, dict)
+        ],
+        "yearly_outlook": outlook,
+        "action_guide": data.get("action_guide"),
+        "open_questions": data.get("open_questions"),
+        "boundaries": data.get("boundaries"),
+    }
+    visible = json.dumps(visible_data, ensure_ascii=False)
+    for term in BANNED | AI_JARGON | EDITORIAL_BANNED:
+        if term in visible:
+            errors.append(f"用户可见正文含禁用表达：{term}")
+    if re.search(r"校准后的现实线索|校准确认|符合.{0,10}判断", visible):
+        errors.append("用户可见正文不得展示校准过程")
+    found_mingli = sorted(term for term in MINGLI_TERMS if term in visible)
+    if found_mingli or MINGLI_PATTERN.search(visible):
+        errors.append("用户可见正文不得直接出现内部命理术语")
+    if errors:
+        raise ValueError("；".join(errors))
+
+
+def validate(data: dict[str, Any]) -> None:
+    if data.get("schema_version") == "2.7.0":
+        _validate_v27(data)
+    else:
+        _validate_v26(data)
+
+
 def bullets(items: list[str], bold: bool = False) -> str:
     return "\n".join(f"- {'**' if bold else ''}{item}{'**' if bold else ''}" for item in items)
 
 
-def render(data: dict[str, Any]) -> str:
-    profile, chart, calibration = data["profile"], data["chart"], data["calibration"]
+def _render_v26(data: dict[str, Any]) -> str:
+    profile, chart = data["profile"], data["chart"]
     summary, stage = data["executive_summary"], data["stage_story"]
     name = profile.get("name") or "未署名"
     lines = [
@@ -462,7 +621,6 @@ def render(data: dict[str, Any]) -> str:
         f"| 姓名 | {name} |", f"| 身份选项 | {profile['identity_option']} |", f"| 出生时间 | {profile['birth']} |",
         f"| 出生地点 | {profile['location']} |", f"| 最想了解 | {profile['focus']} |", f"| 当前问题 | {profile['question']} |",
         f"| 四柱 | {'　'.join(chart['pillars'])} |", f"| 当前阶段 | {chart['current_luck_cycle']} |", f"| 时间口径 | {chart['time_basis']} |", "",
-        f"**校准结果：** {calibration['summary']}（生时状态：{calibration['birth_time_status']}）", "",
         "## 完整人生主线", "", summary["life_theme"], "", "## 能力与可用资源", "", bullets(summary["capabilities_resources"], True), "",
         "## 这些方式怎样形成", "", summary["formation"], "", "## 你现在所处的阶段", "",
         f"**当前最需要处理的是：{summary['current_situation']}**", "", f"**对你当前问题的直接回应：{summary['direct_answer']}**", "",
@@ -488,6 +646,47 @@ def render(data: dict[str, Any]) -> str:
     author = data["author"]
     lines.extend(["## 关于景行", "", author["bio"], "", f"- GitHub：{author['github']}", f"- 免费网页：{author['web']}", f"- 工作微信：{author['wechat_note']}", "", "## 阅读边界", "", bullets(data["boundaries"]), "", "---", "", "人生有迹 by 景行｜看见你带来的能力，理解你走过的路，也寻找新的可能", ""])
     return "\n".join(lines)
+
+
+def _render_v27(data: dict[str, Any]) -> str:
+    profile, chart = data["profile"], data["chart"]
+    summary, stage = data["executive_summary"], data["stage_story"]
+    name = profile.get("name") or "未署名"
+    lines = [
+        f"# {data['title']}", "", f"> {data['subtitle']}", "", f"**{data['brand']}**", "",
+        "## 关于这份报告", "", FIXED_REPORT_INTRO, "", "> 阅读后如果还有想继续了解的问题，请查看第10页联系方式。", "",
+        "## 基本信息与排盘口径", "", "| 项目 | 内容 |", "|---|---|",
+        f"| 姓名 | {name} |", f"| 身份选项 | {profile['identity_option']} |", f"| 出生时间 | {profile['birth']} |",
+        f"| 出生地点 | {profile['location']} |", f"| 最想了解 | {profile['focus']} |", f"| 当前问题 | {profile['question']} |",
+        f"| 四柱 | {'　'.join(chart['pillars'])} |", f"| 当前阶段 | {chart['current_luck_cycle']} |", f"| 时间口径 | {chart['time_basis']} |", "",
+        "## 完整人生主线", "",
+    ]
+    for paragraph in summary["life_overview"]["paragraphs"]:
+        lines.extend([paragraph, ""])
+    lines.extend(["## 能力与可用资源", "", bullets(summary["capabilities_resources"], True), "", "## 当前阶段与问题回应", ""])
+    for paragraph in data["current_question_narrative"]["paragraphs"]:
+        lines.extend([paragraph, ""])
+    lines.extend(["### 阶段怎样一步步发展", "", f"- **上一阶段留下的条件：** {stage['previous_foundation']}", f"- **近几年的发展：** {stage['recent_development']}", f"- **现在正在处理：** {stage['present_task']}", f"- **未来两三年的可能方向：** {stage['next_direction']}", f"- **更长阶段的主线：** {stage['long_range']}", ""])
+    for section in data["dimensions"]:
+        lines.extend([f"## {section['title']}", ""])
+        for paragraph in section["paragraphs"]:
+            lines.extend([paragraph, ""])
+    outlook = data["yearly_outlook"]
+    lines.extend(["## 阶段与逐年观察", "", outlook["summary"], "", "| 年份 | 年度主题 | 上一年带来的影响 | 这一年的主要表现 | 给下一年留下什么 |", "|---|---|---|---|---|"])
+    for item in outlook["years"]:
+        year_label = f"★ {item['year']}" if item["key_year"] else str(item["year"])
+        lines.append(f"| {year_label} | {item['theme']} | {item['carry_in']} | {item['real_world_signal']} | {item['seed_for_next']} |")
+    guide = data["action_guide"]
+    lines.extend(["", "## 现实行动建议", "", "### 现在最值得做的三件事", "", bullets(guide["priority_actions"]), "", "### 需要减少的一种消耗", "", guide["reduce"], "", "## 仍需继续验证", "", bullets(data["open_questions"]), ""])
+    if data.get("assisted_service_note"):
+        lines.extend([f"> {data['assisted_service_note']}", ""])
+    author = data["author"]
+    lines.extend(["## 关于景行", "", author["bio"], "", f"- GitHub：{author['github']}", f"- 免费网页：{author['web']}", f"- 工作微信：{author['wechat_note']}", "", "## 阅读边界", "", bullets(data["boundaries"]), "", "---", "", "人生有迹 by 景行｜看见你带来的能力，理解你走过的路，也寻找新的可能", ""])
+    return "\n".join(lines)
+
+
+def render(data: dict[str, Any]) -> str:
+    return _render_v27(data) if data.get("schema_version") == "2.7.0" else _render_v26(data)
 
 
 def main() -> int:

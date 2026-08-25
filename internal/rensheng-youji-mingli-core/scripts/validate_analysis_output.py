@@ -42,6 +42,10 @@ REQUIRED_SECTIONS = {
     "monthly_theme_activation",
     "life_stages",
     "turning_points",
+    "report_claim_ledger",
+    "formation_chains",
+    "domain_linkage_chains",
+    "report_source_bundle",
     "reality_candidate_pool",
     "calibration_state",
     "not_inferable_register",
@@ -205,8 +209,8 @@ def validate(data: Any) -> list[str]:
     meta = data.get("analysis_meta")
     require_keys(meta, {"analysis_id", "request_id", "core_version", "generated_at", "analysis_as_of", "target_range", "input_completeness", "status"}, "analysis_meta", errors)
     if isinstance(meta, dict):
-        if meta.get("core_version") != "0.4.0":
-            errors.append("analysis_meta.core_version 必须为 0.4.0")
+        if meta.get("core_version") != "0.5.0":
+            errors.append("analysis_meta.core_version 必须为 0.5.0")
         if meta.get("status") not in {"complete", "pass_with_flags"}:
             errors.append("analysis_meta.status 必须是 complete 或 pass_with_flags")
         try:
@@ -296,15 +300,91 @@ def validate(data: Any) -> list[str]:
                 if missing:
                     errors.append(f"annual_theme_activation 缺少目标年份：{missing}")
 
+    claims = data.get("report_claim_ledger")
+    claim_ids: set[str] = set()
+    if not isinstance(claims, list) or len(claims) < 24:
+        errors.append("report_claim_ledger 至少包含24条报告级判断")
+    else:
+        for index, claim in enumerate(claims):
+            path = f"report_claim_ledger[{index}]"
+            require_keys(claim, {"claim_id", "domain", "reality_dimension", "claim", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status"}, path, errors)
+            if not isinstance(claim, dict):
+                continue
+            claim_id = claim.get("claim_id")
+            if isinstance(claim_id, str):
+                if claim_id in claim_ids:
+                    errors.append(f"{path}.claim_id 不能重复")
+                claim_ids.add(claim_id)
+            if not isinstance(claim.get("evidence_ids"), list) or len(set(claim.get("evidence_ids") or [])) < 2:
+                errors.append(f"{path}.evidence_ids 至少包含两个独立证据")
+            if not isinstance(claim.get("supporting_methods"), list) or len(set(claim.get("supporting_methods") or [])) < 2:
+                errors.append(f"{path}.supporting_methods 至少包含两种交叉方法")
+            if not isinstance(claim.get("unsupported_extensions"), list) or not claim.get("unsupported_extensions"):
+                errors.append(f"{path}.unsupported_extensions 至少说明一项禁止外推")
+
+    formation_ids: set[str] = set()
+    formations = data.get("formation_chains")
+    if not isinstance(formations, list) or not 3 <= len(formations) <= 6:
+        errors.append("formation_chains 必须包含3—6条人物形成链")
+    else:
+        required = {"chain_id", "starting_condition", "adaptation_need", "learned_response", "ability_formed", "constraint", "adult_pattern", "linked_domains", "current_change", "claim_ids", "confidence"}
+        for index, item in enumerate(formations):
+            path = f"formation_chains[{index}]"
+            require_keys(item, required, path, errors)
+            if isinstance(item, dict):
+                formation_ids.add(str(item.get("chain_id", "")))
+                unknown = sorted(set(item.get("claim_ids") or []) - claim_ids)
+                if unknown:
+                    errors.append(f"{path}.claim_ids 引用了不存在的判断：{unknown}")
+
+    linkage_ids: set[str] = set()
+    linkages = data.get("domain_linkage_chains")
+    if not isinstance(linkages, list) or not 3 <= len(linkages) <= 6:
+        errors.append("domain_linkage_chains 必须包含3—6条跨领域联动链")
+    else:
+        required = {"chain_id", "trigger", "transmission", "affected_domains", "time_lag", "amplifiers", "buffers", "claim_ids", "confidence"}
+        for index, item in enumerate(linkages):
+            path = f"domain_linkage_chains[{index}]"
+            require_keys(item, required, path, errors)
+            if isinstance(item, dict):
+                linkage_ids.add(str(item.get("chain_id", "")))
+                unknown = sorted(set(item.get("claim_ids") or []) - claim_ids)
+                if unknown:
+                    errors.append(f"{path}.claim_ids 引用了不存在的判断：{unknown}")
+
+    source_bundle = data.get("report_source_bundle")
+    require_keys(source_bundle, {"life_narrative_source", "dimensions", "current_stage_source"}, "report_source_bundle", errors)
+    if isinstance(source_bundle, dict):
+        sources = {"life_narrative_source": source_bundle.get("life_narrative_source"), "current_stage_source": source_bundle.get("current_stage_source")}
+        dimensions = source_bundle.get("dimensions")
+        required_dimensions = {"self_growth", "career", "finance_resources", "love_partner", "family_growth", "body_emotion"}
+        if not isinstance(dimensions, dict) or set(dimensions) != required_dimensions:
+            errors.append("report_source_bundle.dimensions 必须完整包含六个现实领域")
+        else:
+            sources.update({f"dimensions.{key}": value for key, value in dimensions.items()})
+        for name, source in sources.items():
+            path = f"report_source_bundle.{name}"
+            require_keys(source, {"summary_materials", "claim_ids", "formation_chain_ids", "linkage_chain_ids", "concrete_candidates", "coverage", "evidence_gaps"}, path, errors)
+            if not isinstance(source, dict):
+                continue
+            if len(source.get("summary_materials") or []) < 4 or len(source.get("claim_ids") or []) < 4:
+                errors.append(f"{path} 至少包含4条素材和4个判断来源")
+            if set(source.get("claim_ids") or []) - claim_ids:
+                errors.append(f"{path}.claim_ids 存在无效引用")
+            if set(source.get("formation_chain_ids") or []) - formation_ids:
+                errors.append(f"{path}.formation_chain_ids 存在无效引用")
+            if set(source.get("linkage_chain_ids") or []) - linkage_ids:
+                errors.append(f"{path}.linkage_chain_ids 存在无效引用")
+
     candidates = data.get("reality_candidate_pool")
-    if not isinstance(candidates, list) or not 8 <= len(candidates) <= 15:
-        errors.append("reality_candidate_pool 必须包含 8—15 条候选")
+    if not isinstance(candidates, list) or not 12 <= len(candidates) <= 30:
+        errors.append("reality_candidate_pool 必须包含 12—30 条开放现实候选")
     else:
         ids: list[str] = []
         domains: set[str] = set()
         for index, candidate in enumerate(candidates):
             path = f"reality_candidate_pool[{index}]"
-            require_keys(candidate, {"candidate_id", "domain", "candidate_kind", "time_scope", "calibration_targets", "statement", "observable_examples", "alternative_statement", "source_layers", "confidence", "validation_question", "status"}, path, errors)
+            require_keys(candidate, {"candidate_id", "domain", "reality_dimension", "parent_category", "label", "attributes", "candidate_kind", "time_scope", "calibration_targets", "statement", "observable_examples", "alternative_statement", "counterevidence", "unsupported_extensions", "source_layers", "confidence", "validation_question", "status"}, path, errors)
             if isinstance(candidate, dict) and isinstance(candidate.get("candidate_id"), str):
                 ids.append(candidate["candidate_id"])
             if isinstance(candidate, dict) and isinstance(candidate.get("domain"), str):
@@ -327,6 +407,10 @@ def validate(data: Any) -> list[str]:
                     errors.append(f"{path}.calibration_targets 必须包含1—4个不同的Core结论路径")
                 if candidate.get("candidate_kind") == "timed_event" and not any(layer in set(layers or []) for layer in {"annual", "luck", "annual_theme_activation", "luck_cycle_themes"}):
                     errors.append(f"{path}.candidate_kind=timed_event 时必须包含时运证据")
+                if not isinstance(candidate.get("attributes"), list) or not candidate.get("attributes"):
+                    errors.append(f"{path}.attributes 至少包含一个现实属性")
+                if not isinstance(candidate.get("unsupported_extensions"), list) or not candidate.get("unsupported_extensions"):
+                    errors.append(f"{path}.unsupported_extensions 至少包含一项禁止外推")
         if len(ids) != len(set(ids)):
             errors.append("reality_candidate_pool.candidate_id 不能重复")
         if len(domains) < 4:
@@ -371,8 +455,8 @@ def self_test_fixture() -> dict[str, Any]:
     pillar_analysis = {"facts": [], "structural_role": "", "activation_keys": [], "possible_manifestations": [], "uncertainties": [], "findings": []}
     resource = {"acquire": [], "preserve": [], "exchange": [], "amplify": [], "loss_risks": [], "findings": []}
     annual = {"year": 2026, "age": 36, "luck_cycle_index": 0, "year_theme": "自检", "luck_theme_link": "自检", "activation_mechanisms": [], "natal_reactions": [], "change_intensity": "low", "direction": "consolidation", "domain_impacts": [], "domain_connections": [], "human_actions": [], "social_feedback": [], "carry_in": [], "carry_out": [], "seed_for_next": [], "confidence": "to_verify", "alternatives": [], "validation": []}
-    candidate_domains = ["career", "finance_resources", "love_partner", "family_growth", "learning", "mobility", "body_emotion", "self_growth"]
-    candidate = lambda number: {"candidate_id": f"c{number}", "domain": candidate_domains[number - 1], "candidate_kind": "timed_event" if number == 6 else "stable_pattern", "time_scope": "过去五年" if number == 6 else "原局长期", "calibration_targets": ["reality_domains"], "statement": "遇到模糊任务时先整理信息再开始", "observable_examples": ["先列出步骤和缺少的资料", "交付前会主动核对关键细节"], "alternative_statement": "也可能先行动再根据反馈调整", "source_layers": ["annual", "cross_method"] if number == 6 else ["chart", "cross_method"], "confidence": "to_verify", "validation_question": "哪种处理方式更接近实际？", "status": "unverified"}
+    candidate_domains = ["career", "finance_resources", "love_partner", "family_growth", "learning", "mobility", "body_emotion", "self_growth", "career", "finance_resources", "love_partner", "family_growth"]
+    candidate = lambda number: {"candidate_id": f"c{number}", "domain": candidate_domains[number - 1], "reality_dimension": "work_style", "parent_category": "structured_work", "label": "先整理再行动", "attributes": ["规则明确"], "candidate_kind": "timed_event" if number == 6 else "stable_pattern", "time_scope": "过去五年" if number == 6 else "原局长期", "calibration_targets": ["reality_domains"], "statement": "遇到模糊任务时先整理信息再开始", "observable_examples": ["先列出步骤和缺少的资料", "交付前会主动核对关键细节"], "alternative_statement": "也可能先行动再根据反馈调整", "counterevidence": [], "unsupported_extensions": ["不能据此断定具体职业"], "source_layers": ["annual", "cross_method"] if number == 6 else ["chart", "cross_method"], "confidence": "to_verify", "validation_question": "哪种处理方式更接近实际？", "status": "unverified"}
     partner_profile = {"summary": "自检", "traits": [], "mechanism": [], "benefits": [], "costs": [], "evidence_strength": "insufficient", "alternatives": [], "validation": [], "findings": []}
     complete_self_portrait = {
         "summary": "自检",
@@ -425,7 +509,7 @@ def self_test_fixture() -> dict[str, Any]:
     }
     not_inferable = lambda number: {"item": f"不可推断项{number}", "reason": "自检", "evidence_level": "insufficient", "needed_input": [], "prohibited_claims": ["禁止编造"]}
     data = {
-        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.4.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
+        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.5.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
         "chart_facts": {"day_master": "甲", "pillars": {"year": pillar, "month": pillar, "day": {**pillar, "stem_ten_god": "日主"}, "hour": pillar}, "luck_cycles": [{}], "annual_cycles": [{}]},
         "chart_audit": {"status": "pass", "checks": [], "boundary_dependencies": [], "versions": []},
         "social_context_model": empty_section(),
@@ -451,7 +535,24 @@ def self_test_fixture() -> dict[str, Any]:
         "monthly_theme_activation": None,
         "life_stages": [],
         "turning_points": [],
-        "reality_candidate_pool": [candidate(i) for i in range(1, 9)],
+        "report_claim_ledger": [
+            {"claim_id": f"claim_self_{i}", "domain": "self_growth", "reality_dimension": "behavior", "claim": "遇到复杂任务时先整理信息再行动", "mechanism_chain": ["先确认规则", "再开始执行"], "evidence_ids": [f"e{i}_a", f"e{i}_b"], "supporting_methods": ["格局", "根苗花果"], "allowed_examples": ["任务清单"], "counterevidence": [], "confidence": "to_verify", "unsupported_extensions": ["不能据此断定具体职业"], "calibration_status": "unverified"}
+            for i in range(1, 25)
+        ],
+        "formation_chains": [
+            {"chain_id": f"formation_{i}", "starting_condition": "早期规则较明确", "adaptation_need": "需要减少出错", "learned_response": "先观察再行动", "ability_formed": "能够整理复杂信息", "constraint": "进入新环境较慢", "adult_pattern": "先确认要求再执行", "linked_domains": ["self_growth", "career"], "current_change": "开始增加主动表达", "claim_ids": ["claim_self_1", "claim_self_2"], "confidence": "to_verify"}
+            for i in range(1, 4)
+        ],
+        "domain_linkage_chains": [
+            {"chain_id": f"linkage_{i}", "trigger": "责任增加", "transmission": ["提高稳定需求", "减少快速变化"], "affected_domains": ["career", "finance_resources"], "time_lag": "逐步出现", "amplifiers": [], "buffers": [], "claim_ids": ["claim_self_1", "claim_self_2"], "confidence": "to_verify"}
+            for i in range(1, 4)
+        ],
+        "report_source_bundle": {
+            "life_narrative_source": {"summary_materials": ["素材一", "素材二", "素材三", "素材四"], "claim_ids": ["claim_self_1", "claim_self_2", "claim_self_3", "claim_self_4"], "formation_chain_ids": ["formation_1"], "linkage_chain_ids": ["linkage_1"], "concrete_candidates": [], "coverage": ["性格", "家庭", "事业", "关系"], "evidence_gaps": []},
+            "dimensions": {key: {"summary_materials": ["素材一", "素材二", "素材三", "素材四"], "claim_ids": ["claim_self_1", "claim_self_2", "claim_self_3", "claim_self_4"], "formation_chain_ids": ["formation_1"], "linkage_chain_ids": ["linkage_1"], "concrete_candidates": [], "coverage": ["特征", "行为", "形成", "变化"], "evidence_gaps": []} for key in ("self_growth", "career", "finance_resources", "love_partner", "family_growth", "body_emotion")},
+            "current_stage_source": {"summary_materials": ["素材一", "素材二", "素材三", "素材四"], "claim_ids": ["claim_self_1", "claim_self_2", "claim_self_3", "claim_self_4"], "formation_chain_ids": [], "linkage_chain_ids": ["linkage_1"], "concrete_candidates": [], "coverage": ["当前", "问题", "条件", "应对"], "evidence_gaps": []}
+        },
+        "reality_candidate_pool": [candidate(i) for i in range(1, 13)],
         "calibration_state": {"confirmed": [], "partial": [], "rejected": [], "uncertain": [], "updates": []},
         "not_inferable_register": [not_inferable(i) for i in range(1, 4)],
         "portrait_balance_audit": {"status": "pass_with_flags", "covered_domains": sorted(MANDATORY_PORTRAIT_DOMAINS), "weak_domains": [], "unsupported_claims_removed": [], "cross_domain_paths": ["自检1", "自检2", "自检3"], "warnings": []},

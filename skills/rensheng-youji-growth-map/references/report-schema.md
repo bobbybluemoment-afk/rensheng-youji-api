@@ -1,210 +1,185 @@
-# 人生有迹报告 JSON v2.6.0
+# 人生有迹报告 JSON v2.7.0
 
-把已校验的 Core 母稿提取为 UTF-8 `report.json`。内部 `audit` 只用于核对来源，永远不进入正文。
+## 目录
 
-## 模式
+1. 模式
+2. 来源链路
+3. 用户可见内容
+4. 完整人生主线
+5. 六个现实领域
+6. 当前问题与阶段
+7. 校准
+8. 中文编辑
+9. 逐年与行动
+10. 固定检查
 
-- 正式报告：`document_mode=full_calibrated`、`source.calibration_status=calibrated`、标题“人生有迹｜完整报告”。必须完成五条校准并通过时间边界预检，才能生成10页PDF。
-- 未校准版：`document_mode=preliminary_uncalibrated`、`source.calibration_status=skipped`、标题“人生有迹｜初步分析”。只交付初步Markdown与新版卡片，不生成正式PDF。
+## 1. 模式
 
-## 顶层结构
+- 正式报告：`document_mode=full_calibrated`，必须完成五条现实校准、事实提纲、人物初稿和中文编辑，生成10页PDF。
+- 未校准版：`document_mode=preliminary_uncalibrated`，只生成初步Markdown与新版卡片，不生成正式PDF。
+
+正式报告使用 `schema_version=2.7.0`，Core使用 `core_version=0.5.0`。
+
+## 2. 来源链路
+
+报告保存以下来源标识：
+
+- 校准后Core分析编号；
+- 报告事实提纲编号；
+- 人物初稿编号；
+- 中文编辑记录编号；
+- 最终报告编号。
+
+同一内容区在初稿和终稿中必须保留相同判断来源。编辑只能改文字，不能增加或删除现实判断。
+
+正式 `report.json` 使用以下顶层结构：
 
 ```json
 {
-  "schema_version": "2.6.0",
+  "schema_version": "2.7.0",
+  "report_id": "唯一报告编号",
   "document_mode": "full_calibrated",
   "source": {
-    "analysis_id": "与Core一致",
-    "core_version": "0.4.0",
-    "analysis_as_of": "2026-08-20",
+    "analysis_id": "与Core和卡片一致",
+    "core_version": "0.5.0",
+    "analysis_as_of": "YYYY-MM-DD",
     "calibration_status": "calibrated"
+  },
+  "source_artifacts": {
+    "content_brief_id": "事实提纲编号",
+    "report_draft_id": "人物初稿编号",
+    "editorial_review_id": "编辑记录编号"
   },
   "title": "人生有迹｜完整报告",
   "subtitle": "看见你带来的能力，理解你走过的路，也寻找新的可能",
-  "generated_on": "2026-08-20",
+  "generated_on": "YYYY-MM-DD",
   "brand": "人生有迹 by 景行",
-  "profile": {
-    "name": "",
-    "identity_option": "女",
-    "birth": "1991-10-07 21:56（出生地当地法定时间）",
-    "location": "北京",
-    "focus": "事业发展",
-    "question": "未来两年更适合继续深耕专业还是尝试管理"
-  },
+  "profile": {},
   "focus_scope": {
-    "selected_focus": "事业发展",
-    "emphasis_sections": [
-      "executive_summary.current_situation",
-      "executive_summary.direct_answer",
-      "stage_story.present_task",
-      "stage_story.next_direction",
-      "yearly_outlook",
-      "action_guide.priority_actions"
-    ],
-    "excluded_sections": [
-      "executive_summary.life_theme",
-      "executive_summary.capabilities_resources",
-      "executive_summary.formation",
-      "stage_story.previous_foundation",
-      "stage_story.long_range",
-      "dimensions"
-    ],
-    "overview_domains": [
-      "self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"
-    ],
-    "topic_keywords": ["深耕专业", "尝试管理"]
+    "selected_focus": "与profile.focus一致",
+    "protected_sections": ["life_overview", "dimensions"],
+    "emphasis_sections": ["current_question_narrative", "stage_story.present_task", "stage_story.next_direction", "yearly_outlook", "action_guide.priority_actions"],
+    "topic_keywords": ["当前问题中的具体对象"]
   },
-  "cross_output_consistency": {
-    "relationship_opportunity_years": [2027, 2031]
-  },
-  "chart": {
-    "pillars": ["辛未", "丁酉", "庚戌", "丁亥"],
-    "luck_start": "1992-03-07 21:56:00",
-    "current_luck_cycle": "辛丑（2022—2031）",
-    "time_basis": "普通钟表时间输入，已进行真太阳时校正",
-    "uncertainty": "出生时间不接近时辰边界",
-    "formal_report_allowed": true
-  },
-  "calibration": {
-    "question_schema_version": "2.1.0",
-    "template_version": "1.0.0",
-    "summary": "五条中三条符合、一条部分符合、一条不确定。",
-    "birth_time_status": "稳定",
-    "responses": [
-      {
-        "question_number": 1,
-        "template_id": "career.unclear_task_response",
-        "domain": "事业与组织",
-        "choice": "A",
-        "selected_text": "先查资料、列条件和步骤，想清楚后再开始",
-        "selected_value": "research_plan",
-        "candidate_updates": [
-          {"candidate_id": "c11", "status": "match"}
-        ],
-        "user_note": "用户可选补充的具体事实或年份，没有则为空字符串"
-      }
-    ],
-    "confirmed": ["已确认事实一", "已确认事实二", "已确认事实三"],
-    "partial": ["部分符合内容"],
-    "rejected": [],
-    "uncertain": ["仍不确定内容"]
-  },
-  "editorial_review": {
-    "version": "1.0.0",
-    "fact_preservation_checked": true,
-    "calibration_paraphrased": true,
-    "natural_chinese_checked": true,
-    "template_repetition_checked": true
-  },
+  "cross_output_consistency": {"relationship_opportunity_years": []},
+  "chart": {},
+  "calibration": {"responses": []},
+  "editorial_review": {"version": "2.0.0", "review_id": "与source_artifacts一致"},
   "executive_summary": {
-    "life_theme": "35—120个汉字的人生主线。",
-    "capabilities_resources": ["每项16—65个汉字，共2—3项"],
-    "formation": "70—240个汉字，说明家庭、教育与现实条件怎样共同形成这些方式。",
-    "current_situation": "25—110个汉字的当前具体矛盾。",
-    "direct_answer": "35—150个汉字，直接回答用户问题。"
+    "life_overview": {"paragraphs": [], "source_claim_ids": [], "coverage": []},
+    "capabilities_resources": []
   },
-  "stage_story": {
-    "previous_foundation": "25—110个汉字",
-    "recent_development": "25—110个汉字",
-    "present_task": "25—110个汉字",
-    "next_direction": "25—110个汉字",
-    "long_range": "25—110个汉字"
-  },
-  "dimensions": [
-    {
-      "id": "self_growth",
-      "title": "1｜性格与内在成长",
-      "overview": "45—95个汉字，概括该领域最鲜明的整体特征",
-      "paragraphs": {
-        "behavior_and_decision": "45—105个汉字，写做决定和处理事情的具体方式",
-        "formation_and_experience": "45—105个汉字，写家庭、教育与既往经历怎样形成这些习惯",
-        "recurring_challenge_and_change": "45—105个汉字，写反复出现的情况、挑战和当前变化",
-        "response": "45—105个汉字，写与前文判断直接对应的现实应对"
-      },
-      "confidence": "中等置信",
-      "audit": {
-        "core_sections": ["complete_self_portrait", "root_seed_flower_fruit_map"],
-        "evidence_lenses": ["natal_structure", "root_seed_flower_fruit_map"],
-        "verdict_sources": ["complete_self_portrait", "cross_method_analysis"],
-        "reality_anchor_terms": ["任务清单", "交付复核"],
-        "reality_anchor_sources": {
-          "任务清单": ["complete_self_portrait.action_execution", "root_seed_flower_fruit_map"],
-          "交付复核": ["complete_self_portrait.action_execution", "cross_method_analysis"]
-        },
-        "anchor_precision": "multi_method",
-        "user_facts": [],
-        "social_priors": [],
-        "needs_validation": "仍需核对什么"
-      }
-    }
-  ],
-  "yearly_outlook": {
-    "start_year": 2021,
-    "end_year": 2040,
-    "summary": "45—160个汉字",
-    "years": [
-      {
-        "year": 2021,
-        "theme": "4—14个汉字的现实主题",
-        "carry_in": "10—50个汉字",
-        "real_world_signal": "22—90个汉字，写现实载体，不统一使用‘可能表现’",
-        "signal_terms": ["项目交付"],
-        "key_year": false,
-        "seed_for_next": "10—50个汉字",
-        "confidence": "中等置信"
-      }
-    ]
-  },
-  "action_guide": {
-    "priority_actions": ["每项18—75个汉字，恰好三项"],
-    "reduce": "18—80个汉字",
-    "traditional_preferences": [
-      {"area": "家居与工作区", "advice": "18—80个汉字"}
-    ]
-  },
-  "open_questions": ["真正会改变结论、仍需核对的2—5项"],
-  "assisted_service_note": "本Skill可免费自行生成；如果你的AI无法运行Skill，或希望获得人工校准、PDF整理和问题解释，可以联系景行。",
-  "author": {
-    "name": "景行",
-    "bio": "作者介绍",
-    "github": "https://github.com/bobbybluemoment-afk/rensheng-youji-api",
-    "web": "https://rensheng-youji-web.bobbybluemoment.workers.dev",
-    "wechat_image": "assets/wechat-contact.jpg",
-    "wechat_note": "添加时建议备注：人生有迹"
-  },
-  "boundaries": [
-    "本报告用于传统文化体验与自我观察，不构成医疗、心理、法律、投资或其他专业意见。",
-    "报告提供的是有条件、可验证的倾向，不代表唯一解释或必然命运。"
-  ]
+  "current_question_narrative": {"paragraphs": [], "source_claim_ids": []},
+  "stage_story": {},
+  "dimensions": [],
+  "yearly_outlook": {},
+  "action_guide": {},
+  "open_questions": [],
+  "assisted_service_note": "",
+  "author": {},
+  "boundaries": []
 }
 ```
 
-## 固定校验
+`profile`、`chart`、`calibration`、`stage_story`、`yearly_outlook`、`action_guide`、`author` 和 `boundaries` 延续2.6.0已经确认的字段；只有用户可见长文结构与编辑来源链发生变化。
 
-- `focus_scope` 三组列表必须与示例完全一致，`selected_focus` 必须等于 `profile.focus`。`topic_keywords` 提取1—4个当前问题里的具体对象或选项，不能使用“事业、感情、发展、选择”等宽泛类别。每个关键词在受保护章节中最多出现两次。关注方向只决定第4页“当前阶段与问题回应”、相关年度提醒及行动优先级，不得改写完整人生主线、能力资源、形成过程、长期主线或六领域基础判断。
-- `calibration` 必须来自 `question_schema_version=2.1.0`、`template_version=1.0.0` 的固定题型。每条响应记录 `template_id`、固定 `selected_value` 和与原问题完全一致的 `candidate_updates`；D只能写 `uncertain` 和空更新。统一交付时必须同时传入原 `calibration-questions.json` 逐项核对。
-- `cross_output_consistency.relationship_opportunity_years` 必须与 `free-card-output.json.trend_panel.years` 中 `peach.highlight=true` 的年份完全一致。空列表表示卡片留白，报告也不得把某年写成明显关系进入或发展机会。
-- `source.analysis_as_of` 必须等于 `generated_on`。当前问题回应、当前重点、未来方向和行动建议不得使用早于 `generated_on` 的年份；过去年份只允许放在上一阶段、近几年和逐年回顾中。
-- 用户可见正文不得出现日主、十神、天干地支、身强身弱、透干等内部命理术语；只保留现实判断。百分比由PDF渲染器统一写成“百分之20”这类中文形式，并拒绝 `□` 或乱码替代字符。
-- 第1页使用渲染器内置的固定产品介绍与 Logo，不读取 `life_theme`、`current_situation`、四柱或关注方向。第3页先呈现完整人生主线，再呈现能力、资源与形成过程。
+## 3. 用户可见内容
 
-- `editorial_review` 四项布尔检查必须全部为 `true`。编辑只改可见文字，不得改变Core来源、校准状态、年份或判断方向。
-- 六个领域固定顺序为 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`；每个领域可见正文270—500个汉字。
-- 每个领域必须有 `overview` 和四个按领域固定的 `paragraphs`。每段45—105个汉字，分别覆盖行为、形成或经历、现实条件、挑战变化和应对，不能用同一个“好处—代价”模板替代。
-- 六个领域的固定段落键分别为：
-  - `self_growth`：`behavior_and_decision`、`formation_and_experience`、`recurring_challenge_and_change`、`response`；
-  - `love_partner`：`attraction_and_needs`、`interaction_and_experience`、`conflict_and_change`、`response`；
-  - `career`：`ability_and_formation`、`organization_role_environment`、`recurring_problem_and_change`、`response`；
-  - `finance_resources`：`resource_start_and_attitude`、`income_and_accumulation`、`leakage_and_change`、`response`；
-  - `body_emotion`：`trigger_and_signal`、`coping_and_cycle`、`impact_and_change`、`response`；
-  - `family_growth`：`climate_and_resources`、`role_and_boundary`、`repeated_issue_and_change`、`response`。
-- `reality_anchor_terms` 必须含1—4个现实可核对名词，并原样出现在该领域的 `overview` 或四段正文中。不能用“能力、技术、管理、资源、平台、岗位、组织、稳定、成长”等宽泛词单独充当现实名词。
-- `anchor_precision=user_confirmed` 时必须有用户明确事实；`multi_method` 时每个名词至少有两个独立来源；`category_only` 时必须在 `audit.needs_validation` 中明确目前不足以收窄到唯一行业、岗位、对象或经历。
-- 事业名词先由工作机制推出，再写大型国企、事业单位、互联网大厂、成熟科技公司、项目管理、风控合规等组织或岗位指向；这些只是可用名词类型，不是固定候选词库。关系不得猜对象具体职业，家庭不得猜父母职业，身体情绪不得诊断疾病。
-- 六个领域合计必须实际引用 `root_seed_flower_fruit_map` 与 `cross_method_analysis`；每个领域至少两个Core来源和两个独立证据视角。
-- 正式报告可见正文4300—6500个汉字；逐年观察恰好连续20年。
-- 年度主题使用现实语言，不直接写十神、大运或流年名词。
-- 年度 `real_world_signal` 必须包含1—3个 `signal_terms`，用项目交付、岗位调整、考试证书、合同、搬家、见父母、回款等现实载体表示连续变化；普通年份不强行虚构事件，`key_year=true` 的重点年才增加细节。
-- 内部候选编号、盘面支持、置信推理和替代解释不得进入用户可见正文。
-- 校准题的 `selected_text` 不能原句复制进用户可见正文；不得出现“现实落点、核对点、判断等级、资源持续、平台节奏、稳定位置、能力变现”等内部或生硬表达。
-- `render_report_pdf.py` 只接受正式校准报告，固定生成10页；第2页嵌入同一流程生成的新版1242×1660卡片。
+正式报告包含：
+
+- 基本信息与排盘口径；
+- 完整人生主线；
+- 能力与可用资源；
+- 当前阶段与问题回应；
+- 六个现实领域；
+- 连续20年逐年观察；
+- 行动建议、仍需验证、品牌与边界。
+
+校准回答、候选编号、盘面证据、置信推理、事实提纲和编辑记录永远不进入用户正文。
+
+## 4. 完整人生主线
+
+`executive_summary.life_overview` 包含：
+
+- `paragraphs`：2—3个自然段，总计350—550个汉字；
+- `source_claim_ids`：至少6个有效判断来源；
+- `coverage`：至少覆盖性格、形成、家庭教育、事业财富、关系和当前阶段。
+
+完整人生主线先综述这个人，不围绕用户关注方向集中取材。不得用一句口号或“先扎根后显声”等生造表达代替。
+
+`capabilities_resources` 保留2—4项最有证据的能力与资源，不重复完整人生主线。
+
+## 5. 六个现实领域
+
+固定顺序为：
+
+1. `self_growth` 性格与内在成长；
+2. `love_partner` 恋爱与伴侣；
+3. `career` 事业发展；
+4. `finance_resources` 财富与资源；
+5. `body_emotion` 身体与情绪；
+6. `family_growth` 家庭与成长环境。
+
+每个领域包含：
+
+- `paragraphs`：2—4个自然段，总计380—650个汉字；
+- `source_claim_ids`：至少4个有效判断来源；
+- `coverage`：在内部记录特征、行为、形成、挑战、当前变化与应对是否覆盖；
+- `confidence`：高置信、中等置信或待验证；
+- `audit`：来源、具体例子和证据缺口，只用于内部检查。
+
+用户页面只显示领域标题和自然段，不显示“怎样形成、好处、代价、核对点、可以怎样调整”等固定小标题。
+
+身体与情绪章节必须明确不构成疾病诊断。关系不推断性取向或当前关系状态。家庭不猜父母具体职业。
+
+## 6. 当前问题与阶段
+
+`current_question_narrative` 包含2—4个自然段、280—600个汉字，记录判断来源。内容需要：
+
+- 直接回答用户当前问题；
+- 说明主要判断成立的条件；
+- 说明当前阶段如何形成；
+- 说明未来两三年的变化；
+- 给出符合用户行为方式的应对。
+
+关注方向只在这一节、相关年度和行动建议中加重，不改变完整人生主线和六领域基础判断。
+
+## 7. 校准
+
+`calibration` 保留五题响应和内部候选更新，供交付程序核对。所有校准摘要、确认项、部分符合项、排除项和用户原始答案都不得渲染到Markdown或PDF。
+
+## 8. 中文编辑
+
+`editorial_review` 只保存 `review_id` 和 `version=2.0.0`；完整记录放在独立 `editorial-review.json`。
+
+交付时必须同时传入初稿和编辑记录，程序逐区核对：
+
+- 初稿和终稿哈希；
+- 判断来源一致；
+- 至少三个内容区发生实际编辑；
+- 没有新增判断；
+- 没有展示校准过程；
+- 没有固定模板和禁用表达。
+
+不得再使用几个布尔值自行声明“中文已检查”。
+
+## 9. 逐年与行动
+
+逐年观察仍为当前年前5年、当前年和未来14年，共20年。每年保留上一年带入、本年现实表现和下一年伏笔。普通年份不强行虚构事件，重点年份才增加岗位调整、合同、考试、搬家、见父母、回款等现实载体。
+
+行动建议恰好三项，优先回答当前问题。不得把过去年份写成未来任务。
+
+## 10. 固定检查
+
+- 报告、卡片、Core、事实提纲和初稿来源一致；
+- 完整人生主线350—550字，六领域各380—650字；
+- 六个领域为自然段，不使用固定小标题；
+- 具体组织、行业、岗位、收入和对象特征来自Core开放候选或用户事实；
+- 不把候选库全部列进正文；
+- 不出现“校准后的现实线索、校准确认、符合某判断”；
+- 不出现日主、十神、身强身弱、透干、根苗花果等内部命理术语；
+- 不出现组织化过劳型、先扎根后显声、表达窗口、能力输出、可见度、物质与经营底色、资源伴随期待等表达；
+- 正文有明确主体、动作和现实对象；
+- PDF恰好10页，第2页嵌入同一Core生成的新版1242×1660卡片；
+- Logo、固定字体、微信二维码、GitHub、颜色和免责声明正常；
+- 无缺字、乱码、溢出、截断或段落左边缘不一致。

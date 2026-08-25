@@ -266,23 +266,27 @@ def card_page(card_path: Path) -> Image.Image:
 
 
 def page_three(data: dict[str, Any]) -> Image.Image:
-    page = Page(3, "能力、资源与形成过程")
+    page = Page(3, "人生主线与能力")
     summary = data["executive_summary"]
-    calibration = data["calibration"]
-    body_size = 24
-    bullet_size = 23
+    body_size = 23
+    bullet_size = 22
     page.heading("完整人生主线", color=TEAL, size=32)
-    page.callout("这条主线怎样贯穿不同阶段", summary["life_theme"], size=body_size)
-    page.divider()
-    page.heading("你已经带来的能力", size=31)
-    for item in summary["capabilities_resources"]:
-        page.bullet(item, size=bullet_size)
-    page.divider()
-    page.heading("这些方式怎样形成", color=TEAL, size=31)
-    page.paragraph(summary["formation"], size=body_size, gap=20)
-    page.heading("校准后的现实线索", color=PINK, size=29)
-    for item in (calibration["confirmed"] + calibration["partial"])[:4]:
-        page.bullet(item, size=bullet_size - 1, accent=PINK)
+    if data.get("schema_version") == "2.7.0":
+        for paragraph in summary["life_overview"]["paragraphs"]:
+            page.paragraph(paragraph, size=body_size, gap=18)
+        page.divider()
+        page.heading("你已经带来的能力", size=29)
+        for item in summary["capabilities_resources"]:
+            page.bullet(item, size=bullet_size)
+    else:
+        page.callout("这条主线怎样贯穿不同阶段", summary["life_theme"], size=body_size)
+        page.divider()
+        page.heading("你已经带来的能力", size=31)
+        for item in summary["capabilities_resources"]:
+            page.bullet(item, size=bullet_size)
+        page.divider()
+        page.heading("这些方式怎样形成", color=TEAL, size=31)
+        page.paragraph(summary["formation"], size=body_size, gap=20)
     return page.finish()
 
 
@@ -292,7 +296,12 @@ def page_four(data: dict[str, Any]) -> Image.Image:
     answer_size = 27
     label_size = 22
     page.paragraph("你想问｜" + data["profile"]["question"], size=26, color=PINK, gap=18)
-    page.callout("对当前问题的直接回应", summary["direct_answer"], size=answer_size, fill="#F2E4E6")
+    if data.get("schema_version") == "2.7.0":
+        page.heading("对当前问题的直接回应", color=TEAL, size=29)
+        for paragraph in data["current_question_narrative"]["paragraphs"]:
+            page.paragraph(paragraph, size=22, gap=10)
+    else:
+        page.callout("对当前问题的直接回应", summary["direct_answer"], size=answer_size, fill="#F2E4E6")
     page.heading("阶段怎样一步步走到现在", color=TEAL, size=31)
     for label, key in [("上一阶段", "previous_foundation"), ("近几年", "recent_development"), ("现在", "present_task"), ("未来两三年", "next_direction"), ("更长阶段", "long_range")]:
         page.label(label, stage[key], size=label_size)
@@ -311,11 +320,15 @@ def dimensions_page(data: dict[str, Any], number: int, indexes: tuple[int, int])
         page.y = block_top + 18
         page.draw.text((MARGIN_X, page.y), section["title"], font=font(28, role="heading"), fill=TEAL)
         page.y += 44
-        page.callout("", section["overview"], size=22, fill="#E7EFEA")
-        for key, heading in zip(DIMENSION_PARAGRAPHS[section["id"]], DIMENSION_HEADINGS[section["id"]]):
-            page.draw.text((MARGIN_X, page.y), heading, font=font(19, role="heading"), fill=GOLD)
-            page.y += 29
-            page.paragraph(section["paragraphs"][key], size=20, gap=7)
+        if data.get("schema_version") == "2.7.0":
+            for paragraph in section["paragraphs"]:
+                page.paragraph(paragraph, size=19, gap=9)
+        else:
+            page.callout("", section["overview"], size=22, fill="#E7EFEA")
+            for key, heading in zip(DIMENSION_PARAGRAPHS[section["id"]], DIMENSION_HEADINGS[section["id"]]):
+                page.draw.text((MARGIN_X, page.y), heading, font=font(19, role="heading"), fill=GOLD)
+                page.y += 29
+                page.paragraph(section["paragraphs"][key], size=20, gap=7)
         if page.y > block_bottom - 16:
             raise ValueError(f"第{number}页领域内容溢出；请压缩第{index + 1}个领域")
     return page.finish()
