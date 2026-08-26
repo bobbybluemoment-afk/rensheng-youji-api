@@ -62,9 +62,10 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 7. [complete-person-and-relationship-portrait.md](references/complete-person-and-relationship-portrait.md)：生成完整自身画像、家庭系统、人际与亲密关系、对象特质候选、互动模式、不可推断清单和画像均衡审计。
 8. [luck-cycle-theme.md](references/luck-cycle-theme.md)：确定每步大运的阶段主题、激活键和前后承接。
 9. [annual-activation.md](references/annual-activation.md)：按大运主题分析流年执行、相邻年份连续性和伏笔。
-10. [calibration-confidence.md](references/calibration-confidence.md)：生成现实候选，吸收用户反馈并标注置信度。
-11. [report-grade-reality-mapping.md](references/report-grade-reality-mapping.md)：建立开放现实候选、人物形成链、领域联动链和报告级判断台账。
-12. [safety-boundaries.md](references/safety-boundaries.md)：执行非宿命表达、高风险边界和不确定性披露。
+10. [blind-school-cross-method.md](references/blind-school-cross-method.md)：用宾主、体用、做功、象法与虚实完整性扩充交叉观察，并保留不同作者口径与禁断边界。
+11. [calibration-confidence.md](references/calibration-confidence.md)：生成现实候选，吸收用户反馈并标注置信度。
+12. [report-grade-reality-mapping.md](references/report-grade-reality-mapping.md)：建立开放现实候选、人物形成链、领域联动链和报告级判断台账。
+13. [safety-boundaries.md](references/safety-boundaries.md)：执行非宿命表达、高风险边界和不确定性披露。
 
 ## 执行规则
 
@@ -83,6 +84,8 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 ### 4. 先看全局势，再看局部作用
 
 刑冲合害破必须放回月令、根透、制化、调候和全局气势判断。不得见冲即凶、见合即吉，不得在条件不足时认定合化、从格或成局。
+
+盲派象法与技法只作为交叉层。先分别记录宾主、体用、做功路径、结果归属、成本、虚实与完整性，再与格局调候、根苗花果、资源关系和岁运连续性核对。作者特有规则不得冒充独立共识；高置信结论必须至少有一种非盲派方法支持。
 
 ### 5. 把命盘当作现实中的人
 
@@ -114,7 +117,7 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 
 ### 11. 校准而不倒推
 
-生成12—30个可证伪现实候选，逐条标注固定领域、现实维度、候选类型、时间范围和受影响的结论路径。报告层只从中选择最有区分度的少数候选，通过固定题型组织成同一比较轴下的A/B/C。吸收用户选择、D“都不符合／不确定”和补充事实时，只更新对应现实映射、候选排序与置信度。不得倒改四柱和结构事实，不得把未选择候选换词包装成正确。
+生成18—30个可证伪现实候选，完整覆盖六个报告领域，并逐条标注固定领域、现实维度、候选类型、时间范围和受影响的结论路径。报告层只从中选择最有区分度的少数候选，通过固定题型组织成同一比较轴下的A/B/C。吸收用户选择、D“都不符合／不确定”和补充事实时，只更新对应现实映射、候选排序与置信度。不得倒改四柱和结构事实，不得把未选择候选换词包装成正确。
 
 每条现实候选至少引用两个独立证据视角，并至少包含根苗花果、资源关系、交叉方法、大运主题、流年执行或领域联动之一；日主旺衰只能作为组成证据，不能单独生成现实候选。校准题的用户可见文字与内部命理审计必须分离。
 
@@ -140,6 +143,8 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 - 可以使用的具体例子与禁止外推范围。
 
 这些内容用于约束报告写作，不是用户可见文章。Core中的技术短语必须紧接现实解释；不得用“底色、表达窗口、输出、可见度、先扎根后显声”等抽象词代替事实。
+
+每条报告判断必须登记可解析的证据编号。证据编号要指向真实的 `evidence_registry` 条目，写明方法、命盘位置、观察、解释、限制和置信度。不能只造两个看似不同的编号来满足数量。每条判断还要标注 `origin`：原局长期判断使用 `chart_baseline`，大运流年阶段判断使用 `timing_baseline`，用户校准只使用 `user_fact_refinement`。校准不能成为完整人生主线和六个领域的主要来源。
 
 ### 14. 输出完整语义，不直接画图
 
@@ -246,7 +251,7 @@ validation: []
 30. `report_source_bundle`
     - 完整人生主线和六个现实领域的报告级素材，只提供事实与候选，不直接写最终文章；
 31. `reality_candidate_pool`
-    - 12—30条可验证现实候选；从工作方式、组织属性、行业、职能岗位、财富机制、家庭生态、伴侣特征等开放维度生成。每条包含所属维度、现实标签、属性、固定 `domain`、`candidate_kind`、`time_scope`、`calibration_targets`、2—3个可观察例子、替代解释、反证和禁止外推；候选需覆盖至少四个生活领域；
+    - 18—30条可验证现实候选；从工作方式、组织属性、行业、职能岗位、财富机制、家庭生态、伴侣特征等开放维度生成。每条包含所属维度、现实标签、属性、固定 `domain`、`candidate_kind`、`time_scope`、`calibration_targets`、2—3个可观察例子、替代解释、反证和禁止外推；候选需完整覆盖六个报告领域；
 32. `calibration_state`
     - 历史反馈、被支持和被否定的候选及更新结果；
 33. `not_inferable_register`
@@ -260,7 +265,7 @@ validation: []
 
 不要省略没有明显结论的栏目。使用空数组、`null` 或“证据不足”保留结构，不得补造内容。
 
-完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.5.0`。完成分析后运行：
+完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.6.0`。完成分析后运行：
 
 ```bash
 python3 scripts/validate_analysis_output.py <analysis-output.json>

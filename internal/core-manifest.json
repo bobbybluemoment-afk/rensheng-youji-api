@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "visibility": "internal",
   "stages": [
     {
@@ -37,12 +37,15 @@
     "pdf_renderer": "../skills/rensheng-youji-growth-map/scripts/render_report_pdf.py",
     "pages": 10,
     "card_page": 2,
-    "report_schema_version": "2.7.0",
-    "editorial_review_version": "2.0.0",
+    "report_schema_version": "2.8.0",
+    "core_version": "0.6.0",
+    "content_brief_schema_version": "1.1.0",
+    "report_draft_schema_version": "1.1.0",
+    "editorial_review_version": "2.1.0",
     "calibration_schema_version": "2.1.0",
     "calibration_template_version": "1.0.0",
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "确定性排盘与同一Core母稿同时支持新版免费卡片和固定10页完整报告；Core提供开放现实候选、人物形成链和报告判断台账；五题校准只更新候选且不进入用户报告；报告依次经过事实提纲、人物写作和可追溯中文编辑。公开免费版在用户环境运行，不使用验证码、MCP或人生有迹云端接口。"
+  "notes": "确定性排盘与同一Core母稿同时支持新版免费卡片和固定10页完整报告；Core 0.6.0增加盲派象法技法交叉层与实体证据台账；五题校准只修正候选且不进入用户报告；报告通过哈希实体化事实提纲、逐段判断映射、人物写作和可追溯中文编辑。公开免费版在用户环境运行，不使用验证码、MCP或人生有迹云端接口。"
 }

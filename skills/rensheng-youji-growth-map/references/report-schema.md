@@ -1,4 +1,4 @@
-# 人生有迹报告 JSON v2.7.0
+# 人生有迹报告 JSON v2.8.0
 
 ## 目录
 
@@ -18,7 +18,7 @@
 - 正式报告：`document_mode=full_calibrated`，必须完成五条现实校准、事实提纲、人物初稿和中文编辑，生成10页PDF。
 - 未校准版：`document_mode=preliminary_uncalibrated`，只生成初步Markdown与新版卡片，不生成正式PDF。
 
-正式报告使用 `schema_version=2.7.0`，Core使用 `core_version=0.5.0`。
+正式报告使用 `schema_version=2.8.0`，Core使用 `core_version=0.6.0`。
 
 ## 2. 来源链路
 
@@ -30,18 +30,18 @@
 - 中文编辑记录编号；
 - 最终报告编号。
 
-同一内容区在初稿和终稿中必须保留相同判断来源。编辑只能改文字，不能增加或删除现实判断。
+同一内容区在初稿和终稿中必须保留相同判断来源及逐段判断映射。事实提纲必须携带从Core实体化并经过哈希验证的判断、机制、证据和限制；编辑只能改文字，不能增加或删除现实判断。
 
 正式 `report.json` 使用以下顶层结构：
 
 ```json
 {
-  "schema_version": "2.7.0",
+  "schema_version": "2.8.0",
   "report_id": "唯一报告编号",
   "document_mode": "full_calibrated",
   "source": {
     "analysis_id": "与Core和卡片一致",
-    "core_version": "0.5.0",
+    "core_version": "0.6.0",
     "analysis_as_of": "YYYY-MM-DD",
     "calibration_status": "calibrated"
   },
@@ -64,7 +64,7 @@
   "cross_output_consistency": {"relationship_opportunity_years": []},
   "chart": {},
   "calibration": {"responses": []},
-  "editorial_review": {"version": "2.0.0", "review_id": "与source_artifacts一致"},
+  "editorial_review": {"version": "2.1.0", "review_id": "与source_artifacts一致"},
   "executive_summary": {
     "life_overview": {"paragraphs": [], "source_claim_ids": [], "coverage": []},
     "capabilities_resources": []
@@ -101,8 +101,9 @@
 
 `executive_summary.life_overview` 包含：
 
-- `paragraphs`：2—3个自然段，总计350—550个汉字；
+- `paragraphs`：3—4个自然段，总计500—700个汉字；
 - `source_claim_ids`：至少6个有效判断来源；
+- `paragraph_claim_map`：每个自然段至少映射两个实体化Core判断；
 - `coverage`：至少覆盖性格、形成、家庭教育、事业财富、关系和当前阶段。
 
 完整人生主线先综述这个人，不围绕用户关注方向集中取材。不得用一句口号或“先扎根后显声”等生造表达代替。
@@ -122,8 +123,9 @@
 
 每个领域包含：
 
-- `paragraphs`：2—4个自然段，总计380—650个汉字；
-- `source_claim_ids`：至少4个有效判断来源；
+- `paragraphs`：3—4个自然段，总计500—700个汉字；
+- `source_claim_ids`：至少6个有效判断来源；
+- `paragraph_claim_map`：与自然段逐项对应，每段至少两个判断；
 - `coverage`：在内部记录特征、行为、形成、挑战、当前变化与应对是否覆盖；
 - `confidence`：高置信、中等置信或待验证；
 - `audit`：来源、具体例子和证据缺口，只用于内部检查。
@@ -134,7 +136,7 @@
 
 ## 6. 当前问题与阶段
 
-`current_question_narrative` 包含2—4个自然段、280—600个汉字，记录判断来源。内容需要：
+`current_question_narrative` 包含2—4个自然段、320—650个汉字，记录判断来源。内容需要：
 
 - 直接回答用户当前问题；
 - 说明主要判断成立的条件；
@@ -150,7 +152,7 @@
 
 ## 8. 中文编辑
 
-`editorial_review` 只保存 `review_id` 和 `version=2.0.0`；完整记录放在独立 `editorial-review.json`。
+`editorial_review` 只保存 `review_id` 和 `version=2.1.0`；完整记录放在独立 `editorial-review.json`。
 
 交付时必须同时传入初稿和编辑记录，程序逐区核对：
 
@@ -160,6 +162,9 @@
 - 没有新增判断；
 - 没有展示校准过程；
 - 没有固定模板和禁用表达。
+- 逐段判断映射没有改变；
+- “经营”等抽象词符合实际语境；
+- 跨章节没有重复完整句子，校准事实没有主导全局章节。
 
 不得再使用几个布尔值自行声明“中文已检查”。
 
@@ -172,7 +177,7 @@
 ## 10. 固定检查
 
 - 报告、卡片、Core、事实提纲和初稿来源一致；
-- 完整人生主线350—550字，六领域各380—650字；
+- 完整人生主线与六领域各500—700字；
 - 六个领域为自然段，不使用固定小标题；
 - 具体组织、行业、岗位、收入和对象特征来自Core开放候选或用户事实；
 - 不把候选库全部列进正文；
@@ -180,6 +185,8 @@
 - 不出现日主、十神、身强身弱、透干、根苗花果等内部命理术语；
 - 不出现组织化过劳型、先扎根后显声、表达窗口、能力输出、可见度、物质与经营底色、资源伴随期待等表达；
 - 正文有明确主体、动作和现实对象；
+- 完整人生主线和六领域至少八成判断来自命盘或时运基线，校准只作修正；
+- “经营”只在真实经商、创业、利润责任或业务经营语境使用；
 - PDF恰好10页，第2页嵌入同一Core生成的新版1242×1660卡片；
 - Logo、固定字体、微信二维码、GitHub、颜色和免责声明正常；
 - 无缺字、乱码、溢出、截断或段落左边缘不一致。

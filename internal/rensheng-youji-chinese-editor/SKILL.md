@@ -8,9 +8,10 @@ description: 人生有迹内部中文编辑层。接收已校验的人物初稿�
 1. 完整读取 [natural-chinese.md](references/natural-chinese.md)。
 2. 对完整人生主线、六个现实领域和当前问题逐段执行第二遍编辑。
 3. 补全主体和动作，拆分长句，消除名词堆叠、翻译腔、命理术语泄露和固定模板。
-4. 保留初稿使用的所有判断编号，不得增加新编号。
-5. 输出终稿和独立编辑记录；不得只填写“已检查”。
-6. 运行：
+4. 保留初稿使用的所有判断编号与 `paragraph_claim_map`，不得增加新编号或改变逐段来源。
+5. 检查“经营”等高频抽象词的实际语境，并检查章节之间是否重复整句或固定模板。
+6. 输出终稿和独立编辑记录；编辑记录版本使用 `2.1.0`，不得只填写“已检查”。
+7. 运行：
 
 ```bash
 python internal/rensheng-youji-chinese-editor/scripts/validate_editorial_review.py \

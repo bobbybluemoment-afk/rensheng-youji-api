@@ -125,10 +125,10 @@ python skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.p
    - [prosperity-guide.md](references/prosperity-guide.md)：现实行动建议；
    - [brand-and-conversion.md](references/brand-and-conversion.md)：免费使用与人工服务入口；
    - [safety-language.md](references/safety-language.md)：健康、财务、关系和隐私边界。
-2. 完整读取 `internal/rensheng-youji-report-content-brief/SKILL.md`，从校准后Core生成 `work/report-content-brief.json`。事实提纲只选择有效判断，排除已否定候选，并为完整人生主线、六个现实领域和当前问题分别锁定判断来源、可用例子与禁止外推。
-3. 完整读取 `internal/rensheng-youji-report-writer/SKILL.md`，从事实提纲生成 `work/report-draft.json`。完整人生主线写2—3个自然段、350—550个汉字；六个领域各写2—4个自然段、380—650个汉字。不要把覆盖项显示成固定小标题。
+2. 完整读取 `internal/rensheng-youji-report-content-brief/SKILL.md`，从校准后Core先生成 `work/report-content-selection.json`，再运行实体化脚本生成 `work/report-content-brief.json`。事实提纲必须携带Core判断正文、机制、证据、限制和哈希；不能只传判断编号。
+3. 完整读取 `internal/rensheng-youji-report-writer/SKILL.md`，从实体化事实提纲生成 `work/report-draft.json`。完整人生主线写3—4个自然段、500—700个汉字；六个领域各写3—4个自然段、500—700个汉字。每段至少引用两个Core判断，不要把覆盖项显示成固定小标题。
 4. 完整读取 `internal/rensheng-youji-chinese-editor/SKILL.md`，对初稿逐段执行第二遍中文编辑，生成 `work/editorial-review.json` 和正式 `work/report.json`。编辑记录必须保存初稿与终稿对应关系和实际修改，不能再用几个布尔值代替编辑。
-5. 正式报告使用 `schema_version=2.7.0`、`document_mode=full_calibrated`。完整人生主线先根据全盘材料生成，再在第4页单独回应用户问题。用户关注方向只在当前阶段、问题回应、相关年度和行动建议中加重。
+5. 正式报告使用 `schema_version=2.8.0`、`document_mode=full_calibrated`。完整人生主线先根据全盘材料生成，再在第4页单独回应用户问题。用户关注方向只在当前阶段、问题回应、相关年度和行动建议中加重。
 6. 时间分析继续使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系，同时概括更长阶段。
 7. 从同一份校准后 Core 母稿依次运行 `rensheng-youji-free-card-output` 与 `rensheng-youji-free-card-renderer` 的现有新版流程，生成 `work/free-card-output.json`。报告与卡片的分析编号、Core版本和明显关系机会年份必须一致。
 8. 运行统一交付命令：
@@ -185,10 +185,13 @@ python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
 - 五题至少包含两道客观状态或事件题、一道带时间窗口的事件题，并且时间题实际绑定带大运或流年证据的 `timed_event` 候选；
 - 不包含“初始角色、核心配置、主线任务、人物小传”等旧卡片字段；
 - 六个领域均有实质内容或明确写证据不足，不能把事业段落换词复制到其他领域；
-- 六个领域各自写成2—4个连贯自然段，覆盖行为模式、形成经历、现实条件、重复挑战、阶段变化与应对，但不把这些覆盖项显示成固定小标题；
-- 每个领域可见正文为380—650个汉字，完整人生主线为350—550个汉字；不再设置逐段机械字数；
+- 六个领域各自写成3—4个连贯自然段，覆盖行为模式、形成经历、现实条件、重复挑战、阶段变化与应对，但不把这些覆盖项显示成固定小标题；
+- 每个领域和完整人生主线可见正文均为500—700个汉字；不再设置逐段机械字数；
 - 最终正文没有“现实落点、核对点、判断等级、校准后的现实线索”等内部栏目，也没有固定“好处—代价”句式；
 - 已执行事实提纲、人物初稿和可追溯中文编辑，初稿与终稿真实存在，编辑没有新增判断；
+- 每个自然段至少映射两个实体化Core判断，完整人生主线和六领域至少八成来源为命盘或时运基线；
+- 盲派象法与技法只作交叉验证，高置信判断同时有非盲派方法支持，不向用户显示内部盲派术语；
+- “经营”只在用户确有经商、创业、利润责任或业务经营语境时使用；
 - 每个现实名词都进入来源审计；大型国企、互联网大厂、事业单位、具体岗位、收入形式等名词只有在用户事实或至少两个独立Core视角支持时才能出现；
 - 事业、财务、关系、家庭与压力节奏均落到各自可核对的名词，不能只写“能力、资源、平台、稳定、成长”等宽泛类别；
 - 完整人生主线与能力形成部分至少覆盖六个现实领域，不能围绕用户关注方向集中取材；

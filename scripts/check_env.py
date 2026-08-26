@@ -26,6 +26,7 @@ def main() -> int:
         ROOT / "assets/fonts/lxgw/LXGWWenKai-Regular.ttf",
         ROOT / "internal/rensheng-youji-mingli-core/SKILL.md",
         ROOT / "internal/rensheng-youji-report-content-brief/SKILL.md",
+        ROOT / "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py",
         ROOT / "internal/rensheng-youji-report-writer/SKILL.md",
         ROOT / "internal/rensheng-youji-chinese-editor/SKILL.md",
         ROOT / "internal/rensheng-youji-free-card-output/SKILL.md",
@@ -68,6 +69,7 @@ def main() -> int:
             "-m",
             "unittest",
             "tests.test_report_v27_pipeline.ReportV27PipelineTest.test_v27_full_delivery",
+            "tests.test_report_v28_traceability.ReportV28TraceabilityTest",
         ],
         cwd=ROOT,
         text=True,
@@ -75,7 +77,7 @@ def main() -> int:
         check=False,
     )
     if report_test.returncode:
-        print("FAILED: Core v0.5 -> content brief -> writing -> editorial -> fixed 10-page report pipeline")
+        print("FAILED: report traceability, writing, editorial or fixed 10-page report pipeline")
         print(report_test.stdout or report_test.stderr)
         return 6
     core_test = subprocess.run(
@@ -83,10 +85,10 @@ def main() -> int:
         cwd=ROOT, text=True, capture_output=True, check=False,
     )
     if core_test.returncode:
-        print("FAILED: v0.5.0 Core report-grade source bundle")
+        print("FAILED: v0.6.0 Core evidence registry and report-grade source bundle")
         print(core_test.stdout or core_test.stderr)
         return 7
-    print("READY: dependencies, chart, v2 card, Core v0.5 report sources and fixed 10-page report pipeline passed")
+    print("READY: dependencies, chart, v2 card, Core v0.6 evidence sources, materialized brief and fixed 10-page report pipeline passed")
     return 0
 
 

@@ -17,6 +17,7 @@ def main() -> int:
         REPO_ROOT / "internal/core-manifest.json",
         REPO_ROOT / "internal/rensheng-youji-mingli-core/SKILL.md",
         REPO_ROOT / "internal/rensheng-youji-report-content-brief/SKILL.md",
+        REPO_ROOT / "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py",
         REPO_ROOT / "internal/rensheng-youji-report-writer/SKILL.md",
         REPO_ROOT / "internal/rensheng-youji-chinese-editor/SKILL.md",
         REPO_ROOT / "scripts/prepare_core_input.py",

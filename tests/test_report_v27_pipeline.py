@@ -131,6 +131,7 @@ def _artifacts() -> tuple[dict, dict, dict, dict, dict]:
 
     analysis = self_test_fixture()
     analysis["analysis_meta"]["analysis_id"] = "fixture-v2-pipeline"
+    analysis["analysis_meta"]["core_version"] = "0.5.0"
     return report, brief, draft, review, analysis
 
 

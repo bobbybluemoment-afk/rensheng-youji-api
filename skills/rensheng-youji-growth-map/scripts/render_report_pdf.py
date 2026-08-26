@@ -271,7 +271,7 @@ def page_three(data: dict[str, Any]) -> Image.Image:
     body_size = 23
     bullet_size = 22
     page.heading("完整人生主线", color=TEAL, size=32)
-    if data.get("schema_version") == "2.7.0":
+    if data.get("schema_version") in {"2.7.0", "2.8.0"}:
         for paragraph in summary["life_overview"]["paragraphs"]:
             page.paragraph(paragraph, size=body_size, gap=18)
         page.divider()
@@ -296,7 +296,7 @@ def page_four(data: dict[str, Any]) -> Image.Image:
     answer_size = 27
     label_size = 22
     page.paragraph("你想问｜" + data["profile"]["question"], size=26, color=PINK, gap=18)
-    if data.get("schema_version") == "2.7.0":
+    if data.get("schema_version") in {"2.7.0", "2.8.0"}:
         page.heading("对当前问题的直接回应", color=TEAL, size=29)
         for paragraph in data["current_question_narrative"]["paragraphs"]:
             page.paragraph(paragraph, size=22, gap=10)
@@ -320,9 +320,9 @@ def dimensions_page(data: dict[str, Any], number: int, indexes: tuple[int, int])
         page.y = block_top + 18
         page.draw.text((MARGIN_X, page.y), section["title"], font=font(28, role="heading"), fill=TEAL)
         page.y += 44
-        if data.get("schema_version") == "2.7.0":
+        if data.get("schema_version") in {"2.7.0", "2.8.0"}:
             for paragraph in section["paragraphs"]:
-                page.paragraph(paragraph, size=19, gap=9)
+                page.paragraph(paragraph, size=22, gap=8)
         else:
             page.callout("", section["overview"], size=22, fill="#E7EFEA")
             for key, heading in zip(DIMENSION_PARAGRAPHS[section["id"]], DIMENSION_HEADINGS[section["id"]]):

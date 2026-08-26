@@ -447,7 +447,7 @@ def _validate_v26(data: dict[str, Any]) -> None:
         raise ValueError(f"正式报告正文应为4300—6500个汉字，当前{total_cjk}")
 
 
-def _validate_narrative(section: Any, minimum: int, maximum: int, where: str, errors: list[str]) -> None:
+def _validate_narrative(section: Any, minimum: int, maximum: int, where: str, errors: list[str], require_map: bool = False) -> None:
     if not isinstance(section, dict):
         errors.append(f"{where} 必须是对象")
         return
@@ -463,8 +463,17 @@ def _validate_narrative(section: Any, minimum: int, maximum: int, where: str, er
         if any(cjk_count(sentence) > 70 for sentence in sentences):
             errors.append(f"{where}.paragraphs[{index}] 存在超过70个汉字的长句")
     claim_ids = section.get("source_claim_ids")
-    if not isinstance(claim_ids, list) or len(set(claim_ids)) < 4:
-        errors.append(f"{where}.source_claim_ids 至少包含4个不同判断来源")
+    minimum_claims = 6 if require_map else 4
+    if not isinstance(claim_ids, list) or len(set(claim_ids)) < minimum_claims:
+        errors.append(f"{where}.source_claim_ids 至少包含{minimum_claims}个不同判断来源")
+    if require_map:
+        paragraph_map = section.get("paragraph_claim_map")
+        if not isinstance(paragraph_map, list) or len(paragraph_map) != len(paragraphs):
+            errors.append(f"{where}.paragraph_claim_map 必须与自然段逐项对应")
+        else:
+            for index, mapped in enumerate(paragraph_map):
+                if not isinstance(mapped, list) or len(set(mapped)) < 2 or set(mapped) - set(claim_ids or []):
+                    errors.append(f"{where}.paragraph_claim_map[{index}] 必须引用本节至少两个不同判断")
 
 
 def _validate_v27(data: dict[str, Any]) -> None:
@@ -476,8 +485,9 @@ def _validate_v27(data: dict[str, Any]) -> None:
     if data.get("document_mode") not in {"full_calibrated", "preliminary_uncalibrated"}:
         errors.append("document_mode 值无效")
     source = data.get("source", {})
-    if source.get("core_version") != "0.5.0":
-        errors.append("v2.7.0报告必须来自core_version=0.5.0")
+    expected_core = "0.6.0" if data.get("schema_version") == "2.8.0" else "0.5.0"
+    if source.get("core_version") != expected_core:
+        errors.append(f"{data.get('schema_version')}报告必须来自core_version={expected_core}")
     if source.get("analysis_as_of") != data.get("generated_on"):
         errors.append("source.analysis_as_of 必须与generated_on一致")
     artifacts = data.get("source_artifacts", {})
@@ -508,10 +518,13 @@ def _validate_v27(data: dict[str, Any]) -> None:
     if data.get("document_mode") == "full_calibrated" and (not isinstance(responses, list) or len(responses) != 5):
         errors.append("正式报告必须保留五道内部校准响应供交付核对")
     editorial = data.get("editorial_review", {})
-    if editorial.get("version") != "2.0.0" or editorial.get("review_id") != artifacts.get("editorial_review_id"):
-        errors.append("报告必须引用2.0.0可追溯中文编辑记录")
+    expected_editor = "2.1.0" if data.get("schema_version") == "2.8.0" else "2.0.0"
+    if editorial.get("version") != expected_editor or editorial.get("review_id") != artifacts.get("editorial_review_id"):
+        errors.append(f"报告必须引用{expected_editor}可追溯中文编辑记录")
     summary = data.get("executive_summary", {})
-    _validate_narrative(summary.get("life_overview"), 350, 550, "executive_summary.life_overview", errors)
+    narrative_min, narrative_max = ((500, 700) if data.get("schema_version") == "2.8.0" else (350, 550))
+    require_map = data.get("schema_version") == "2.8.0"
+    _validate_narrative(summary.get("life_overview"), narrative_min, narrative_max, "executive_summary.life_overview", errors, require_map)
     capabilities = summary.get("capabilities_resources")
     if not isinstance(capabilities, list) or not 2 <= len(capabilities) <= 4:
         errors.append("executive_summary.capabilities_resources 必须包含2—4项")
@@ -521,7 +534,8 @@ def _validate_v27(data: dict[str, Any]) -> None:
                 length(item, 16, 75, f"executive_summary.capabilities_resources[{index}]")
             except ValueError as exc:
                 errors.append(str(exc))
-    _validate_narrative(data.get("current_question_narrative"), 280, 600, "current_question_narrative", errors)
+    current_min, current_max = ((320, 650) if data.get("schema_version") == "2.8.0" else (280, 600))
+    _validate_narrative(data.get("current_question_narrative"), current_min, current_max, "current_question_narrative", errors, require_map)
     stage = data.get("stage_story", {})
     for key in ("previous_foundation", "recent_development", "present_task", "next_direction", "long_range"):
         if not stage.get(key):
@@ -533,7 +547,7 @@ def _validate_v27(data: dict[str, Any]) -> None:
         required_coverage = {"feature", "behavior", "formation", "challenge", "current_change", "response"}
         for item in dimensions:
             where = f"dimensions.{item.get('id')}"
-            _validate_narrative(item, 380, 650, where, errors)
+            _validate_narrative(item, narrative_min, narrative_max, where, errors, require_map)
             if not required_coverage.issubset(set(item.get("coverage") or [])):
                 errors.append(f"{where}.coverage 缺少完整人物描述要素")
             if item.get("confidence") not in CONFIDENCE:
@@ -592,6 +606,8 @@ def _validate_v27(data: dict[str, Any]) -> None:
             errors.append(f"用户可见正文含禁用表达：{term}")
     if re.search(r"校准后的现实线索|校准确认|符合.{0,10}判断", visible):
         errors.append("用户可见正文不得展示校准过程")
+    if data.get("schema_version") == "2.8.0" and visible.count("经营") > 2:
+        errors.append("用户可见正文中“经营”出现过多；仅可用于真实经商、创业或利润责任语境")
     found_mingli = sorted(term for term in MINGLI_TERMS if term in visible)
     if found_mingli or MINGLI_PATTERN.search(visible):
         errors.append("用户可见正文不得直接出现内部命理术语")
@@ -600,7 +616,7 @@ def _validate_v27(data: dict[str, Any]) -> None:
 
 
 def validate(data: dict[str, Any]) -> None:
-    if data.get("schema_version") == "2.7.0":
+    if data.get("schema_version") in {"2.7.0", "2.8.0"}:
         _validate_v27(data)
     else:
         _validate_v26(data)
@@ -686,7 +702,7 @@ def _render_v27(data: dict[str, Any]) -> str:
 
 
 def render(data: dict[str, Any]) -> str:
-    return _render_v27(data) if data.get("schema_version") == "2.7.0" else _render_v26(data)
+    return _render_v27(data) if data.get("schema_version") in {"2.7.0", "2.8.0"} else _render_v26(data)
 
 
 def main() -> int:

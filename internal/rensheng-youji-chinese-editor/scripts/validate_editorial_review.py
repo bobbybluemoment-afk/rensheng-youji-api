@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-BANNED = {"组织化过劳型", "先扎根后显声", "表达窗口", "能力输出", "可见度", "物质与经营底色", "资源伴随期待", "表达被规训", "花不显", "现实落点", "核对点"}
+BANNED = {"组织化过劳型", "先扎根后显声", "表达窗口", "能力输出", "可见度", "物质与经营底色", "资源伴随期待", "表达被规训", "花不显", "现实落点", "核对点", "经营责任", "经营基础", "进入经营期", "经营底色", "经营扩张", "输出与经营"}
 
 
 def digest(paragraphs: list[str]) -> str:
@@ -39,8 +39,9 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
     errors: list[str] = []
     if not all(isinstance(item, dict) for item in (review, draft, report)):
         return ["编辑记录、初稿和终稿都必须是对象"]
-    if review.get("version") != "2.0.0":
-        errors.append("编辑记录版本必须为2.0.0")
+    is_v21 = review.get("version") == "2.1.0"
+    if review.get("version") not in {"2.0.0", "2.1.0"}:
+        errors.append("编辑记录版本必须为2.0.0或2.1.0")
     if review.get("draft_id") != draft.get("draft_id") or review.get("final_report_id") != report.get("report_id"):
         errors.append("编辑记录与初稿或终稿来源不一致")
     draft_map, final_map = draft_sections(draft), report_sections(report)
@@ -61,6 +62,8 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
             errors.append(f"{section_id} 编辑前后判断来源发生变化")
         if set(record.get("source_claim_ids") or []) != set(after.get("source_claim_ids") or []):
             errors.append(f"{section_id} 编辑记录中的判断来源与终稿不一致")
+        if is_v21 and before.get("paragraph_claim_map") != after.get("paragraph_claim_map"):
+            errors.append(f"{section_id} 编辑不得改变逐段Core判断映射")
         if before_text != after_text:
             changed += 1
         if not isinstance(record.get("changes"), list):
@@ -73,10 +76,16 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
         errors.append("终稿仍含生硬或生造表达：" + "、".join(found))
     if re.search(r"校准后的现实线索|校准确认|符合.+判断", visible):
         errors.append("终稿不得展示校准过程")
+    if is_v21 and visible.count("经营") > 2:
+        errors.append("终稿中“经营”出现过多；仅可用于真实经商、创业或利润责任语境")
+    sentences = [re.sub(r"[，；：、\s]", "", item) for item in re.split(r"[。！？]", visible) if len(re.findall(r"[\u3400-\u9fff]", item)) >= 12]
+    duplicates = sorted({item for item in sentences if sentences.count(item) > 1})
+    if is_v21 and duplicates:
+        errors.append("终稿跨章节重复完整句子，说明仍在套用模板")
     checks = review.get("checks", {})
-    required = {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden"}
+    required = {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked"} if is_v21 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden"}
     if set(checks) != required or not all(checks.values()):
-        errors.append("编辑记录必须完成五项检查，并由实际文本与来源校验支持")
+        errors.append("编辑记录必须完成八项检查，并由实际文本与来源校验支持")
     return errors
 
 

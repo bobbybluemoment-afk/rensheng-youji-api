@@ -11,14 +11,14 @@ from typing import Any
 
 DIMENSIONS = ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]
 REQUIRED_COVERAGE = {"feature", "behavior", "formation", "challenge", "current_change", "response"}
-BANNED = {"组织化过劳型", "先扎根后显声", "表达窗口", "能力输出", "可见度", "物质与经营底色", "资源伴随期待", "表达被规训"}
+BANNED = {"组织化过劳型", "先扎根后显声", "表达窗口", "能力输出", "可见度", "物质与经营底色", "资源伴随期待", "表达被规训", "经营责任", "经营基础", "进入经营期", "经营底色", "经营扩张", "输出与经营"}
 
 
 def cjk(value: Any) -> int:
     return len(re.findall(r"[\u3400-\u9fff]", str(value)))
 
 
-def check_section(section: Any, minimum: int, maximum: int, where: str, errors: list[str]) -> set[str]:
+def check_section(section: Any, minimum: int, maximum: int, where: str, errors: list[str], require_map: bool = True) -> set[str]:
     if not isinstance(section, dict):
         errors.append(f"{where} 必须是对象")
         return set()
@@ -34,9 +34,20 @@ def check_section(section: Any, minimum: int, maximum: int, where: str, errors: 
             if any(cjk(sentence) > 70 for sentence in sentences):
                 errors.append(f"{where}.paragraphs[{index}] 存在超过70个汉字的长句")
     claim_ids = section.get("source_claim_ids")
-    if not isinstance(claim_ids, list) or len(set(claim_ids)) < 4:
-        errors.append(f"{where} 至少引用4个不同判断")
+    minimum_claims = 6 if require_map else 4
+    if not isinstance(claim_ids, list) or len(set(claim_ids)) < minimum_claims:
+        errors.append(f"{where} 至少引用{minimum_claims}个不同判断")
         return set()
+    if require_map:
+        paragraph_map = section.get("paragraph_claim_map")
+        if not isinstance(paragraph_map, list) or len(paragraph_map) != len(paragraphs or []):
+            errors.append(f"{where}.paragraph_claim_map 必须与自然段逐项对应")
+        else:
+            for index, mapped in enumerate(paragraph_map):
+                if not isinstance(mapped, list) or len(set(mapped)) < 2:
+                    errors.append(f"{where}.paragraph_claim_map[{index}] 至少包含两个不同Core判断")
+                elif set(mapped) - set(claim_ids):
+                    errors.append(f"{where}.paragraph_claim_map[{index}] 引用了本节未声明的判断")
     return set(claim_ids)
 
 
@@ -47,20 +58,21 @@ def validate(data: Any, brief: Any | None = None) -> list[str]:
     for key in ("schema_version", "draft_id", "brief_id", "life_overview", "dimensions", "current_question"):
         if key not in data:
             errors.append(f"缺少字段：{key}")
-    if data.get("schema_version") != "1.0.0":
-        errors.append("schema_version 必须为1.0.0")
-    used = check_section(data.get("life_overview"), 350, 550, "life_overview", errors)
+    is_v11 = data.get("schema_version") == "1.1.0"
+    if data.get("schema_version") not in {"1.0.0", "1.1.0"}:
+        errors.append("schema_version 必须为1.0.0或1.1.0")
+    used = check_section(data.get("life_overview"), 500 if is_v11 else 350, 700 if is_v11 else 550, "life_overview", errors, is_v11)
     dimensions = data.get("dimensions")
     if not isinstance(dimensions, list) or [item.get("id") for item in dimensions if isinstance(item, dict)] != DIMENSIONS:
         errors.append("dimensions 必须按固定顺序完整包含六个领域")
     else:
         for item in dimensions:
-            used |= check_section(item, 380, 650, f"dimensions.{item.get('id')}", errors)
+            used |= check_section(item, 500 if is_v11 else 380, 700 if is_v11 else 650, f"dimensions.{item.get('id')}", errors, is_v11)
             if not REQUIRED_COVERAGE.issubset(set(item.get("coverage") or [])):
                 errors.append(f"dimensions.{item.get('id')} 缺少人物描述覆盖项")
     current = data.get("current_question")
     if isinstance(current, dict):
-        used |= check_section(current, 280, 600, "current_question", errors)
+        used |= check_section(current, 320 if is_v11 else 280, 650 if is_v11 else 600, "current_question", errors, is_v11)
     else:
         errors.append("current_question 必须是对象")
     visible = json.dumps(data, ensure_ascii=False)
@@ -69,6 +81,8 @@ def validate(data: Any, brief: Any | None = None) -> list[str]:
         errors.append("初稿含有生硬或生造表达：" + "、".join(found))
     if "校准后的现实线索" in visible or "校准确认" in visible:
         errors.append("初稿不得展示校准过程")
+    if visible.count("经营") > 2:
+        errors.append("初稿中“经营”出现过多；仅在真实经商、创业或利润责任语境使用")
     if brief is not None and isinstance(brief, dict):
         if data.get("brief_id") != brief.get("brief_id"):
             errors.append("初稿与事实提纲来源不一致")
@@ -78,6 +92,15 @@ def validate(data: Any, brief: Any | None = None) -> list[str]:
                 allowed.update(section.get("claim_ids") or [])
         if used - allowed:
             errors.append("初稿使用了事实提纲没有授权的判断")
+        selected_payload = {
+            item.get("claim_id")
+            for section in [brief.get("life_overview"), brief.get("current_question"), *(brief.get("dimensions") or [])]
+            if isinstance(section, dict)
+            for item in (section.get("selected_claims") or [])
+            if isinstance(item, dict)
+        }
+        if is_v11 and used - selected_payload:
+            errors.append("初稿引用的判断没有实体化Core内容，禁止只凭编号写作")
     return errors
 
 
