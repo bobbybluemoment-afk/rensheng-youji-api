@@ -142,10 +142,55 @@ class Page:
         size = size or (22 if self.compact else 26)
         text_font = font(size, role="heading" if bold else "body")
         value = ("　　" + text) if indent else text
-        line_height = size + (11 if self.compact else 14)
+        line_height = size + (8 if self.compact and size >= 23 else 11 if self.compact else 14)
         for line in wrap(self.draw, value, text_font, WIDTH - 2 * MARGIN_X):
             self._ensure(line_height)
             self.draw.text((MARGIN_X, self.y), line, font=text_font, fill=color)
+            self.y += line_height
+        self.y += gap
+
+    def paragraph_emphasis(self, text: str, emphasis: str | None, *, size: int | None = None, gap: int = 14) -> None:
+        """绘制一段正文；重点句用深青色标题字重，正文仍保持统一字号和左对齐。"""
+        if not emphasis:
+            self.paragraph(text, size=size, gap=gap)
+            return
+        size = size or (22 if self.compact else 26)
+        value = normalize_display_text(text)
+        target = normalize_display_text(emphasis)
+        start = value.find(target)
+        if start < 0:
+            raise ValueError("重点句不是对应正文的精确子串")
+        end = start + len(target)
+        body_font = font(size, role="body")
+        emphasis_font = font(size, role="heading")
+        width = WIDTH - 2 * MARGIN_X
+        line_height = size + (8 if self.compact and size >= 23 else 11 if self.compact else 14)
+        lines: list[list[tuple[str, bool]]] = []
+        current: list[tuple[str, bool]] = []
+        current_width = 0.0
+        for index, char in enumerate(value):
+            highlighted = start <= index < end
+            char_font = emphasis_font if highlighted else body_font
+            char_width = self.draw.textlength(char, font=char_font)
+            if current and current_width + char_width > width:
+                lines.append(current)
+                current, current_width = [], 0.0
+            current.append((char, highlighted))
+            current_width += char_width
+        if current:
+            lines.append(current)
+        for line in lines:
+            self._ensure(line_height)
+            x = MARGIN_X
+            run, style = "", line[0][1]
+            for char, highlighted in line + [("", not style)]:
+                if highlighted == style:
+                    run += char
+                    continue
+                run_font = emphasis_font if style else body_font
+                self.draw.text((x, self.y), run, font=run_font, fill=TEAL if style else INK)
+                x += self.draw.textlength(run, font=run_font)
+                run, style = char, highlighted
             self.y += line_height
         self.y += gap
 
@@ -271,9 +316,10 @@ def page_three(data: dict[str, Any]) -> Image.Image:
     body_size = 23
     bullet_size = 22
     page.heading("完整人生主线", color=TEAL, size=32)
-    if data.get("schema_version") in {"2.7.0", "2.8.0"}:
-        for paragraph in summary["life_overview"]["paragraphs"]:
-            page.paragraph(paragraph, size=body_size, gap=18)
+    if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0"}:
+        spans = {item["paragraph_index"]: item["text"] for item in summary["life_overview"].get("emphasis_spans") or []}
+        for index, paragraph in enumerate(summary["life_overview"]["paragraphs"]):
+            page.paragraph_emphasis(paragraph, spans.get(index), size=body_size, gap=18)
         page.divider()
         page.heading("你已经带来的能力", size=29)
         for item in summary["capabilities_resources"]:
@@ -296,10 +342,12 @@ def page_four(data: dict[str, Any]) -> Image.Image:
     answer_size = 27
     label_size = 22
     page.paragraph("你想问｜" + data["profile"]["question"], size=26, color=PINK, gap=18)
-    if data.get("schema_version") in {"2.7.0", "2.8.0"}:
+    if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0"}:
         page.heading("对当前问题的直接回应", color=TEAL, size=29)
-        for paragraph in data["current_question_narrative"]["paragraphs"]:
-            page.paragraph(paragraph, size=22, gap=10)
+        current = data["current_question_narrative"]
+        spans = {item["paragraph_index"]: item["text"] for item in current.get("emphasis_spans") or []}
+        for index, paragraph in enumerate(current["paragraphs"]):
+            page.paragraph_emphasis(paragraph, spans.get(index), size=22, gap=10)
     else:
         page.callout("对当前问题的直接回应", summary["direct_answer"], size=answer_size, fill="#F2E4E6")
     page.heading("阶段怎样一步步走到现在", color=TEAL, size=31)
@@ -320,9 +368,10 @@ def dimensions_page(data: dict[str, Any], number: int, indexes: tuple[int, int])
         page.y = block_top + 18
         page.draw.text((MARGIN_X, page.y), section["title"], font=font(28, role="heading"), fill=TEAL)
         page.y += 44
-        if data.get("schema_version") in {"2.7.0", "2.8.0"}:
-            for paragraph in section["paragraphs"]:
-                page.paragraph(paragraph, size=22, gap=8)
+        if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0"}:
+            spans = {item["paragraph_index"]: item["text"] for item in section.get("emphasis_spans") or []}
+            for paragraph_index, paragraph in enumerate(section["paragraphs"]):
+                page.paragraph_emphasis(paragraph, spans.get(paragraph_index), size=23 if data.get("schema_version") == "2.10.0" else 22, gap=8)
         else:
             page.callout("", section["overview"], size=22, fill="#E7EFEA")
             for key, heading in zip(DIMENSION_PARAGRAPHS[section["id"]], DIMENSION_HEADINGS[section["id"]]):

@@ -85,7 +85,7 @@ def main() -> int:
         cwd=ROOT, text=True, capture_output=True, check=False,
     )
     if core_test.returncode:
-        print("FAILED: v0.6.0 Core evidence registry and report-grade source bundle")
+        print("FAILED: v0.8.0 Core domain independence and report-grade source bundle")
         print(core_test.stdout or core_test.stderr)
         return 7
     print("READY: dependencies, chart, v2 card, Core v0.6 evidence sources, materialized brief and fixed 10-page report pipeline passed")

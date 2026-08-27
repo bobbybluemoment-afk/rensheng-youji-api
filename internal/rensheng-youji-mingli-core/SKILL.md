@@ -62,10 +62,12 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 7. [complete-person-and-relationship-portrait.md](references/complete-person-and-relationship-portrait.md)：生成完整自身画像、家庭系统、人际与亲密关系、对象特质候选、互动模式、不可推断清单和画像均衡审计。
 8. [luck-cycle-theme.md](references/luck-cycle-theme.md)：确定每步大运的阶段主题、激活键和前后承接。
 9. [annual-activation.md](references/annual-activation.md)：按大运主题分析流年执行、相邻年份连续性和伏笔。
-10. [blind-school-cross-method.md](references/blind-school-cross-method.md)：用宾主、体用、做功、象法与虚实完整性扩充交叉观察，并保留不同作者口径与禁断边界。
+10. [blind-school-cross-method.md](references/blind-school-cross-method.md)：用宾主、体用、做功和多层象法生成组织、行业、岗位、工作对象与成果形式候选，并保留不同作者口径与禁断边界。
 11. [calibration-confidence.md](references/calibration-confidence.md)：生成现实候选，吸收用户反馈并标注置信度。
-12. [report-grade-reality-mapping.md](references/report-grade-reality-mapping.md)：建立开放现实候选、人物形成链、领域联动链和报告级判断台账。
-13. [safety-boundaries.md](references/safety-boundaries.md)：执行非宿命表达、高风险边界和不确定性披露。
+12. [candidate-relations-and-calibrated-synthesis.md](references/candidate-relations-and-calibrated-synthesis.md)：先建立候选共存、主次、阶段、条件与互斥关系，再用校准结果重构完整人物。
+13. [domain-independent-analysis.md](references/domain-independent-analysis.md)：先完成六个领域各自的判断、机制与覆盖，再限制共享主线比例和跨章复用。
+14. [report-grade-reality-mapping.md](references/report-grade-reality-mapping.md)：建立开放现实候选、人物形成链、领域联动链和报告级判断台账。
+15. [safety-boundaries.md](references/safety-boundaries.md)：执行非宿命表达、高风险边界和不确定性披露。
 
 ## 执行规则
 
@@ -85,7 +87,7 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 
 刑冲合害破必须放回月令、根透、制化、调候和全局气势判断。不得见冲即凶、见合即吉，不得在条件不足时认定合化、从格或成局。
 
-盲派象法与技法只作为交叉层。先分别记录宾主、体用、做功路径、结果归属、成本、虚实与完整性，再与格局调候、根苗花果、资源关系和岁运连续性核对。作者特有规则不得冒充独立共识；高置信结论必须至少有一种非盲派方法支持。
+盲派象法与技法只作为交叉层，但必须在现实候选形成之前完成。先分别记录宾主、体用、做功路径、结果归属、成本、虚实与完整性，再从组织形态、行业生态、岗位职能、处理对象、发展方式、成果形式和工作环境七个维度生成取象候选，并与格局调候、根苗花果、资源关系和岁运连续性核对。作者特有规则不得冒充独立共识；高置信结论必须至少有一种非盲派方法支持。
 
 ### 5. 把命盘当作现实中的人
 
@@ -93,7 +95,7 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 
 ### 6. 同时分析根苗花果
 
-既分析年、月、日、时的时间顺序，也分析根、苗、花、果在一个人身上的同时共存。覆盖家庭根基、学历与训练、行业扎根、能力表达、关系、事业、子女或成果等可能映射，不局限于性格。
+既分析年、月、日、时的时间顺序，也分析根、苗、花、果在一个人身上的同时共存、家族传承和各领域生命周期。根可以是家庭、地域、长期资源或事业扎根；苗与枝干可以是学历技能、组织训练和资源输送；花可以是关系吸引、传媒媒介、对外形象、作品和阶段展示；果可以是职位、资产、产品、声誉、子女与下一代沉淀。不得把四柱固定翻译成家庭、教育、表达和制度成果。
 
 ### 7. 分析人与资源的关系
 
@@ -117,7 +119,9 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 
 ### 11. 校准而不倒推
 
-生成18—30个可证伪现实候选，完整覆盖六个报告领域，并逐条标注固定领域、现实维度、候选类型、时间范围和受影响的结论路径。报告层只从中选择最有区分度的少数候选，通过固定题型组织成同一比较轴下的A/B/C。吸收用户选择、D“都不符合／不确定”和补充事实时，只更新对应现实映射、候选排序与置信度。不得倒改四柱和结构事实，不得把未选择候选换词包装成正确。
+生成18—30个可证伪现实候选，完整覆盖六个报告领域，并逐条标注固定领域、现实维度、候选类型、时间范围、实体证据和受影响的报告判断。提出问题前必须先建立候选关系图，区分可共存、互补、主次、阶段、情境、上下位和真正互斥。报告层只从中选择最有区分度的少数候选，通过固定题型组织成同一比较轴下的A/B/C。
+
+吸收用户选择、D“都不符合／不确定”和补充事实时，不能把“未选择”等同于“被否定”。得到校准的候选分别进入主要确认、未选但仍受支持、条件成立、降低优先、明确排除或仍不确定。只有在相同时间、相同口径和相同比较轴下真正互斥时，才排除未选候选。不得倒改四柱和结构事实，也不得因为用户只选A就把完整人物写成单一A类型。
 
 每条现实候选至少引用两个独立证据视角，并至少包含根苗花果、资源关系、交叉方法、大运主题、流年执行或领域联动之一；日主旺衰只能作为组成证据，不能单独生成现实候选。校准题的用户可见文字与内部命理审计必须分离。
 
@@ -135,6 +139,9 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 
 除完整技术母稿外，还要生成：
 
+- 校准后完整人物总判断；
+- 候选之间的共存、主次、阶段、条件和互斥关系图；
+- 校准前后每条现实判断的变化记录；
 - 具有固定编号的报告判断台账；
 - 3—6条人物形成链；
 - 3—6条跨领域联动链；
@@ -161,6 +168,8 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 ### 17. 强制执行画像均衡审计
 
 自身、家庭、资源、人际、亲密关系、对象画像、互动关系、事业、财富、迁移、身心和连续性必须都有实质分析或明确的证据不足说明。不得把事业分析换词复制进其他领域。
+
+六个报告领域必须先独立分析、再与人生主线联动。每个领域至少4条领域专属判断、2个领域自身机制；共享人生主线判断不得超过30%，同一判断最多进入两个领域。去掉共享主线后仍须形成完整人物侧面。家庭重点分析父母亲友、借力与受限、独立与回馈；身体与情绪重点分析基础信号、压力反应顺序和恢复方式。不得把事业中的协调与收尾直接移植到家庭章节。
 
 ## 完整输出契约
 
@@ -265,7 +274,7 @@ validation: []
 
 不要省略没有明显结论的栏目。使用空数组、`null` 或“证据不足”保留结构，不得补造内容。
 
-完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.6.0`。完成分析后运行：
+完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.8.0`。完成分析后运行：
 
 ```bash
 python3 scripts/validate_analysis_output.py <analysis-output.json>

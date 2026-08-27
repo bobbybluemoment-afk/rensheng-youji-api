@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rensheng-youji.local/schemas/analysis-output.schema.json",
-  "title": "人生有迹完整命理分析母稿 v0.6.0",
+  "title": "人生有迹完整命理分析母稿 v0.8.0",
   "description": "内置分析核心返回的统一 analysis_bundle。包含完整人物画像、盲派交叉层、实体证据台账、开放现实候选、形成链、领域联动与校准审计。",
   "type": "object",
   "additionalProperties": false,
@@ -19,6 +19,7 @@
     "evidence_registry",
     "root_seed_flower_fruit_map",
     "natal_portrait",
+    "portrait_thesis",
     "complete_self_portrait",
     "family_system",
     "resource_relationship",
@@ -39,7 +40,9 @@
     "domain_linkage_chains",
     "report_source_bundle",
     "reality_candidate_pool",
+    "candidate_relation_map",
     "calibration_state",
+    "calibration_delta",
     "not_inferable_register",
     "portrait_balance_audit",
     "uncertainty_register",
@@ -335,13 +338,14 @@
     "blind_school_cross_analysis": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["source_boundaries", "host_guest_map", "body_function_map", "work_paths", "image_hypotheses", "virtual_real_completeness", "timing_activation", "agreements", "conflicts", "prohibited_extensions"],
+      "required": ["source_boundaries", "host_guest_map", "body_function_map", "work_paths", "image_hypotheses", "reality_image_candidates", "virtual_real_completeness", "timing_activation", "agreements", "conflicts", "prohibited_extensions"],
       "properties": {
         "source_boundaries": {"type": "array", "minItems": 2, "items": {"type": "string"}},
         "host_guest_map": {"type": "array", "items": {"type": "object"}},
         "body_function_map": {"type": "array", "items": {"type": "object"}},
         "work_paths": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/workPath"}},
         "image_hypotheses": {"type": "array", "items": {"type": "object"}},
+        "reality_image_candidates": {"type": "array", "minItems": 4, "items": {"$ref": "#/$defs/realityImageCandidate"}},
         "virtual_real_completeness": {"type": "array", "items": {"type": "object"}},
         "timing_activation": {"type": "array", "items": {"type": "object"}},
         "agreements": {"type": "array", "items": {"type": "string"}},
@@ -364,6 +368,7 @@
         "flower",
         "fruit",
         "continuity",
+        "domain_lifecycles",
         "findings"
       ],
       "properties": {
@@ -384,9 +389,15 @@
         },
         "continuity": {
           "type": "array",
+          "minItems": 3,
           "items": {
             "type": "string"
           }
+        },
+        "domain_lifecycles": {
+          "type": "array",
+          "minItems": 3,
+          "items": {"$ref": "#/$defs/domainLifecycle"}
         },
         "findings": {
           "type": "array",
@@ -395,6 +406,9 @@
           }
         }
       }
+    },
+    "portrait_thesis": {
+      "$ref": "#/$defs/portraitThesis"
     },
     "natal_portrait": {
       "$ref": "#/$defs/analysisSection"
@@ -601,6 +615,11 @@
         "$ref": "#/$defs/realityCandidate"
       }
     },
+    "candidate_relation_map": {
+      "type": "array",
+      "minItems": 6,
+      "items": {"$ref": "#/$defs/candidateRelation"}
+    },
     "calibration_state": {
       "type": "object",
       "additionalProperties": false,
@@ -643,6 +662,9 @@
           }
         }
       }
+    },
+    "calibration_delta": {
+      "$ref": "#/$defs/calibrationDelta"
     },
     "not_inferable_register": {
       "type": "array",
@@ -1502,7 +1524,7 @@
         "counterevidence": {"type": "array", "items": {"type": "string"}},
         "confidence": {"$ref": "#/$defs/confidence"},
         "unsupported_extensions": {"type": "array", "minItems": 1, "items": {"type": "string"}},
-        "calibration_status": {"type": "string", "enum": ["unverified", "match", "partial", "reject", "uncertain"]},
+        "calibration_status": {"type": "string", "enum": ["unverified", "match", "supported_unselected", "conditional", "weakened", "partial", "reject", "uncertain"]},
         "origin": {"type": "string", "enum": ["chart_baseline", "timing_baseline", "user_fact_refinement"]}
       }
     },
@@ -1584,10 +1606,15 @@
     "domainSource": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["summary_materials", "claim_ids", "formation_chain_ids", "linkage_chain_ids", "concrete_candidates", "coverage", "evidence_gaps"],
+      "required": ["summary_materials", "claim_ids", "domain_specific_claim_ids", "mainline_claim_ids", "emphasis_claim_ids", "domain_mechanisms", "survives_without_mainline", "formation_chain_ids", "linkage_chain_ids", "concrete_candidates", "coverage", "evidence_gaps"],
       "properties": {
         "summary_materials": {"type": "array", "minItems": 6, "items": {"type": "string"}},
         "claim_ids": {"type": "array", "minItems": 6, "uniqueItems": true, "items": {"type": "string"}},
+        "domain_specific_claim_ids": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string"}},
+        "mainline_claim_ids": {"type": "array", "maxItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "emphasis_claim_ids": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": {"type": "string"}},
+        "domain_mechanisms": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string", "minLength": 4}},
+        "survives_without_mainline": {"const": true},
         "formation_chain_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
         "linkage_chain_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
         "concrete_candidates": {"type": "array", "items": {"type": "string"}},
@@ -1614,6 +1641,9 @@
         "counterevidence",
         "unsupported_extensions",
         "source_layers",
+        "evidence_ids",
+        "related_claim_ids",
+        "relation_ids",
         "confidence",
         "validation_question",
         "status"
@@ -1714,6 +1744,24 @@
             ]
           }
         },
+        "evidence_ids": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {"type": "string"}
+        },
+        "related_claim_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string"}
+        },
+        "relation_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string"}
+        },
         "confidence": {
           "$ref": "#/$defs/confidence"
         },
@@ -1726,11 +1774,107 @@
           "enum": [
             "unverified",
             "match",
+            "supported_unselected",
+            "conditional",
+            "weakened",
             "partial",
             "reject",
             "uncertain"
           ]
         }
+      }
+    },
+    "realityImageCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image_id", "dimension", "candidate_labels", "derivation_chain", "evidence_ids", "non_blind_support", "counterevidence", "limitations", "confidence"],
+      "properties": {
+        "image_id": {"type": "string", "pattern": "^image_[a-z0-9_]+$"},
+        "dimension": {"type": "string", "enum": ["organization", "industry", "function", "work_object", "development_mode", "result_form", "environment"]},
+        "candidate_labels": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": {"type": "string"}},
+        "derivation_chain": {"type": "array", "minItems": 2, "items": {"type": "string"}},
+        "evidence_ids": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "non_blind_support": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "counterevidence": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      }
+    },
+    "domainLifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain", "root", "seedling", "flower", "fruit", "continuity", "evidence_ids", "confidence"],
+      "properties": {
+        "domain": {"type": "string"},
+        "root": {"type": "string", "minLength": 4},
+        "seedling": {"type": "string", "minLength": 4},
+        "flower": {"type": "string", "minLength": 4},
+        "fruit": {"type": "string", "minLength": 4},
+        "continuity": {"type": "string", "minLength": 8},
+        "evidence_ids": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      }
+    },
+    "portraitThesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "primary_traits", "complementary_traits", "internal_tensions", "observable_patterns", "formation_chain_ids", "current_shift", "evidence_ids", "boundaries"],
+      "properties": {
+        "summary": {"type": "string", "minLength": 20},
+        "primary_traits": {"type": "array", "minItems": 2, "items": {"type": "string"}},
+        "complementary_traits": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "internal_tensions": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "observable_patterns": {"type": "array", "minItems": 3, "items": {"type": "string"}},
+        "formation_chain_ids": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "current_shift": {"type": "string", "minLength": 8},
+        "evidence_ids": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string"}},
+        "boundaries": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+      }
+    },
+    "candidateRelation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relation_id", "candidate_ids", "relation_type", "comparison_axis", "time_scope", "coexistence_rule", "exclusion_rule", "evidence_ids", "confidence"],
+      "properties": {
+        "relation_id": {"type": "string", "pattern": "^relation_[a-z0-9_]+$"},
+        "candidate_ids": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "relation_type": {"type": "string", "enum": ["compatible", "complementary", "primary_secondary", "phase_dependent", "context_dependent", "nested", "mutually_exclusive"]},
+        "comparison_axis": {"type": "string", "minLength": 4},
+        "time_scope": {"type": "string", "minLength": 2},
+        "coexistence_rule": {"type": "string", "minLength": 6},
+        "exclusion_rule": {"type": "string", "minLength": 6},
+        "evidence_ids": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      }
+    },
+    "calibrationDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline_preserved", "confirmed", "supported_unselected", "conditional", "weakened", "rejected", "uncertain", "user_fact_evidence_ids", "claim_updates"],
+      "properties": {
+        "baseline_preserved": {"type": "boolean"},
+        "confirmed": {"type": "array", "items": {"type": "string"}},
+        "supported_unselected": {"type": "array", "items": {"type": "string"}},
+        "conditional": {"type": "array", "items": {"type": "string"}},
+        "weakened": {"type": "array", "items": {"type": "string"}},
+        "rejected": {"type": "array", "items": {"type": "string"}},
+        "uncertain": {"type": "array", "items": {"type": "string"}},
+        "user_fact_evidence_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "claim_updates": {"type": "array", "items": {"$ref": "#/$defs/claimUpdate"}}
+      }
+    },
+    "claimUpdate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_id", "before_status", "after_status", "reason", "user_fact_evidence_ids", "rewritten_reality_claim", "preserves_chart_mechanism"],
+      "properties": {
+        "claim_id": {"type": "string"},
+        "before_status": {"type": "string"},
+        "after_status": {"type": "string", "enum": ["match", "supported_unselected", "conditional", "weakened", "partial", "reject", "uncertain"]},
+        "reason": {"type": "string", "minLength": 6},
+        "user_fact_evidence_ids": {"type": "array", "items": {"type": "string"}},
+        "rewritten_reality_claim": {"type": "string", "minLength": 8},
+        "preserves_chart_mechanism": {"type": "boolean"}
       }
     },
     "uncertainty": {
