@@ -37,6 +37,10 @@ def main() -> int:
         ROOT / "skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py",
         ROOT / "skills/rensheng-youji-growth-map/scripts/generate_full_report.py",
         ROOT / "skills/rensheng-youji-growth-map/scripts/render_report_pdf.py",
+        ROOT / "scripts/core_baseline.py",
+        ROOT / "scripts/apply_calibration_delta.py",
+        ROOT / "scripts/audit_claim_diversity.py",
+        ROOT / "scripts/audit_report_claim_coverage.py",
         ROOT / "assets/wechat-contact.jpg",
         ROOT / "assets/rensheng-youji-logo.png",
         ROOT / "assets/asset-manifest.json",
@@ -71,6 +75,7 @@ def main() -> int:
             "tests.test_report_v27_pipeline.ReportV27PipelineTest.test_v27_full_delivery",
             "tests.test_report_v28_traceability.ReportV28TraceabilityTest",
             "tests.test_report_v211_delivery_safety.ReportV211DeliverySafetyTest",
+            "tests.test_report_v212_core_traceability.ReportV212CoreTraceabilityTest",
         ],
         cwd=ROOT,
         text=True,
@@ -86,10 +91,10 @@ def main() -> int:
         cwd=ROOT, text=True, capture_output=True, check=False,
     )
     if core_test.returncode:
-        print("FAILED: v0.8.0 Core domain independence and report-grade source bundle")
+        print("FAILED: v0.8.1 Core domain independence and report-grade source bundle")
         print(core_test.stdout or core_test.stderr)
         return 7
-    print("READY: dependencies, chart, v2 card, Core v0.8 sources, sparse emphasis, stable fallback and fixed 10-page report pipeline passed")
+    print("READY: dependencies, chart, v2 card, frozen Core v0.8.1, calibration delta, mandatory claim realization, sparse emphasis, stable fallback and fixed 10-page report pipeline passed")
     return 0
 
 

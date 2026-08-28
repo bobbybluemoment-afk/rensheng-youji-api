@@ -8,6 +8,7 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -33,6 +34,9 @@ def main() -> int:
     parser.add_argument("--report-draft", type=Path, help="report-draft.json，v2.7.0及以上正式报告必填")
     parser.add_argument("--editorial-review", type=Path, help="editorial-review.json，v2.7.0及以上正式报告必填")
     parser.add_argument("--analysis", type=Path, help="analysis-output-calibrated.json，v2.7.0及以上正式报告必填")
+    parser.add_argument("--analysis-baseline", type=Path, help="analysis-baseline.json，v2.12.0正式报告必填")
+    parser.add_argument("--baseline-lock", type=Path, help="analysis-baseline-lock.json，v2.12.0正式报告必填")
+    parser.add_argument("--calibration-delta", type=Path, help="calibration-delta.json，v2.12.0正式报告必填")
     parser.add_argument("--free-card", type=Path, required=True, help="free-card-output.json")
     parser.add_argument("--calibration-questions", type=Path, required=True, help="已通过2.2.0校验的calibration-questions.json")
     parser.add_argument("--out-dir", type=Path, required=True)
@@ -43,7 +47,7 @@ def main() -> int:
         report = json.loads(args.report.read_text(encoding="utf-8"))
         free_card = json.loads(args.free_card.read_text(encoding="utf-8"))
         calibration_questions = json.loads(args.calibration_questions.read_text(encoding="utf-8"))
-        is_traceable = report.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0"}
+        is_traceable = report.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0"}
         if is_traceable:
             required_artifacts = {
                 "--content-brief": args.content_brief,
@@ -66,6 +70,30 @@ def main() -> int:
             ]
             if temporary_patches:
                 raise ValueError("正式交付目录含临时报告修补脚本，禁止据此修改正文或哈希：" + "、".join(sorted(set(temporary_patches))))
+            if report.get("schema_version") == "2.12.0":
+                protected = {
+                    "--analysis-baseline": args.analysis_baseline,
+                    "--baseline-lock": args.baseline_lock,
+                    "--calibration-delta": args.calibration_delta,
+                }
+                missing_protected = [name for name, value in protected.items() if value is None]
+                if missing_protected:
+                    raise ValueError("2.12.0正式报告缺少冻结Core来源：" + "、".join(missing_protected))
+                with tempfile.TemporaryDirectory(prefix="rensheng-youji-calibration-") as temp_dir:
+                    applied = Path(temp_dir) / "analysis-calibrated.json"
+                    run([
+                        sys.executable, str(REPO_ROOT / "scripts/apply_calibration_delta.py"),
+                        "--baseline", str(args.analysis_baseline), "--lock", str(args.baseline_lock),
+                        "--delta", str(args.calibration_delta), "--output", str(applied),
+                    ])
+                    if json.loads(applied.read_text(encoding="utf-8")) != analysis_data:
+                        raise ValueError("正式分析不是由锁定Baseline与校准增量确定性合成")
+                run([
+                    sys.executable, str(REPO_ROOT / "scripts/core_baseline.py"), "verify",
+                    "--baseline", str(args.analysis_baseline), "--lock", str(args.baseline_lock),
+                    "--calibrated", str(args.analysis),
+                ])
+                run([sys.executable, str(REPO_ROOT / "scripts/audit_claim_diversity.py"), str(args.analysis)])
             run([
                 sys.executable,
                 str(REPO_ROOT / "internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py"),
@@ -81,6 +109,12 @@ def main() -> int:
                 str(REPO_ROOT / "internal/rensheng-youji-chinese-editor/scripts/validate_editorial_review.py"),
                 str(args.editorial_review), "--draft", str(args.report_draft), "--report", str(args.report),
             ])
+            if report.get("schema_version") == "2.12.0":
+                run([
+                    sys.executable, str(REPO_ROOT / "scripts/audit_report_claim_coverage.py"),
+                    "--analysis", str(args.analysis), "--brief", str(args.content_brief),
+                    "--draft", str(args.report_draft), "--report", str(args.report),
+                ])
         if calibration_questions.get("schema_version") not in {"2.1.0", "2.2.0"} or calibration_questions.get("template_version") != "1.0.0":
             raise ValueError("交付必须使用2.1.0或2.2.0固定题型校准结果")
         questions = calibration_questions.get("questions")
@@ -134,6 +168,13 @@ def main() -> int:
                 "report_draft_valid": True,
                 "traceable_editorial_review_valid": True,
                 "calibration_hidden_from_visible_report": True,
+            })
+        if report.get("schema_version") == "2.12.0":
+            checks.update({
+                "baseline_core_locked": True,
+                "calibration_delta_only": True,
+                "claim_diversity_valid": True,
+                "mandatory_core_claims_realized": True,
             })
         if report.get("document_mode") == "full_calibrated":
             command = [sys.executable, str(SKILL_ROOT / "scripts/render_report_pdf.py"), str(args.report), "--card", str(card), "--out", str(pdf)]

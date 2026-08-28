@@ -92,6 +92,17 @@ python internal/rensheng-youji-mingli-core/scripts/validate_analysis_input.py wo
 python internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py work/analysis-output-initial.json
 ```
 
+10. 在生成校准题之前冻结初始Core。此后不得重新生成或改写完整母稿：
+
+```bash
+python scripts/core_baseline.py freeze work/analysis-output-initial.json \
+  --baseline work/analysis-baseline.json \
+  --lock work/analysis-baseline-lock.json
+python scripts/audit_claim_diversity.py work/analysis-baseline.json
+```
+
+冻结失败、判断家族不足或六领域语义重复时，只重新分析缺失领域一次；不得进入五题校准，更不得用测试样例或宽泛套话补齐数量。
+
 不得再读取本目录旧版 `core-method.md` 重新推命；该文件仅说明统一 Core 的使用边界。
 
 ## 五条现实校准
@@ -119,8 +130,23 @@ python skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.p
 不得自行把 `audit`、候选编号、盘面支持、置信度、替代解释或任何命理证据附在问题后面。
 5. 让用户只回复题号和字母；鼓励在最关心的一至两题后补充一个具体事实或年份，但不能要求用户先懂命理。
 6. 将五个选择完整写入 Core 输入的 `calibration` 和报告的 `calibration.responses`。A/B/C记录固定 `template_id`、`selected_value` 与该选项对应的 `candidate_updates`；D记录 `selected_value=uncertain` 和空更新列表。用户补充内容同时写入 `reality_context` 与 `responses.user_note`。不得为了迎合反馈修改四柱、原局结构或大运流年事实。
-7. 在初始完整母稿上更新候选状态、用户事实、受影响的现实映射与置信度，并重新生成 `portrait_thesis` 与 `calibration_delta`；生成并校验 `work/analysis-output-calibrated.json`。每道已回答问题必须实际改变对应候选或人物合成结论，不能只提高整章置信度。没有被选择的候选继续按关系图保留为有支持的次要侧面或条件侧面，只有事实明确否定且关系真正互斥时才标记为 `reject`。
-8. 用户跳过任何一条时，`document_mode` 必须为 `preliminary_uncalibrated`，标题必须为“人生有迹｜初步分析”，只交付初步 Markdown 和新版卡片；不得生成或称为正式完整PDF。
+7. 只生成 `work/calibration-delta.json`，不得重新生成Core、`portrait_thesis`、报告判断正文、命理机制、证据登记或六领域素材。校准增量只包含候选状态、判断状态、理由、用户事实证据和五题响应，并绑定冻结Baseline的SHA-256。
+8. 使用确定性程序合成校准后Core并验证冻结字段：
+
+```bash
+python scripts/apply_calibration_delta.py \
+  --baseline work/analysis-baseline.json \
+  --lock work/analysis-baseline-lock.json \
+  --delta work/calibration-delta.json \
+  --output work/analysis-output-calibrated.json
+python scripts/core_baseline.py verify \
+  --baseline work/analysis-baseline.json \
+  --lock work/analysis-baseline-lock.json \
+  --calibrated work/analysis-output-calibrated.json
+```
+
+每道已回答问题必须改变对应候选状态；字母答案只能调整原有候选主次，不能产生新职业、家庭、关系、身体或收入判断。未选候选继续按关系图保留；只有事实明确否定且真正互斥时才标记为 `reject`。
+9. 用户跳过任何一条时，`document_mode` 必须为 `preliminary_uncalibrated`，标题必须为“人生有迹｜初步分析”，只交付初步 Markdown 和新版卡片；不得生成或称为正式完整PDF。
 
 ## 报告事实整理、写作与输出
 
@@ -134,9 +160,9 @@ python skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.p
    - [brand-and-conversion.md](references/brand-and-conversion.md)：免费使用与人工服务入口；
    - [safety-language.md](references/safety-language.md)：健康、财务、关系和隐私边界。
 2. 完整读取 `internal/rensheng-youji-report-content-brief/SKILL.md`，从校准后Core先生成 `work/report-content-selection.json`，再运行实体化脚本生成 `work/report-content-brief.json`。事实提纲必须携带Core判断正文、机制、证据、限制和哈希；不能只传判断编号。
-3. 完整读取 `internal/rensheng-youji-report-writer/SKILL.md`，从实体化事实提纲生成 `work/report-draft.json`。完整人生主线写3—4个自然段、500—700个汉字；六个领域各写3—4个自然段、500—700个汉字。每段至少引用两个Core判断，不要把覆盖项显示成固定小标题。
+3. 完整读取 `internal/rensheng-youji-report-writer/SKILL.md`，从实体化事实提纲生成 `work/report-draft.json`。每个内容区必须把 `mandatory_claim_ids` 对应的 `plain_claim` 原句放入正文，并登记 `claim_realization_map`；写作层只补充形成过程、条件、例子和限制，不能重新概括锁定判断。完整人生主线写3—4个自然段、500—700个汉字；六个领域各写3—4个自然段、500—700个汉字。
 4. 完整读取 `internal/rensheng-youji-chinese-editor/SKILL.md`，对初稿逐段执行第二遍中文编辑，生成 `work/editorial-review.json` 和正式 `work/report.json`。编辑记录必须保存初稿与终稿对应关系和实际修改，不能再用几个布尔值代替编辑。
-5. 正式报告使用 `schema_version=2.11.0`、`document_mode=full_calibrated`。完整人生主线先根据全盘材料生成，再在第4页单独回应用户问题。六个领域先写各自的人物侧面，再用人生主线串联；用户关注方向只在当前阶段、问题回应、相关年度和行动建议中加重。
+5. 正式报告使用 `schema_version=2.12.0`、`document_mode=full_calibrated`。Core使用0.8.1、事实提纲和初稿使用1.4.0、中文编辑使用2.3.0。完整人生主线先根据全盘材料生成，再在第4页单独回应用户问题。六个领域先写各自的人物侧面，再用人生主线串联；用户关注方向只在当前阶段、问题回应、相关年度和行动建议中加重。
 6. 时间分析继续使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系，同时概括更长阶段。
 7. 从同一份校准后 Core 母稿依次运行 `rensheng-youji-free-card-output` 与 `rensheng-youji-free-card-renderer` 的现有新版流程，生成 `work/free-card-output.json`。报告与卡片的分析编号、Core版本和明显关系机会年份必须一致。
 8. 运行统一交付命令：
@@ -148,6 +174,9 @@ python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
   --report-draft work/report-draft.json \
   --editorial-review work/editorial-review.json \
   --analysis work/analysis-output-calibrated.json \
+  --analysis-baseline work/analysis-baseline.json \
+  --baseline-lock work/analysis-baseline-lock.json \
+  --calibration-delta work/calibration-delta.json \
   --free-card work/free-card-output.json \
   --calibration-questions work/calibration-questions.json \
   --out-dir work/delivery \
@@ -163,7 +192,8 @@ python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
 1. 先生成少量重点判断的新版PDF；完整人生主线通常2条、当前问题通常1条、每个领域最多1条，没有合适句子时允许为空。
 2. 重点样式、换行或单页空间检查失败时，交付程序自动关闭重点样式，使用同一份已校验正文生成统一字号和颜色的稳定版PDF；不得重新推命或改写正文。
 3. 数组、对象、残句、内部命理术语或来源错误必须在写作/编辑阶段修复后重新校验，不能由PDF渲染器猜测或替换。
-4. 只有四柱/时运计算失败、Core没有真实生成、报告与卡片来源不一致、主要判断无来源，或稳定版仍发生缺字截断时，才停止错误交付。
+4. 单个领域判断不足或重复时只返工该领域一次；仍不足则缩短该领域并明确证据不足，不用人生主线或校准答案填满，也不阻塞其余可靠内容交付。
+5. 只有四柱/时运计算失败、Core没有真实生成、冻结Core被校准改写、报告与卡片来源不一致、主要判断无来源，或稳定版仍发生缺字截断时，才停止错误交付。
 
 交付清单必须记录 `render_mode=primary|stable`、`visual_fallback_used`、实际 `overflow` 和 `text_render_completed`。不得把 `overflow=false` 作为固定值写入。
 
@@ -197,6 +227,9 @@ python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
 - `source.analysis_id`、`source.core_version` 与 Core 母稿一致；
 - 正式PDF前已经完成五条校准且时间边界预检通过；
 - 四柱、时间口径和大运事实未被改写；
+- `analysis-baseline.json` 已在五题前冻结，校准后受保护字段哈希完全一致；
+- 六个领域各至少包含三个判断家族、两个机制家族和三个现实问题轴；
+- 每个内容区锁定的1—2条 `plain_claim` 均以原句进入初稿和终稿，中文编辑没有改变其落地映射；
 - 第2页为同一 Core 生成的新版人生卡片，卡片尺寸为1242×1660；
 - PDF恰好10页，所有正文无截断，微信二维码实际嵌入；重点判断使用独立深青色行，稳定模式允许取消重点样式；
 - 用户可见校准题中没有候选编号、置信度、盘面支持或命理证据；
@@ -221,7 +254,7 @@ python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
 - 报告明显关系机会年份与卡片桃花年份完全一致；百分号等常用符号渲染后不得出现缺字方框；
 - 校准答案选择了哪个现实候选，相关章节就引用哪个候选或用户补充事实，不得只提高置信度；
 - 校准没有选中的候选，不得自动删除；兼容、互补、阶段性或情境性候选应作为次要侧面或条件侧面参与人物刻画，真正互斥且已被现实答案否定时才排除；
-- 校准后的完整人生主线与六领域必须引用 `portrait_thesis`、`candidate_relation_map` 和 `calibration_delta`，不得只复述五道题的答案；
+- 校准后的完整人生主线与六领域必须引用冻结Core的 `portrait_thesis` 和 `candidate_relation_map`；`calibration_delta`只决定候选主次，不得成为六领域正文的主要材料；
 - 逐年观察使用项目交付、岗位调整、考试证书、合同、搬家、见父母、回款等现实载体；普通年份不强行虚构事件，重点年才增加细节；
 - 已确认事实、命理推断、社会先验和待验证候选没有混写；
 - 当前问题在开篇和相关章节获得直接回应；

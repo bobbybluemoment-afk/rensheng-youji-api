@@ -1,4 +1,4 @@
-# 人生有迹报告 JSON v2.11.0
+# 人生有迹报告 JSON v2.12.0
 
 ## 目录
 
@@ -18,7 +18,7 @@
 - 正式报告：`document_mode=full_calibrated`，必须完成五条现实校准、事实提纲、人物初稿和中文编辑，生成10页PDF。
 - 未校准版：`document_mode=preliminary_uncalibrated`，只生成初步Markdown与新版卡片，不生成正式PDF。
 
-正式报告使用 `schema_version=2.11.0`，Core继续使用 `core_version=0.8.0`。
+正式报告使用 `schema_version=2.12.0`，Core使用 `core_version=0.8.1`。校准前的完整Core必须先冻结；校准后只能通过绑定Baseline哈希的增量文件调整候选与判断状态。
 
 ## 2. 来源链路
 
@@ -36,12 +36,12 @@
 
 ```json
 {
-  "schema_version": "2.11.0",
+  "schema_version": "2.12.0",
   "report_id": "唯一报告编号",
   "document_mode": "full_calibrated",
   "source": {
     "analysis_id": "与Core和卡片一致",
-    "core_version": "0.8.0",
+    "core_version": "0.8.1",
     "analysis_as_of": "YYYY-MM-DD",
     "calibration_status": "calibrated"
   },
@@ -64,12 +64,12 @@
   "cross_output_consistency": {"relationship_opportunity_years": []},
   "chart": {},
   "calibration": {"responses": []},
-  "editorial_review": {"version": "2.2.0", "review_id": "与source_artifacts一致"},
+  "editorial_review": {"version": "2.3.0", "review_id": "与source_artifacts一致"},
   "executive_summary": {
-    "life_overview": {"paragraphs": [], "source_claim_ids": [], "paragraph_claim_map": [], "emphasis_spans": [], "coverage": []},
+    "life_overview": {"paragraphs": [], "source_claim_ids": [], "paragraph_claim_map": [], "claim_realization_map": [], "emphasis_spans": [], "coverage": []},
     "capabilities_resources": []
   },
-  "current_question_narrative": {"paragraphs": [], "source_claim_ids": [], "paragraph_claim_map": [], "emphasis_spans": []},
+  "current_question_narrative": {"paragraphs": [], "source_claim_ids": [], "paragraph_claim_map": [], "claim_realization_map": [], "emphasis_spans": []},
   "stage_story": {},
   "dimensions": [],
   "yearly_outlook": {},
@@ -104,6 +104,7 @@
 - `paragraphs`：3—4个自然段，总计500—700个汉字；
 - `source_claim_ids`：至少6个有效判断来源；
 - `paragraph_claim_map`：每个自然段至少映射两个实体化Core判断；
+- `claim_realization_map`：逐条登记本区必须兑现判断的编号、段落编号和与Core完全一致的 `exact_span`；
 - `emphasis_spans`：0—2条完整重点判断的段落位置、精确文本与Core判断来源；
 - `coverage`：至少覆盖性格、形成、家庭教育、事业财富、关系和当前阶段。
 
@@ -127,6 +128,7 @@
 - `paragraphs`：3—4个自然段，总计500—700个汉字；
 - `source_claim_ids`：至少6个有效判断来源；
 - `paragraph_claim_map`：与自然段逐项对应，每段至少两个判断；
+- `claim_realization_map`：逐条证明 `mandatory_claim_ids` 对应的白话判断原句确实出现在正文；
 - `domain_specific_claim_ids`：至少4个领域专属判断；
 - `mainline_claim_ids`：最多占本节判断的30%；
 - `domain_mechanisms`：至少两个领域自身机制；
@@ -158,7 +160,7 @@
 
 ## 8. 中文编辑
 
-`editorial_review` 只保存 `review_id` 和 `version=2.2.0`；完整记录放在独立 `editorial-review.json`。
+`editorial_review` 只保存 `review_id` 和 `version=2.3.0`；完整记录放在独立 `editorial-review.json`。
 
 `life_overview`、`current_question_narrative` 和六个领域都保留 `emphasis_spans` 字段，允许空数组。每项保存 `paragraph_index`、正文中带句末标点的完整 `text` 和支撑它的 `claim_ids`；正文自身保持纯文本，由渲染器将重点判断独立成行。不得截取半句或为满足数量扩写。
 
@@ -166,6 +168,7 @@
 
 - 初稿和终稿哈希；
 - 判断来源一致；
+- 必须兑现判断的原句、段落位置和映射完全一致；
 - 至少三个内容区发生实际编辑；
 - 没有新增判断；
 - 没有展示校准过程；
@@ -194,6 +197,8 @@
 - 不出现组织化过劳型、先扎根后显声、表达窗口、能力输出、可见度、物质与经营底色、资源伴随期待等表达；
 - 正文有明确主体、动作和现实对象；
 - 完整人生主线和六领域至少八成判断来自命盘或时运基线，校准只作修正；
+- 校准后Core受保护字段与冻结Baseline哈希一致；
+- 每个内容区的指定判断均以完整原句进入正文，且同一判断最多跨两个内容区；
 - “经营”只在真实经商、创业、利润责任或业务经营语境使用；
 - PDF恰好10页，第2页嵌入同一Core生成的新版1242×1660卡片；
 - Logo、固定字体、微信二维码、GitHub、颜色和免责声明正常；

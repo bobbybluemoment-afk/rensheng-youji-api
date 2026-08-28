@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.11.0",
+  "version": "2.12.0",
   "visibility": "internal",
   "stages": [
     {
@@ -37,15 +37,15 @@
     "pdf_renderer": "../skills/rensheng-youji-growth-map/scripts/render_report_pdf.py",
     "pages": 10,
     "card_page": 2,
-    "report_schema_version": "2.11.0",
-    "core_version": "0.8.0",
-    "content_brief_schema_version": "1.3.0",
-    "report_draft_schema_version": "1.3.0",
-    "editorial_review_version": "2.2.0",
+    "report_schema_version": "2.12.0",
+    "core_version": "0.8.1",
+    "content_brief_schema_version": "1.4.0",
+    "report_draft_schema_version": "1.4.0",
+    "editorial_review_version": "2.3.0",
     "calibration_schema_version": "2.2.0",
     "calibration_template_version": "1.0.0",
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "确定性排盘与同一Core母稿同时支持新版免费卡片和完整报告；Core 0.8.0先独立完成六个现实领域，再用人生主线串联，限制跨章复用和校准支配；报告只使用实体化Core材料，并由结构化重点句统一生成Markdown与PDF强调。公开免费版在用户环境运行，不使用验证码、MCP或人生有迹云端接口。"
+  "notes": "Core 0.8.1在校准前冻结完整母稿，现实校准只以确定性增量调整候选状态；六领域必须满足判断家族、机制家族和现实问题轴多样性。报告内容区锁定必须兑现的白话判断，并逐句验证确实进入正文；内部技术术语与用户可见正文分开校验。公开免费版在用户环境运行，不使用验证码、MCP或人生有迹云端接口。"
 }

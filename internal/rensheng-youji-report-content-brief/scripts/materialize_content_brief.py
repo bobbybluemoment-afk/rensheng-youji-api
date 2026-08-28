@@ -16,7 +16,7 @@ def canonical_digest(value: Any) -> str:
 
 
 def snapshot(claim: dict[str, Any]) -> dict[str, Any]:
-    keys = ("claim_id", "domain", "reality_dimension", "claim", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin")
+    keys = ("claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family", "claim", "plain_claim", "new_information", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin")
     body = {key: claim[key] for key in keys}
     return {**body, "source_sha256": canonical_digest(body)}
 
@@ -35,6 +35,8 @@ def enrich_section(section: dict[str, Any], analysis: dict[str, Any], ledger: di
     section["selected_claims"] = selected
     emphasis_ids = section.get("emphasis_claim_ids") or []
     section["emphasis_claims"] = [snapshot(ledger[claim_id]) for claim_id in emphasis_ids]
+    mandatory_ids = section.get("mandatory_claim_ids") or []
+    section["mandatory_claims"] = [snapshot(ledger[claim_id]) for claim_id in mandatory_ids]
     evidence_ids = list(dict.fromkeys(evidence_id for item in selected for evidence_id in item["evidence_ids"]))
     evidence_index = {item["evidence_id"]: item for item in analysis["evidence_registry"]}
     missing_evidence = [evidence_id for evidence_id in evidence_ids if evidence_id not in evidence_index]
@@ -89,19 +91,20 @@ def enrich_section(section: dict[str, Any], analysis: dict[str, Any], ledger: di
 def materialize(selection: dict[str, Any], analysis: dict[str, Any]) -> dict[str, Any]:
     result = json.loads(json.dumps(selection, ensure_ascii=False))
     meta = analysis["analysis_meta"]
+    is_v081 = meta.get("core_version") == "0.8.1"
     is_v08 = meta.get("core_version") == "0.8.0"
-    result["schema_version"] = "1.3.0" if is_v08 else "1.2.0"
+    result["schema_version"] = "1.4.0" if is_v081 else "1.3.0" if is_v08 else "1.2.0"
     result.setdefault("source", {}).update({"analysis_id": meta["analysis_id"], "core_version": meta["core_version"], "analysis_sha256": canonical_digest(analysis)})
     ledger = {item["claim_id"]: item for item in analysis["report_claim_ledger"]}
     sections = [result["life_overview"], *result["dimensions"], result["current_question"]]
-    if is_v08:
+    if is_v08 or is_v081:
         source_bundle = analysis["report_source_bundle"]
         source_pairs = [
             (result["life_overview"], source_bundle["life_narrative_source"]),
             *[(section, source_bundle["dimensions"][section["id"]]) for section in result["dimensions"]],
             (result["current_question"], source_bundle["current_stage_source"]),
         ]
-        locked = ("claim_ids", "formation_chain_ids", "linkage_chain_ids", "coverage", "domain_specific_claim_ids", "mainline_claim_ids", "emphasis_claim_ids", "domain_mechanisms", "survives_without_mainline")
+        locked = ("claim_ids", "formation_chain_ids", "linkage_chain_ids", "coverage", "domain_specific_claim_ids", "mainline_claim_ids", "mandatory_claim_ids", "emphasis_claim_ids", "domain_mechanisms", "survives_without_mainline")
         for section, source_section in source_pairs:
             for key in locked:
                 section[key] = json.loads(json.dumps(source_section[key], ensure_ascii=False))

@@ -217,8 +217,8 @@ def validate(data: Any) -> list[str]:
     meta = data.get("analysis_meta")
     require_keys(meta, {"analysis_id", "request_id", "core_version", "generated_at", "analysis_as_of", "target_range", "input_completeness", "status"}, "analysis_meta", errors)
     if isinstance(meta, dict):
-        if meta.get("core_version") != "0.8.0":
-            errors.append("analysis_meta.core_version 必须为 0.8.0")
+        if meta.get("core_version") != "0.8.1":
+            errors.append("analysis_meta.core_version 必须为 0.8.1")
         if meta.get("status") not in {"complete", "pass_with_flags"}:
             errors.append("analysis_meta.status 必须是 complete 或 pass_with_flags")
         try:
@@ -376,7 +376,7 @@ def validate(data: Any) -> list[str]:
     else:
         for index, claim in enumerate(claims):
             path = f"report_claim_ledger[{index}]"
-            require_keys(claim, {"claim_id", "domain", "reality_dimension", "claim", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin"}, path, errors)
+            require_keys(claim, {"claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family", "claim", "plain_claim", "new_information", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin"}, path, errors)
             if not isinstance(claim, dict):
                 continue
             claim_id = claim.get("claim_id")
@@ -389,6 +389,11 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"{path}.evidence_ids 至少包含两个独立证据")
             if not isinstance(claim.get("supporting_methods"), list) or len(set(claim.get("supporting_methods") or [])) < 2:
                 errors.append(f"{path}.supporting_methods 至少包含两种交叉方法")
+            for key in ("claim_family", "mechanism_family", "plain_claim", "new_information"):
+                if not isinstance(claim.get(key), str) or len(claim.get(key, "").strip()) < 3:
+                    errors.append(f"{path}.{key} 必须包含实质内容")
+            if isinstance(claim.get("plain_claim"), str) and not claim["plain_claim"].rstrip().endswith(("。", "！", "？")):
+                errors.append(f"{path}.plain_claim 必须是带句末标点的完整判断句")
             evidence_ids = set(claim.get("evidence_ids") or [])
             unknown_evidence = sorted(evidence_ids - set(evidence_by_id))
             if unknown_evidence:
@@ -409,6 +414,14 @@ def validate(data: Any) -> list[str]:
         thin = sorted(domain for domain, count in domain_counts.items() if count < 4)
         if thin:
             errors.append(f"report_claim_ledger 六个报告领域各至少4条判断，当前不足：{thin}")
+        for domain in REPORT_DOMAINS:
+            domain_claims = [item for item in claims if isinstance(item, dict) and item.get("domain") == domain]
+            if len({item.get("claim_family") for item in domain_claims}) < 3:
+                errors.append(f"report_claim_ledger.{domain} 至少包含三个不同判断家族")
+            if len({item.get("mechanism_family") for item in domain_claims}) < 2:
+                errors.append(f"report_claim_ledger.{domain} 至少包含两条不同命理机制路径")
+            if len({item.get("reality_dimension") for item in domain_claims}) < 3:
+                errors.append(f"report_claim_ledger.{domain} 至少覆盖三个现实问题轴")
         normalized_claims = [str(claim.get("claim", "")).replace(" ", "") for claim in claims if isinstance(claim, dict)]
         if len(normalized_claims) != len(set(normalized_claims)):
             errors.append("report_claim_ledger 不得用重复判断填充数量")
@@ -471,7 +484,7 @@ def validate(data: Any) -> list[str]:
             sources.update({f"dimensions.{key}": value for key, value in dimensions.items()})
         for name, source in sources.items():
             path = f"report_source_bundle.{name}"
-            require_keys(source, {"summary_materials", "claim_ids", "domain_specific_claim_ids", "mainline_claim_ids", "emphasis_claim_ids", "domain_mechanisms", "survives_without_mainline", "formation_chain_ids", "linkage_chain_ids", "concrete_candidates", "coverage", "evidence_gaps"}, path, errors)
+            require_keys(source, {"summary_materials", "claim_ids", "domain_specific_claim_ids", "mainline_claim_ids", "mandatory_claim_ids", "emphasis_claim_ids", "domain_mechanisms", "survives_without_mainline", "formation_chain_ids", "linkage_chain_ids", "concrete_candidates", "coverage", "evidence_gaps"}, path, errors)
             if not isinstance(source, dict):
                 continue
             if len(source.get("summary_materials") or []) < 6 or len(source.get("claim_ids") or []) < 6:
@@ -482,10 +495,13 @@ def validate(data: Any) -> list[str]:
             specific_ids = set(source.get("domain_specific_claim_ids") or [])
             mainline_ids = set(source.get("mainline_claim_ids") or [])
             emphasis_ids = set(source.get("emphasis_claim_ids") or [])
+            mandatory_ids = set(source.get("mandatory_claim_ids") or [])
             if len(specific_ids) < 4 or not specific_ids.issubset(source_ids):
                 errors.append(f"{path}.domain_specific_claim_ids 至少包含4个本节判断且必须属于claim_ids")
             if len(mainline_ids) > 2 or not mainline_ids.issubset(source_ids) or len(mainline_ids) / max(len(source_ids), 1) > 0.30:
                 errors.append(f"{path} 的共享人生主线判断不得超过本节判断的30%")
+            if not 1 <= len(mandatory_ids) <= 2 or not mandatory_ids.issubset(source_ids):
+                errors.append(f"{path}.mandatory_claim_ids 必须锁定1—2条本节判断")
             emphasis_range = (0, 2) if name == "life_narrative_source" else (0, 1)
             if not emphasis_range[0] <= len(emphasis_ids) <= emphasis_range[1] or not emphasis_ids.issubset(source_ids):
                 errors.append(f"{path}.emphasis_claim_ids 最多包含{emphasis_range[1]}个可独立成立的重点判断；没有合适句子时允许为空")
@@ -654,7 +670,7 @@ def self_test_fixture() -> dict[str, Any]:
     resource = {"acquire": [], "preserve": [], "exchange": [], "amplify": [], "loss_risks": [], "findings": []}
     annual = {"year": 2026, "age": 36, "luck_cycle_index": 0, "year_theme": "自检", "luck_theme_link": "自检", "activation_mechanisms": [], "natal_reactions": [], "change_intensity": "low", "direction": "consolidation", "domain_impacts": [], "domain_connections": [], "human_actions": [], "social_feedback": [], "carry_in": [], "carry_out": [], "seed_for_next": [], "confidence": "to_verify", "alternatives": [], "validation": []}
     candidate_domains = ["career", "finance_resources", "love_partner", "family_growth", "body_emotion", "self_growth", "learning", "mobility", "career", "finance_resources", "love_partner", "family_growth", "body_emotion", "self_growth", "career", "finance_resources", "love_partner", "family_growth"]
-    candidate = lambda number: {"candidate_id": f"c{number}", "domain": candidate_domains[number - 1], "reality_dimension": "work_style", "parent_category": "structured_work", "label": "先整理再行动", "attributes": ["规则明确"], "candidate_kind": "timed_event" if number == 6 else "stable_pattern", "time_scope": "过去五年" if number == 6 else "原局长期", "calibration_targets": ["reality_domains"], "statement": "遇到模糊任务时先整理信息再开始", "observable_examples": ["先列出步骤和缺少的资料", "交付前会主动核对关键细节"], "alternative_statement": "也可能先行动再根据反馈调整", "counterevidence": [], "unsupported_extensions": ["不能据此断定具体职业"], "source_layers": ["annual", "cross_method"] if number == 6 else ["chart", "cross_method"], "evidence_ids": [f"evidence_{number}", f"evidence_{1 if number == 24 else number + 1}"], "related_claim_ids": [f"claim_self_{number}"], "relation_ids": [f"relation_{(number - 1) // 3 + 1}"], "confidence": "to_verify", "validation_question": "哪种处理方式更接近实际？", "status": "unverified"}
+    candidate = lambda number: {"candidate_id": f"c{number}", "domain": candidate_domains[number - 1], "reality_dimension": f"candidate_axis_{number}", "parent_category": f"candidate_group_{number}", "label": f"候选侧面{number}", "attributes": [f"属性{number}"], "candidate_kind": "timed_event" if number == 6 else "stable_pattern", "time_scope": "过去五年" if number == 6 else "原局长期", "calibration_targets": ["reality_domains"], "statement": f"用于验证第{number}个现实侧面的自检陈述", "observable_examples": [f"第{number}个可观察例子甲", f"第{number}个可观察例子乙"], "alternative_statement": f"第{number}个候选也可能有另一种解释", "counterevidence": [], "unsupported_extensions": ["不能据此断定具体职业"], "source_layers": ["annual", "cross_method"] if number == 6 else ["chart", "cross_method"], "evidence_ids": [f"evidence_{number}", f"evidence_{1 if number == 24 else number + 1}"], "related_claim_ids": [f"claim_self_{number}"], "relation_ids": [f"relation_{(number - 1) // 3 + 1}"], "confidence": "to_verify", "validation_question": "哪个现实侧面更接近实际？", "status": "unverified"}
     partner_profile = {"summary": "自检", "traits": [], "mechanism": [], "benefits": [], "costs": [], "evidence_strength": "insufficient", "alternatives": [], "validation": [], "findings": []}
     complete_self_portrait = {
         "summary": "自检",
@@ -718,6 +734,7 @@ def self_test_fixture() -> dict[str, Any]:
             "claim_ids": own + shared,
             "domain_specific_claim_ids": own,
             "mainline_claim_ids": shared,
+            "mandatory_claim_ids": own[:2],
             "emphasis_claim_ids": own[:1],
             "domain_mechanisms": [f"{domain_labels[report_domains[index]]}的形成机制", f"{domain_labels[report_domains[index]]}的阶段变化机制"],
             "survives_without_mainline": True,
@@ -729,7 +746,7 @@ def self_test_fixture() -> dict[str, Any]:
         }
 
     data = {
-        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.8.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
+        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.8.1", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
         "chart_facts": {"day_master": "甲", "pillars": {"year": pillar, "month": pillar, "day": {**pillar, "stem_ten_god": "日主"}, "hour": pillar}, "luck_cycles": [{}], "annual_cycles": [{}]},
         "chart_audit": {"status": "pass", "checks": [], "boundary_dependencies": [], "versions": []},
         "social_context_model": empty_section(),
@@ -744,7 +761,7 @@ def self_test_fixture() -> dict[str, Any]:
             "work_paths": [{"path_id": "work_1", "actor": "命主", "tool": "专业能力", "target": "外部任务", "mechanism": ["整理后执行"], "direction": "由外向内取得结果", "result_type": "项目成果", "retained_by_subject": True, "costs": ["准备时间"], "failure_conditions": ["职责边界不清"], "evidence_ids": ["evidence_1"], "method_sources": ["blind_shared"], "confidence": "to_verify"}],
             "image_hypotheses": [],
             "reality_image_candidates": [
-                {"image_id": "image_org", "dimension": "organization", "candidate_labels": ["规则明确的平台"], "derivation_chain": ["宾主区分", "体用落实"], "evidence_ids": ["evidence_1", "evidence_2"], "non_blind_support": ["格局调候"], "counterevidence": ["自主性仍待验证"], "limitations": ["不能指定单位"], "confidence": "to_verify"},
+                {"image_id": "image_org", "dimension": "organization", "candidate_labels": ["仅用于结构校验的组织候选"], "derivation_chain": ["宾主区分", "体用落实"], "evidence_ids": ["evidence_1", "evidence_2"], "non_blind_support": ["格局调候"], "counterevidence": ["自主性仍待验证"], "limitations": ["不能指定单位"], "confidence": "to_verify"},
                 {"image_id": "image_industry", "dimension": "industry", "candidate_labels": ["专业服务"], "derivation_chain": ["处理对象", "结果形式"], "evidence_ids": ["evidence_3", "evidence_4"], "non_blind_support": ["根苗花果"], "counterevidence": ["行业事实未知"], "limitations": ["不能指定行业"], "confidence": "to_verify"},
                 {"image_id": "image_function", "dimension": "function", "candidate_labels": ["研究分析"], "derivation_chain": ["工具能力", "工作动作"], "evidence_ids": ["evidence_5", "evidence_6"], "non_blind_support": ["十神网络"], "counterevidence": ["岗位事实未知"], "limitations": ["不能指定岗位"], "confidence": "to_verify"},
                 {"image_id": "image_result", "dimension": "result_form", "candidate_labels": ["项目成果"], "derivation_chain": ["做功路径", "结果归属"], "evidence_ids": ["evidence_7", "evidence_8"], "non_blind_support": ["岁运连续"], "counterevidence": ["成果事实未知"], "limitations": ["不能保证结果"], "confidence": "to_verify"}
@@ -754,7 +771,7 @@ def self_test_fixture() -> dict[str, Any]:
             "prohibited_extensions": ["不推具体职业", "不推收入金额", "不推疾病寿夭", "不推婚姻结果"]
         },
         "evidence_registry": [
-            {"evidence_id": f"evidence_{i}", "source_layer": "annual" if i == 3 else "luck_cycle" if i == 4 else "natal" if i % 2 else "root_seed_flower_fruit", "method": "流年执行" if i == 3 else "大运主题" if i == 4 else "格局调候" if i % 2 else "根苗花果", "chart_refs": ["chart_facts.pillars"], "observation": f"自检结构观察{i}", "interpretation": "用于检验先整理再行动的现实候选", "limitations": ["不能外推具体职业"], "confidence": "to_verify"}
+            {"evidence_id": f"evidence_{i}", "source_layer": "annual" if i == 3 else "luck_cycle" if i == 4 else "natal" if i % 2 else "root_seed_flower_fruit", "method": "流年执行" if i == 3 else "大运主题" if i == 4 else "格局调候" if i % 2 else "根苗花果", "chart_refs": ["chart_facts.pillars"], "observation": f"自检结构观察{i}", "interpretation": "仅用于校验实体证据引用关系", "limitations": ["不能外推具体职业"], "confidence": "to_verify"}
             for i in range(1, 25)
         ],
         "root_seed_flower_fruit_map": {"summary": "自检", "root": empty_section(), "seedling": empty_section(), "flower": empty_section(), "fruit": empty_section(), "continuity": ["根与苗跨阶段连续", "花与果在当前同时作用", "成果进入下一轮传承"], "domain_lifecycles": [
@@ -779,7 +796,7 @@ def self_test_fixture() -> dict[str, Any]:
         "life_stages": [],
         "turning_points": [],
         "report_claim_ledger": [
-            {"claim_id": f"claim_self_{i}", "domain": report_domains[(i - 1) // 5], "reality_dimension": "behavior", "claim": f"{domain_labels[report_domains[(i - 1) // 5]]}中可观察到第{(i - 1) % 5 + 1}种独立表现", "mechanism_chain": ["先识别本领域条件", "再形成相应行动"], "evidence_ids": [f"evidence_{(i - 1) % 24 + 1}", f"evidence_{i % 24 + 1}"], "supporting_methods": ["格局调候", "根苗花果"], "allowed_examples": ["可观察行为"], "counterevidence": [], "confidence": "to_verify", "unsupported_extensions": ["不能据此断定唯一现实结果"], "calibration_status": "unverified", "origin": "chart_baseline"}
+            {"claim_id": f"claim_self_{i}", "domain": report_domains[(i - 1) // 5], "reality_dimension": f"axis_{(i - 1) % 5 + 1}", "claim_family": f"family_{(i - 1) % 5 + 1}", "mechanism_family": f"mechanism_{(i - 1) % 2 + 1}", "claim": f"{domain_labels[report_domains[(i - 1) // 5]]}的第{(i - 1) % 5 + 1}项内部自检判断", "plain_claim": f"你在{domain_labels[report_domains[(i - 1) // 5]]}方面可能呈现第{(i - 1) % 5 + 1}种可核对的独立表现。", "new_information": f"{domain_labels[report_domains[(i - 1) // 5]]}新增信息{(i - 1) % 5 + 1}", "mechanism_chain": ["识别本领域的结构条件", "形成与该领域对应的现实表现"], "evidence_ids": [f"evidence_{(i - 1) % 24 + 1}", f"evidence_{i % 24 + 1}"], "supporting_methods": ["格局调候", "根苗花果"], "allowed_examples": ["可观察行为"], "counterevidence": [], "confidence": "to_verify", "unsupported_extensions": ["不能据此断定唯一现实结果"], "calibration_status": "unverified", "origin": "chart_baseline"}
             for i in range(1, 31)
         ],
         "formation_chains": [

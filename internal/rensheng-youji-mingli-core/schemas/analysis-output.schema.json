@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rensheng-youji.local/schemas/analysis-output.schema.json",
-  "title": "人生有迹完整命理分析母稿 v0.8.0",
+  "title": "人生有迹完整命理分析母稿 v0.8.1",
   "description": "内置分析核心返回的统一 analysis_bundle。包含完整人物画像、盲派交叉层、实体证据台账、开放现实候选、形成链、领域联动与校准审计。",
   "type": "object",
   "additionalProperties": false,
@@ -1508,7 +1508,8 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "claim_id", "domain", "reality_dimension", "claim", "mechanism_chain",
+        "claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family",
+        "claim", "plain_claim", "new_information", "mechanism_chain",
         "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence",
         "confidence", "unsupported_extensions", "calibration_status", "origin"
       ],
@@ -1516,7 +1517,11 @@
         "claim_id": {"type": "string", "pattern": "^claim_[a-z0-9_]+$"},
         "domain": {"type": "string"},
         "reality_dimension": {"type": "string", "minLength": 2},
+        "claim_family": {"type": "string", "minLength": 3},
+        "mechanism_family": {"type": "string", "minLength": 3},
         "claim": {"type": "string", "minLength": 8},
+        "plain_claim": {"type": "string", "minLength": 12},
+        "new_information": {"type": "string", "minLength": 4},
         "mechanism_chain": {"type": "array", "minItems": 2, "items": {"type": "string"}},
         "evidence_ids": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
         "supporting_methods": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
@@ -1606,12 +1611,13 @@
     "domainSource": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["summary_materials", "claim_ids", "domain_specific_claim_ids", "mainline_claim_ids", "emphasis_claim_ids", "domain_mechanisms", "survives_without_mainline", "formation_chain_ids", "linkage_chain_ids", "concrete_candidates", "coverage", "evidence_gaps"],
+      "required": ["summary_materials", "claim_ids", "domain_specific_claim_ids", "mainline_claim_ids", "mandatory_claim_ids", "emphasis_claim_ids", "domain_mechanisms", "survives_without_mainline", "formation_chain_ids", "linkage_chain_ids", "concrete_candidates", "coverage", "evidence_gaps"],
       "properties": {
         "summary_materials": {"type": "array", "minItems": 6, "items": {"type": "string"}},
         "claim_ids": {"type": "array", "minItems": 6, "uniqueItems": true, "items": {"type": "string"}},
         "domain_specific_claim_ids": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string"}},
         "mainline_claim_ids": {"type": "array", "maxItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "mandatory_claim_ids": {"type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": {"type": "string"}},
         "emphasis_claim_ids": {"type": "array", "minItems": 0, "maxItems": 2, "uniqueItems": true, "items": {"type": "string"}},
         "domain_mechanisms": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string", "minLength": 4}},
         "survives_without_mainline": {"const": true},

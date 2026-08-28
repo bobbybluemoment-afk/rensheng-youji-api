@@ -127,7 +127,7 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 
 用户填写的关注方向和当前问题只用于排列“当前阶段回应、年度提醒与行动建议”的优先级，不是命理证据，也不得反向改写完整自身画像、家庭形成、能力资源、人生主线或六个生活领域的基础判断。必须先完成全盘母稿，再把关注方向放入当前阶段中回应。
 
-校准只能确认、部分支持、排除或保留原有候选。不得把用户回答扩写成新的人格类型、职业标签或健康标签。例如用户确认“压力时先列清单继续做事”，只能支持“通过整理任务恢复控制感”，不能新增“组织化过劳型”等生造结论。
+校准只能确认、部分支持、排除或保留原有候选。不得把用户回答扩写成新的人格类型、职业标签、健康标签或新的报告判断。初始Core冻结后，校准不得重写 `portrait_thesis`、判断正文、机制、证据或报告素材。
 
 ### 12. 先判断工作属性，再生成开放现实候选
 
@@ -139,7 +139,7 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 
 除完整技术母稿外，还要生成：
 
-- 校准后完整人物总判断；
+- 校准前完成并冻结的完整人物总判断；
 - 候选之间的共存、主次、阶段、条件和互斥关系图；
 - 校准前后每条现实判断的变化记录；
 - 具有固定编号的报告判断台账；
@@ -152,6 +152,17 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 这些内容用于约束报告写作，不是用户可见文章。Core中的技术短语必须紧接现实解释；不得用“底色、表达窗口、输出、可见度、先扎根后显声”等抽象词代替事实。
 
 每条报告判断必须登记可解析的证据编号。证据编号要指向真实的 `evidence_registry` 条目，写明方法、命盘位置、观察、解释、限制和置信度。不能只造两个看似不同的编号来满足数量。每条判断还要标注 `origin`：原局长期判断使用 `chart_baseline`，大运流年阶段判断使用 `timing_baseline`，用户校准只使用 `user_fact_refinement`。校准不能成为完整人生主线和六个领域的主要来源。
+
+每条报告判断同时登记：
+
+- `claim_family`：它回答的是该领域哪一类问题；
+- `mechanism_family`：主要来自哪条结构或时运路径；
+- `new_information`：相对同领域其他判断新增了什么；
+- `plain_claim`：不含命理术语、可以原句进入报告的完整判断句。
+
+每个领域至少四条判断、三个判断家族、两个机制家族和三个现实问题轴。不同编号但语义高度相似的句子视为重复，不得用换词满足数量。`report_source_bundle` 每个内容区锁定1—2条 `mandatory_claim_ids`，供下游确定性检查原句是否进入报告。
+
+内部 `mechanism_chain`、`evidence_registry`、`domain_mechanisms` 和技术审计允许并应保留必要命理术语；禁止术语只适用于最终用户可见正文。不得为了通过正文术语检查而清洗或改写内部Core。
 
 ### 14. 输出完整语义，不直接画图
 
@@ -274,10 +285,11 @@ validation: []
 
 不要省略没有明显结论的栏目。使用空数组、`null` 或“证据不足”保留结构，不得补造内容。
 
-完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.8.0`。完成分析后运行：
+完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.8.1`。完成分析后运行：
 
 ```bash
 python3 scripts/validate_analysis_output.py <analysis-output.json>
+python3 ../../scripts/audit_claim_diversity.py <analysis-output.json>
 ```
 
 只有输出校验通过后，才把 `analysis_bundle` 交给下游卡片、报告或网页流程。

@@ -29,11 +29,12 @@ def validate(data: Any, analysis: Any | None = None) -> list[str]:
     is_v11 = data.get("schema_version") == "1.1.0"
     is_v12 = data.get("schema_version") == "1.2.0"
     is_v13 = data.get("schema_version") == "1.3.0"
-    is_materialized = is_v11 or is_v12 or is_v13
-    if data.get("schema_version") not in {"1.0.0", "1.1.0", "1.2.0", "1.3.0"}:
-        errors.append("schema_version 必须为1.0.0、1.1.0、1.2.0或1.3.0")
+    is_v14 = data.get("schema_version") == "1.4.0"
+    is_materialized = is_v11 or is_v12 or is_v13 or is_v14
+    if data.get("schema_version") not in {"1.0.0", "1.1.0", "1.2.0", "1.3.0", "1.4.0"}:
+        errors.append("schema_version 必须为1.0.0—1.4.0中的受支持版本")
     source = data.get("source", {})
-    expected_core = "0.8.0" if is_v13 else "0.7.0" if is_v12 else "0.6.0" if is_v11 else "0.5.0"
+    expected_core = "0.8.1" if is_v14 else "0.8.0" if is_v13 else "0.7.0" if is_v12 else "0.6.0" if is_v11 else "0.5.0"
     if source.get("core_version") != expected_core:
         errors.append(f"事实提纲必须来自core_version={expected_core}")
     if data.get("focus_scope", {}).get("protected_sections") != ["life_overview", "dimensions"]:
@@ -47,7 +48,7 @@ def validate(data: Any, analysis: Any | None = None) -> list[str]:
         for item in dimensions:
             if not REQUIRED_COVERAGE.issubset(set(item.get("coverage") or [])):
                 errors.append(f"{item.get('id')} 缺少人物描述覆盖项")
-        if is_v13:
+        if is_v13 or is_v14:
             usage: dict[str, int] = {}
             for item in dimensions:
                 claim_set = set(item.get("claim_ids") or [])
@@ -93,7 +94,7 @@ def validate(data: Any, analysis: Any | None = None) -> list[str]:
                     errors.append(f"第{index + 1}个内容区的来源比例审计与实体判断不一致")
                 if index != 1 and (expected_ratio < 0.8 or calibrated > 1):
                     errors.append(f"第{index + 1}个内容区必须至少八成来自命盘/时运基线，且校准修正最多一条")
-        if is_v13:
+        if is_v13 or is_v14:
             emphasis = section.get("emphasis_claim_ids")
             minimum, maximum = (0, 2) if index == 0 else (0, 1)
             if not isinstance(emphasis, list) or not minimum <= len(set(emphasis)) <= maximum or not set(emphasis or []).issubset(set(claim_ids or [])):
@@ -101,7 +102,14 @@ def validate(data: Any, analysis: Any | None = None) -> list[str]:
             snapshots = section.get("emphasis_claims")
             if not isinstance(snapshots, list) or [item.get("claim_id") for item in snapshots if isinstance(item, dict)] != emphasis:
                 errors.append(f"第{index + 1}个内容区必须携带Core重点判断实体")
-        if is_v12 or is_v13:
+        if is_v14:
+            mandatory = section.get("mandatory_claim_ids")
+            mandatory_snapshots = section.get("mandatory_claims")
+            if not isinstance(mandatory, list) or not 1 <= len(mandatory) <= 2 or not set(mandatory).issubset(set(claim_ids or [])):
+                errors.append(f"第{index + 1}个内容区必须锁定1—2条必进报告判断")
+            if not isinstance(mandatory_snapshots, list) or [item.get("claim_id") for item in mandatory_snapshots if isinstance(item, dict)] != mandatory:
+                errors.append(f"第{index + 1}个内容区必须携带Core必进报告判断实体")
+        if is_v12 or is_v13 or is_v14:
             required_entities = ("selected_evidence", "selected_formation_chains", "selected_linkage_chains", "selected_reality_candidates", "selected_candidate_relations", "selected_blind_images", "selected_domain_lifecycles", "portrait_context", "calibration_context")
             missing_entities = [key for key in required_entities if key not in section]
             if missing_entities:
@@ -123,7 +131,7 @@ def validate(data: Any, analysis: Any | None = None) -> list[str]:
             errors.append("事实提纲使用了Core中已排除的判断")
         if is_materialized and source.get("analysis_sha256") != digest(analysis):
             errors.append("事实提纲中的Core整体哈希与实际母稿不一致")
-        if is_v13:
+        if is_v13 or is_v14:
             source_bundle = analysis.get("report_source_bundle", {})
             data_dimensions = {item.get("id"): item for item in data.get("dimensions") or [] if isinstance(item, dict)}
             source_pairs = [
@@ -131,7 +139,7 @@ def validate(data: Any, analysis: Any | None = None) -> list[str]:
                 (data.get("current_question"), source_bundle.get("current_stage_source"), "current_question"),
                 *[(data_dimensions.get(domain), (source_bundle.get("dimensions") or {}).get(domain), f"dimensions.{domain}") for domain in DIMENSIONS],
             ]
-            locked = ("claim_ids", "formation_chain_ids", "linkage_chain_ids", "coverage", "domain_specific_claim_ids", "mainline_claim_ids", "emphasis_claim_ids", "domain_mechanisms", "survives_without_mainline")
+            locked = ("claim_ids", "formation_chain_ids", "linkage_chain_ids", "coverage", "domain_specific_claim_ids", "mainline_claim_ids", "mandatory_claim_ids", "emphasis_claim_ids", "domain_mechanisms", "survives_without_mainline")
             for section, core_source, where in source_pairs:
                 if not isinstance(section, dict) or not isinstance(core_source, dict):
                     errors.append(f"{where} 缺少Core报告素材来源")
@@ -139,7 +147,7 @@ def validate(data: Any, analysis: Any | None = None) -> list[str]:
                 for key in locked:
                     if section.get(key) != core_source.get(key):
                         errors.append(f"{where}.{key} 已偏离Core报告素材")
-        snapshot_keys = ("claim_id", "domain", "reality_dimension", "claim", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin")
+        snapshot_keys = ("claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family", "claim", "plain_claim", "new_information", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin") if is_v14 else ("claim_id", "domain", "reality_dimension", "claim", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin")
         for section in sections if is_materialized else []:
             if not isinstance(section, dict):
                 continue
@@ -150,7 +158,7 @@ def validate(data: Any, analysis: Any | None = None) -> list[str]:
                 body = {key: claim.get(key) for key in snapshot_keys}
                 if any(selected.get(key) != body[key] for key in snapshot_keys) or selected.get("source_sha256") != digest(body):
                     errors.append(f"事实提纲中的判断实体已偏离Core：{selected.get('claim_id')}")
-            if is_v13:
+            if is_v13 or is_v14:
                 for selected in section.get("emphasis_claims") or []:
                     claim = ledger.get(selected.get("claim_id")) if isinstance(selected, dict) else None
                     if not claim:
@@ -158,7 +166,15 @@ def validate(data: Any, analysis: Any | None = None) -> list[str]:
                     body = {key: claim.get(key) for key in snapshot_keys}
                     if any(selected.get(key) != body[key] for key in snapshot_keys) or selected.get("source_sha256") != digest(body):
                         errors.append(f"事实提纲中的重点判断实体已偏离Core：{selected.get('claim_id')}")
-        if is_v12 or is_v13:
+            if is_v14:
+                for selected in section.get("mandatory_claims") or []:
+                    claim = ledger.get(selected.get("claim_id")) if isinstance(selected, dict) else None
+                    if not claim:
+                        continue
+                    body = {key: claim.get(key) for key in snapshot_keys}
+                    if any(selected.get(key) != body[key] for key in snapshot_keys) or selected.get("source_sha256") != digest(body):
+                        errors.append(f"事实提纲中的必进报告判断实体已偏离Core：{selected.get('claim_id')}")
+        if is_v12 or is_v13 or is_v14:
             evidence_index = {item.get("evidence_id"): item for item in analysis.get("evidence_registry", []) if isinstance(item, dict)}
             formation_index = {item.get("chain_id"): item for item in analysis.get("formation_chains", []) if isinstance(item, dict)}
             linkage_index = {item.get("chain_id"): item for item in analysis.get("domain_linkage_chains", []) if isinstance(item, dict)}

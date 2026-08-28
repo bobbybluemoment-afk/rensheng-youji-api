@@ -90,6 +90,27 @@ def check_emphasis(section: Any, brief_section: Any, minimum: int, maximum: int,
             errors.append(f"{path}.claim_ids 必须来自本段映射和Core指定重点判断")
 
 
+def check_realizations(section: Any, brief_section: Any, where: str, errors: list[str]) -> None:
+    if not isinstance(section, dict) or not isinstance(brief_section, dict):
+        return
+    paragraphs = section.get("paragraphs") or []
+    mandatory = brief_section.get("mandatory_claims") or []
+    expected = {item.get("claim_id"): item.get("plain_claim") for item in mandatory if isinstance(item, dict)}
+    records = section.get("claim_realization_map")
+    if not isinstance(records, list) or {item.get("claim_id") for item in records if isinstance(item, dict)} != set(expected):
+        errors.append(f"{where}.claim_realization_map 必须逐条覆盖Core锁定判断")
+        return
+    for item in records:
+        if not isinstance(item, dict) or set(item) != {"claim_id", "paragraph_index", "exact_span"}:
+            errors.append(f"{where}.claim_realization_map 含无效记录")
+            continue
+        claim_id, paragraph_index, exact_span = item["claim_id"], item["paragraph_index"], item["exact_span"]
+        if exact_span != expected.get(claim_id):
+            errors.append(f"{where}.{claim_id} 改写了Core锁定判断")
+        if not isinstance(paragraph_index, int) or not 0 <= paragraph_index < len(paragraphs) or exact_span not in paragraphs[paragraph_index]:
+            errors.append(f"{where}.{claim_id} 未真实进入声明的正文段落")
+
+
 def validate(data: Any, brief: Any | None = None) -> list[str]:
     errors: list[str] = []
     if not isinstance(data, dict):
@@ -100,9 +121,10 @@ def validate(data: Any, brief: Any | None = None) -> list[str]:
     is_v11 = data.get("schema_version") == "1.1.0"
     is_v12 = data.get("schema_version") == "1.2.0"
     is_v13 = data.get("schema_version") == "1.3.0"
-    is_traced = is_v11 or is_v12 or is_v13
-    if data.get("schema_version") not in {"1.0.0", "1.1.0", "1.2.0", "1.3.0"}:
-        errors.append("schema_version 必须为1.0.0、1.1.0、1.2.0或1.3.0")
+    is_v14 = data.get("schema_version") == "1.4.0"
+    is_traced = is_v11 or is_v12 or is_v13 or is_v14
+    if data.get("schema_version") not in {"1.0.0", "1.1.0", "1.2.0", "1.3.0", "1.4.0"}:
+        errors.append("schema_version 必须为1.0.0—1.4.0中的受支持版本")
     used = check_section(data.get("life_overview"), 500 if is_traced else 350, 700 if is_traced else 550, "life_overview", errors, is_traced)
     dimensions = data.get("dimensions")
     if not isinstance(dimensions, list) or [item.get("id") for item in dimensions if isinstance(item, dict)] != DIMENSIONS:
@@ -117,7 +139,11 @@ def validate(data: Any, brief: Any | None = None) -> list[str]:
         used |= check_section(current, 320 if is_traced else 280, 650 if is_traced else 600, "current_question", errors, is_traced)
     else:
         errors.append("current_question 必须是对象")
-    visible = json.dumps(data, ensure_ascii=False)
+    visible_sections = [data.get("life_overview", {}), data.get("current_question", {}), *(data.get("dimensions") or [])]
+    visible = json.dumps([
+        {"title": item.get("title"), "paragraphs": item.get("paragraphs")}
+        for item in visible_sections if isinstance(item, dict)
+    ], ensure_ascii=False)
     found = sorted(term for term in BANNED if term in visible)
     if found:
         errors.append("初稿含有生硬或生造表达：" + "、".join(found))
@@ -151,14 +177,14 @@ def validate(data: Any, brief: Any | None = None) -> list[str]:
         }
         if is_traced and used - selected_payload:
             errors.append("初稿引用的判断没有实体化Core内容，禁止只凭编号写作")
-        if is_v12 or is_v13:
+        if is_v12 or is_v13 or is_v14:
             for index, section in enumerate([brief.get("life_overview"), brief.get("current_question"), *(brief.get("dimensions") or [])]):
                 if not isinstance(section, dict):
                     continue
                 for required in ("selected_evidence", "selected_formation_chains", "selected_linkage_chains", "selected_reality_candidates", "selected_candidate_relations", "portrait_context", "calibration_context"):
                     if required not in section:
                         errors.append(f"事实提纲第{index + 1}区缺少{required}，写作不得继续")
-        if is_v13:
+        if is_v13 or is_v14:
             check_emphasis(data.get("life_overview"), brief.get("life_overview"), 0, 2, "life_overview", errors)
             check_emphasis(data.get("current_question"), brief.get("current_question"), 0, 1, "current_question", errors)
             brief_dimensions = {item.get("id"): item for item in brief.get("dimensions") or [] if isinstance(item, dict)}
@@ -166,11 +192,18 @@ def validate(data: Any, brief: Any | None = None) -> list[str]:
                 if isinstance(section, dict):
                     brief_section = brief_dimensions.get(section.get("id"))
                     check_emphasis(section, brief_section, 0, 1, f"dimensions.{section.get('id')}", errors)
-                    for key in ("domain_specific_claim_ids", "mainline_claim_ids", "domain_mechanisms", "survives_without_mainline"):
+                    for key in ("domain_specific_claim_ids", "mainline_claim_ids", "mandatory_claim_ids", "domain_mechanisms", "survives_without_mainline"):
                         if not isinstance(brief_section, dict) or section.get(key) != brief_section.get(key):
                             errors.append(f"dimensions.{section.get('id')}.{key} 必须原样继承事实提纲")
             if "**" in json.dumps(data, ensure_ascii=False):
                 errors.append("初稿正文必须保存纯文本；加粗只由emphasis_spans和渲染器生成")
+        if is_v14:
+            check_realizations(data.get("life_overview"), brief.get("life_overview"), "life_overview", errors)
+            check_realizations(data.get("current_question"), brief.get("current_question"), "current_question", errors)
+            brief_dimensions = {item.get("id"): item for item in brief.get("dimensions") or [] if isinstance(item, dict)}
+            for section in data.get("dimensions") or []:
+                if isinstance(section, dict):
+                    check_realizations(section, brief_dimensions.get(section.get("id")), f"dimensions.{section.get('id')}", errors)
     return errors
 
 

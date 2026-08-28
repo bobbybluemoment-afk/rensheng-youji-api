@@ -515,6 +515,27 @@ def _validate_emphasis(section: Any, minimum: int, maximum: int, where: str, err
             errors.append(f"{path}.claim_ids 必须来自对应自然段的Core判断")
 
 
+def _validate_realizations(section: Any, where: str, errors: list[str]) -> None:
+    if not isinstance(section, dict):
+        return
+    paragraphs = section.get("paragraphs") or []
+    mandatory = section.get("mandatory_claim_ids")
+    records = section.get("claim_realization_map")
+    if not isinstance(mandatory, list) or not 1 <= len(mandatory) <= 2:
+        errors.append(f"{where}.mandatory_claim_ids 必须包含1—2条Core锁定判断")
+        return
+    if not isinstance(records, list) or {item.get("claim_id") for item in records if isinstance(item, dict)} != set(mandatory):
+        errors.append(f"{where}.claim_realization_map 必须逐条覆盖Core锁定判断")
+        return
+    for item in records:
+        if not isinstance(item, dict) or set(item) != {"claim_id", "paragraph_index", "exact_span"}:
+            errors.append(f"{where}.claim_realization_map 含无效记录")
+            continue
+        paragraph_index, exact_span = item["paragraph_index"], item["exact_span"]
+        if not isinstance(paragraph_index, int) or not 0 <= paragraph_index < len(paragraphs) or not isinstance(exact_span, str) or exact_span not in paragraphs[paragraph_index]:
+            errors.append(f"{where}.{item.get('claim_id')} 未真实出现在声明的正文段落")
+
+
 def _validate_v27(data: dict[str, Any]) -> None:
     required = ("schema_version", "report_id", "document_mode", "source", "source_artifacts", "title", "subtitle", "generated_on", "brand", "profile", "focus_scope", "cross_output_consistency", "chart", "calibration", "editorial_review", "executive_summary", "current_question_narrative", "stage_story", "dimensions", "yearly_outlook", "action_guide", "open_questions", "author", "boundaries")
     errors: list[str] = []
@@ -524,7 +545,7 @@ def _validate_v27(data: dict[str, Any]) -> None:
     if data.get("document_mode") not in {"full_calibrated", "preliminary_uncalibrated"}:
         errors.append("document_mode 值无效")
     source = data.get("source", {})
-    expected_core = "0.8.0" if data.get("schema_version") in {"2.10.0", "2.11.0"} else "0.7.0" if data.get("schema_version") == "2.9.0" else "0.6.0" if data.get("schema_version") == "2.8.0" else "0.5.0"
+    expected_core = "0.8.1" if data.get("schema_version") == "2.12.0" else "0.8.0" if data.get("schema_version") in {"2.10.0", "2.11.0"} else "0.7.0" if data.get("schema_version") == "2.9.0" else "0.6.0" if data.get("schema_version") == "2.8.0" else "0.5.0"
     if source.get("core_version") != expected_core:
         errors.append(f"{data.get('schema_version')}报告必须来自core_version={expected_core}")
     if source.get("analysis_as_of") != data.get("generated_on"):
@@ -557,12 +578,12 @@ def _validate_v27(data: dict[str, Any]) -> None:
     if data.get("document_mode") == "full_calibrated" and (not isinstance(responses, list) or len(responses) != 5):
         errors.append("正式报告必须保留五道内部校准响应供交付核对")
     editorial = data.get("editorial_review", {})
-    expected_editor = "2.2.0" if data.get("schema_version") in {"2.10.0", "2.11.0"} else "2.1.0" if data.get("schema_version") in {"2.8.0", "2.9.0"} else "2.0.0"
+    expected_editor = "2.3.0" if data.get("schema_version") == "2.12.0" else "2.2.0" if data.get("schema_version") in {"2.10.0", "2.11.0"} else "2.1.0" if data.get("schema_version") in {"2.8.0", "2.9.0"} else "2.0.0"
     if editorial.get("version") != expected_editor or editorial.get("review_id") != artifacts.get("editorial_review_id"):
         errors.append(f"报告必须引用{expected_editor}可追溯中文编辑记录")
     summary = data.get("executive_summary", {})
-    narrative_min, narrative_max = ((500, 700) if data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0"} else (350, 550))
-    require_map = data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0"}
+    narrative_min, narrative_max = ((500, 700) if data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0"} else (350, 550))
+    require_map = data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0"}
     _validate_narrative(summary.get("life_overview"), narrative_min, narrative_max, "executive_summary.life_overview", errors, require_map)
     capabilities = summary.get("capabilities_resources")
     if not isinstance(capabilities, list) or not 2 <= len(capabilities) <= 4:
@@ -573,7 +594,7 @@ def _validate_v27(data: dict[str, Any]) -> None:
                 length(item, 16, 75, f"executive_summary.capabilities_resources[{index}]")
             except ValueError as exc:
                 errors.append(str(exc))
-    current_min, current_max = ((320, 650) if data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0"} else (280, 600))
+    current_min, current_max = ((320, 650) if data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0"} else (280, 600))
     _validate_narrative(data.get("current_question_narrative"), current_min, current_max, "current_question_narrative", errors, require_map)
     stage = data.get("stage_story", {})
     for key in ("previous_foundation", "recent_development", "present_task", "next_direction", "long_range"):
@@ -594,7 +615,7 @@ def _validate_v27(data: dict[str, Any]) -> None:
                 errors.append(f"{where}.confidence 值无效")
             if item.get("id") == "body_emotion" and not any(term in "".join(item.get("paragraphs") or []) for term in ("不构成疾病诊断", "不能据此诊断", "应以正规医疗评估为准")):
                 errors.append("身体与情绪章节必须说明不构成疾病诊断")
-            if data.get("schema_version") in {"2.10.0", "2.11.0"}:
+            if data.get("schema_version") in {"2.10.0", "2.11.0", "2.12.0"}:
                 source_ids = set(item.get("source_claim_ids") or [])
                 specific = set(item.get("domain_specific_claim_ids") or [])
                 mainline = set(item.get("mainline_claim_ids") or [])
@@ -606,16 +627,17 @@ def _validate_v27(data: dict[str, Any]) -> None:
                     errors.append(f"{where} 缺少领域机制，或去掉主线后不能独立成立")
                 for claim_id in source_ids:
                     claim_usage[claim_id] = claim_usage.get(claim_id, 0) + 1
-        if data.get("schema_version") in {"2.10.0", "2.11.0"}:
+        if data.get("schema_version") in {"2.10.0", "2.11.0", "2.12.0"}:
             overused = sorted(item for item, count in claim_usage.items() if count > 2)
             if overused:
                 errors.append(f"同一Core判断最多进入两个现实领域：{overused}")
-    if data.get("schema_version") in {"2.10.0", "2.11.0"}:
-        _validate_emphasis(summary.get("life_overview"), 0 if data.get("schema_version") == "2.11.0" else 3, 2 if data.get("schema_version") == "2.11.0" else 4, "executive_summary.life_overview", errors)
-        _validate_emphasis(data.get("current_question_narrative"), 0 if data.get("schema_version") == "2.11.0" else 2, 1 if data.get("schema_version") == "2.11.0" else 3, "current_question_narrative", errors)
+    if data.get("schema_version") in {"2.10.0", "2.11.0", "2.12.0"}:
+        sparse = data.get("schema_version") in {"2.11.0", "2.12.0"}
+        _validate_emphasis(summary.get("life_overview"), 0 if sparse else 3, 2 if sparse else 4, "executive_summary.life_overview", errors)
+        _validate_emphasis(data.get("current_question_narrative"), 0 if sparse else 2, 1 if sparse else 3, "current_question_narrative", errors)
         for item in dimensions or []:
             if isinstance(item, dict):
-                _validate_emphasis(item, 0 if data.get("schema_version") == "2.11.0" else 1, 1 if data.get("schema_version") == "2.11.0" else 2, f"dimensions.{item.get('id')}", errors)
+                _validate_emphasis(item, 0 if sparse else 1, 1 if sparse else 2, f"dimensions.{item.get('id')}", errors)
         narrative_text = json.dumps([
             summary.get("life_overview", {}).get("paragraphs", []),
             data.get("current_question_narrative", {}).get("paragraphs", []),
@@ -623,6 +645,12 @@ def _validate_v27(data: dict[str, Any]) -> None:
         ], ensure_ascii=False)
         if "**" in narrative_text:
             errors.append("正文必须保存纯文本；重点样式只由emphasis_spans和渲染器生成")
+    if data.get("schema_version") == "2.12.0":
+        _validate_realizations(summary.get("life_overview"), "executive_summary.life_overview", errors)
+        _validate_realizations(data.get("current_question_narrative"), "current_question_narrative", errors)
+        for item in dimensions or []:
+            if isinstance(item, dict):
+                _validate_realizations(item, f"dimensions.{item.get('id')}", errors)
     outlook = data.get("yearly_outlook", {})
     years = outlook.get("years")
     if not isinstance(years, list) or len(years) != 20:
@@ -683,7 +711,7 @@ def _validate_v27(data: dict[str, Any]) -> None:
             errors.append(f"用户可见正文含禁用表达：{term}")
     if re.search(r"校准后的现实线索|校准确认|符合.{0,10}判断", visible):
         errors.append("用户可见正文不得展示校准过程")
-    if data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0"} and visible.count("经营") > 2:
+    if data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0"} and visible.count("经营") > 2:
         errors.append("用户可见正文中“经营”出现过多；仅可用于真实经商、创业或利润责任语境")
     found_mingli = sorted(term for term in MINGLI_TERMS if term in visible)
     if found_mingli or MINGLI_PATTERN.search(visible):
@@ -707,7 +735,7 @@ def _validate_v27(data: dict[str, Any]) -> None:
 
 
 def validate(data: dict[str, Any]) -> None:
-    if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0"}:
+    if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0"}:
         _validate_v27(data)
     else:
         _validate_v26(data)
@@ -802,7 +830,7 @@ def _render_v27(data: dict[str, Any]) -> str:
 
 
 def render(data: dict[str, Any]) -> str:
-    return _render_v27(data) if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0"} else _render_v26(data)
+    return _render_v27(data) if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0"} else _render_v26(data)
 
 
 def main() -> int:
