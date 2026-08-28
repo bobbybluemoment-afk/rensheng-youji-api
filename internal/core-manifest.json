@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.10.0",
+  "version": "2.11.0",
   "visibility": "internal",
   "stages": [
     {
@@ -37,7 +37,7 @@
     "pdf_renderer": "../skills/rensheng-youji-growth-map/scripts/render_report_pdf.py",
     "pages": 10,
     "card_page": 2,
-    "report_schema_version": "2.10.0",
+    "report_schema_version": "2.11.0",
     "core_version": "0.8.0",
     "content_brief_schema_version": "1.3.0",
     "report_draft_schema_version": "1.3.0",

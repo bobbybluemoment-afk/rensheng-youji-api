@@ -486,9 +486,9 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"{path}.domain_specific_claim_ids 至少包含4个本节判断且必须属于claim_ids")
             if len(mainline_ids) > 2 or not mainline_ids.issubset(source_ids) or len(mainline_ids) / max(len(source_ids), 1) > 0.30:
                 errors.append(f"{path} 的共享人生主线判断不得超过本节判断的30%")
-            emphasis_range = (3, 4) if name == "life_narrative_source" else (2, 3) if name == "current_stage_source" else (1, 2)
+            emphasis_range = (0, 2) if name == "life_narrative_source" else (0, 1)
             if not emphasis_range[0] <= len(emphasis_ids) <= emphasis_range[1] or not emphasis_ids.issubset(source_ids):
-                errors.append(f"{path}.emphasis_claim_ids 必须包含{emphasis_range[0]}—{emphasis_range[1]}个本节可加粗判断")
+                errors.append(f"{path}.emphasis_claim_ids 最多包含{emphasis_range[1]}个可独立成立的重点判断；没有合适句子时允许为空")
             if len(set(source.get("domain_mechanisms") or [])) < 2:
                 errors.append(f"{path}.domain_mechanisms 至少包含两个领域自身机制")
             if source.get("survives_without_mainline") is not True:
@@ -718,7 +718,7 @@ def self_test_fixture() -> dict[str, Any]:
             "claim_ids": own + shared,
             "domain_specific_claim_ids": own,
             "mainline_claim_ids": shared,
-            "emphasis_claim_ids": own[:2],
+            "emphasis_claim_ids": own[:1],
             "domain_mechanisms": [f"{domain_labels[report_domains[index]]}的形成机制", f"{domain_labels[report_domains[index]]}的阶段变化机制"],
             "survives_without_mainline": True,
             "formation_chain_ids": ["formation_1"],
@@ -792,7 +792,7 @@ def self_test_fixture() -> dict[str, Any]:
             for i in range(1, 4)
         ],
         "report_source_bundle": {
-            "life_narrative_source": {**domain_source(0, ["性格", "家庭", "事业", "关系"]), "emphasis_claim_ids": ["claim_self_1", "claim_self_2", "claim_self_3"]},
+            "life_narrative_source": {**domain_source(0, ["性格", "家庭", "事业", "关系"]), "emphasis_claim_ids": ["claim_self_1", "claim_self_2"]},
             "dimensions": {
                 "self_growth": domain_source(0, ["feature", "behavior", "formation", "challenge", "current_change", "response"]),
                 "career": domain_source(2, ["feature", "behavior", "formation", "challenge", "current_change", "response"]),

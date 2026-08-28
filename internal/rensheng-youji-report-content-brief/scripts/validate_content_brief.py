@@ -95,9 +95,9 @@ def validate(data: Any, analysis: Any | None = None) -> list[str]:
                     errors.append(f"第{index + 1}个内容区必须至少八成来自命盘/时运基线，且校准修正最多一条")
         if is_v13:
             emphasis = section.get("emphasis_claim_ids")
-            minimum, maximum = (3, 4) if index == 0 else (2, 3) if index == 1 else (1, 2)
+            minimum, maximum = (0, 2) if index == 0 else (0, 1)
             if not isinstance(emphasis, list) or not minimum <= len(set(emphasis)) <= maximum or not set(emphasis or []).issubset(set(claim_ids or [])):
-                errors.append(f"第{index + 1}个内容区重点判断数量或来源无效")
+                errors.append(f"第{index + 1}个内容区重点判断最多{maximum}条，且必须来自本区判断")
             snapshots = section.get("emphasis_claims")
             if not isinstance(snapshots, list) or [item.get("claim_id") for item in snapshots if isinstance(item, dict)] != emphasis:
                 errors.append(f"第{index + 1}个内容区必须携带Core重点判断实体")

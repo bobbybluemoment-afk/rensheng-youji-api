@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -36,12 +37,13 @@ def main() -> int:
     parser.add_argument("--calibration-questions", type=Path, required=True, help="已通过2.2.0校验的calibration-questions.json")
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--keep-pages", action="store_true", help="保留10页PNG用于视觉验收")
+    parser.add_argument("--allow-test-fixture", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     try:
         report = json.loads(args.report.read_text(encoding="utf-8"))
         free_card = json.loads(args.free_card.read_text(encoding="utf-8"))
         calibration_questions = json.loads(args.calibration_questions.read_text(encoding="utf-8"))
-        is_traceable = report.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0"}
+        is_traceable = report.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0"}
         if is_traceable:
             required_artifacts = {
                 "--content-brief": args.content_brief,
@@ -52,6 +54,18 @@ def main() -> int:
             missing = [name for name, value in required_artifacts.items() if value is None]
             if missing:
                 raise ValueError("可追溯正式报告缺少来源文件：" + "、".join(missing))
+            analysis_data = json.loads(args.analysis.read_text(encoding="utf-8"))
+            analysis_meta = analysis_data.get("analysis_meta", {})
+            provenance = " ".join(str(analysis_meta.get(key, "")) for key in ("analysis_id", "request_id"))
+            if re.search(r"self[-_ ]?test|test[-_ ]?fixture", provenance, re.I) and not args.allow_test_fixture:
+                raise ValueError("正式用户报告禁止使用self_test_fixture或测试数据来源")
+            temporary_patches = [
+                path.name
+                for pattern in ("fix_report*.py", "rewrite_report*.py", "patch_report*.py")
+                for path in args.report.parent.glob(pattern)
+            ]
+            if temporary_patches:
+                raise ValueError("正式交付目录含临时报告修补脚本，禁止据此修改正文或哈希：" + "、".join(sorted(set(temporary_patches))))
             run([
                 sys.executable,
                 str(REPO_ROOT / "internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py"),
@@ -125,7 +139,13 @@ def main() -> int:
             command = [sys.executable, str(SKILL_ROOT / "scripts/render_report_pdf.py"), str(args.report), "--card", str(card), "--out", str(pdf)]
             if args.keep_pages:
                 command.extend(["--pages-dir", str(output / "report-pages")])
-            pdf_result = run(command)
+            fallback_used = False
+            try:
+                pdf_result = run(command + ["--style-mode", "primary"])
+            except ValueError:
+                # 视觉增强不得阻塞可靠内容交付；稳定模式关闭重点样式并沿用同一份已校验正文。
+                pdf_result = run(command + ["--style-mode", "stable"])
+                fallback_used = True
             files["pdf"] = str(pdf)
             checks.update({
                 "pdf_pages": pdf_result["pages"],
@@ -138,7 +158,10 @@ def main() -> int:
                 "cover_logo_sha256": pdf_result["logo_sha256"],
                 "body_font": pdf_result["body_font"],
                 "body_font_sha256": pdf_result["body_font_sha256"],
-                "overflow": False,
+                "overflow": pdf_result["overflow"],
+                "text_render_completed": pdf_result["text_render_completed"],
+                "render_mode": pdf_result["render_mode"],
+                "visual_fallback_used": fallback_used,
             })
         else:
             checks["formal_pdf_skipped"] = "五条现实校准未完成"

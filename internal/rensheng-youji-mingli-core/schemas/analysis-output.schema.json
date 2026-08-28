@@ -1612,7 +1612,7 @@
         "claim_ids": {"type": "array", "minItems": 6, "uniqueItems": true, "items": {"type": "string"}},
         "domain_specific_claim_ids": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string"}},
         "mainline_claim_ids": {"type": "array", "maxItems": 2, "uniqueItems": true, "items": {"type": "string"}},
-        "emphasis_claim_ids": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": {"type": "string"}},
+        "emphasis_claim_ids": {"type": "array", "minItems": 0, "maxItems": 2, "uniqueItems": true, "items": {"type": "string"}},
         "domain_mechanisms": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string", "minLength": 4}},
         "survives_without_mainline": {"const": true},
         "formation_chain_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},

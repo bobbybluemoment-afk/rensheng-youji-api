@@ -70,6 +70,7 @@ def main() -> int:
             "unittest",
             "tests.test_report_v27_pipeline.ReportV27PipelineTest.test_v27_full_delivery",
             "tests.test_report_v28_traceability.ReportV28TraceabilityTest",
+            "tests.test_report_v211_delivery_safety.ReportV211DeliverySafetyTest",
         ],
         cwd=ROOT,
         text=True,
@@ -88,7 +89,7 @@ def main() -> int:
         print("FAILED: v0.8.0 Core domain independence and report-grade source bundle")
         print(core_test.stdout or core_test.stderr)
         return 7
-    print("READY: dependencies, chart, v2 card, Core v0.6 evidence sources, materialized brief and fixed 10-page report pipeline passed")
+    print("READY: dependencies, chart, v2 card, Core v0.8 sources, sparse emphasis, stable fallback and fixed 10-page report pipeline passed")
     return 0
 
 

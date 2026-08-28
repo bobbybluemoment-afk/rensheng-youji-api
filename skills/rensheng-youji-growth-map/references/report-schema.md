@@ -1,4 +1,4 @@
-# 人生有迹报告 JSON v2.10.0
+# 人生有迹报告 JSON v2.11.0
 
 ## 目录
 
@@ -18,7 +18,7 @@
 - 正式报告：`document_mode=full_calibrated`，必须完成五条现实校准、事实提纲、人物初稿和中文编辑，生成10页PDF。
 - 未校准版：`document_mode=preliminary_uncalibrated`，只生成初步Markdown与新版卡片，不生成正式PDF。
 
-正式报告使用 `schema_version=2.10.0`，Core使用 `core_version=0.8.0`。
+正式报告使用 `schema_version=2.11.0`，Core继续使用 `core_version=0.8.0`。
 
 ## 2. 来源链路
 
@@ -36,7 +36,7 @@
 
 ```json
 {
-  "schema_version": "2.10.0",
+  "schema_version": "2.11.0",
   "report_id": "唯一报告编号",
   "document_mode": "full_calibrated",
   "source": {
@@ -104,7 +104,7 @@
 - `paragraphs`：3—4个自然段，总计500—700个汉字；
 - `source_claim_ids`：至少6个有效判断来源；
 - `paragraph_claim_map`：每个自然段至少映射两个实体化Core判断；
-- `emphasis_spans`：3—4条重点判断的段落位置、精确文本与Core判断来源；
+- `emphasis_spans`：0—2条完整重点判断的段落位置、精确文本与Core判断来源；
 - `coverage`：至少覆盖性格、形成、家庭教育、事业财富、关系和当前阶段。
 
 完整人生主线先综述这个人，不围绕用户关注方向集中取材。不得用一句口号或“先扎根后显声”等生造表达代替。
@@ -131,7 +131,7 @@
 - `mainline_claim_ids`：最多占本节判断的30%；
 - `domain_mechanisms`：至少两个领域自身机制；
 - `survives_without_mainline`：必须为 `true`；
-- `emphasis_spans`：1—2条由Core重点判断支持的精确句子，每段最多一条；
+- `emphasis_spans`：0—1条由Core重点判断支持的完整句子；没有合适重点时允许为空；
 - `coverage`：在内部记录特征、行为、形成、挑战、当前变化与应对是否覆盖；
 - `confidence`：高置信、中等置信或待验证；
 - `audit`：来源、具体例子和证据缺口，只用于内部检查。
@@ -142,7 +142,7 @@
 
 ## 6. 当前问题与阶段
 
-`current_question_narrative` 包含2—4个自然段、320—650个汉字，记录判断来源，并包含2—3条结构化重点句。内容需要：
+`current_question_narrative` 包含2—4个自然段、320—650个汉字，记录判断来源，并包含0—1条结构化重点句。内容需要：
 
 - 直接回答用户当前问题；
 - 说明主要判断成立的条件；
@@ -160,7 +160,7 @@
 
 `editorial_review` 只保存 `review_id` 和 `version=2.2.0`；完整记录放在独立 `editorial-review.json`。
 
-`life_overview`、`current_question_narrative` 和六个领域都必须包含 `emphasis_spans`。每项保存 `paragraph_index`、正文中的精确 `text` 和支撑它的 `claim_ids`；正文自身保持纯文本，由渲染器统一加粗。
+`life_overview`、`current_question_narrative` 和六个领域都保留 `emphasis_spans` 字段，允许空数组。每项保存 `paragraph_index`、正文中带句末标点的完整 `text` 和支撑它的 `claim_ids`；正文自身保持纯文本，由渲染器将重点判断独立成行。不得截取半句或为满足数量扩写。
 
 交付时必须同时传入初稿和编辑记录，程序逐区核对：
 

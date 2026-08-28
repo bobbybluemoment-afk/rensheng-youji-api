@@ -35,6 +35,7 @@ BODY_FONT_PATH = REPO_ROOT / "assets/fonts/lxgw/LXGWWenKai-Regular.ttf"
 WECHAT_PATH = REPO_ROOT / "assets/wechat-contact.jpg"
 LOGO_PATH = REPO_ROOT / "assets/rensheng-youji-logo.png"
 ASSET_MANIFEST_PATH = REPO_ROOT / "assets/asset-manifest.json"
+RENDER_STYLE = "primary"
 
 
 def normalize_display_text(value: Any) -> str:
@@ -129,6 +130,8 @@ class Page:
         self.draw = ImageDraw.Draw(self.image)
         self.y = TOP
         self.compact = compact
+        self.overflow = False
+        self.text_render_completed = True
         self.draw.rounded_rectangle((54, 40, WIDTH - 54, 70), 15, fill=TEAL)
         self.draw.text((MARGIN_X, 88), title, font=font(38, role="heading"), fill=TEAL)
         self.y = 158
@@ -150,8 +153,8 @@ class Page:
         self.y += gap
 
     def paragraph_emphasis(self, text: str, emphasis: str | None, *, size: int | None = None, gap: int = 14) -> None:
-        """绘制一段正文；重点句用深青色标题字重，正文仍保持统一字号和左对齐。"""
-        if not emphasis:
+        """重点判断独立成行；稳定模式完全关闭重点样式，避免视觉增强阻塞交付。"""
+        if not emphasis or RENDER_STYLE == "stable":
             self.paragraph(text, size=size, gap=gap)
             return
         size = size or (22 if self.compact else 26)
@@ -161,38 +164,23 @@ class Page:
         if start < 0:
             raise ValueError("重点句不是对应正文的精确子串")
         end = start + len(target)
-        body_font = font(size, role="body")
-        emphasis_font = font(size, role="heading")
-        width = WIDTH - 2 * MARGIN_X
-        line_height = size + (8 if self.compact and size >= 23 else 11 if self.compact else 14)
-        lines: list[list[tuple[str, bool]]] = []
-        current: list[tuple[str, bool]] = []
-        current_width = 0.0
-        for index, char in enumerate(value):
-            highlighted = start <= index < end
-            char_font = emphasis_font if highlighted else body_font
-            char_width = self.draw.textlength(char, font=char_font)
-            if current and current_width + char_width > width:
-                lines.append(current)
-                current, current_width = [], 0.0
-            current.append((char, highlighted))
-            current_width += char_width
-        if current:
-            lines.append(current)
+        before, after = value[:start].strip(), value[end:].strip()
+        if before:
+            self.paragraph(before, size=size, gap=5)
+        judgment_font = font(size, role="heading")
+        lines = wrap(self.draw, target, judgment_font, WIDTH - 2 * MARGIN_X - 24)
+        line_height = size + (9 if self.compact else 12)
+        self._ensure(line_height * len(lines) + 10)
+        top = self.y
+        self.draw.rounded_rectangle((MARGIN_X, top + 2, MARGIN_X + 7, top + line_height * len(lines) - 3), 3, fill=TEAL)
         for line in lines:
-            self._ensure(line_height)
-            x = MARGIN_X
-            run, style = "", line[0][1]
-            for char, highlighted in line + [("", not style)]:
-                if highlighted == style:
-                    run += char
-                    continue
-                run_font = emphasis_font if style else body_font
-                self.draw.text((x, self.y), run, font=run_font, fill=TEAL if style else INK)
-                x += self.draw.textlength(run, font=run_font)
-                run, style = char, highlighted
+            self.draw.text((MARGIN_X + 20, self.y), line, font=judgment_font, fill=TEAL)
             self.y += line_height
-        self.y += gap
+        self.y += 6
+        if after:
+            self.paragraph(after, size=size, gap=gap)
+        else:
+            self.y += max(0, gap - 6)
 
     def bullet(self, text: str, *, size: int | None = None, accent: str = GOLD) -> None:
         size = size or (22 if self.compact else 25)
@@ -238,6 +226,7 @@ class Page:
 
     def _ensure(self, height: int) -> None:
         if self.y + height > HEIGHT - BOTTOM:
+            self.overflow = True
             raise ValueError(f"第{self.number}页内容溢出；请按报告字段字数限制压缩正文")
 
     def finish(self) -> Image.Image:
@@ -246,6 +235,9 @@ class Page:
         self.draw.text((MARGIN_X, footer_y), "人生有迹 by 景行", font=font(18), fill=MUTED)
         page_text = f"{self.number} / 10"
         self.draw.text((WIDTH - MARGIN_X - self.draw.textlength(page_text, font=font(18)), footer_y), page_text, font=font(18), fill=MUTED)
+        self.image.info["overflow"] = self.overflow
+        self.image.info["text_render_completed"] = self.text_render_completed
+        self.image.info["max_content_y"] = self.y
         return self.image
 
 
@@ -316,7 +308,7 @@ def page_three(data: dict[str, Any]) -> Image.Image:
     body_size = 23
     bullet_size = 22
     page.heading("完整人生主线", color=TEAL, size=32)
-    if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0"}:
+    if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0"}:
         spans = {item["paragraph_index"]: item["text"] for item in summary["life_overview"].get("emphasis_spans") or []}
         for index, paragraph in enumerate(summary["life_overview"]["paragraphs"]):
             page.paragraph_emphasis(paragraph, spans.get(index), size=body_size, gap=18)
@@ -342,7 +334,7 @@ def page_four(data: dict[str, Any]) -> Image.Image:
     answer_size = 27
     label_size = 22
     page.paragraph("你想问｜" + data["profile"]["question"], size=26, color=PINK, gap=18)
-    if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0"}:
+    if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0"}:
         page.heading("对当前问题的直接回应", color=TEAL, size=29)
         current = data["current_question_narrative"]
         spans = {item["paragraph_index"]: item["text"] for item in current.get("emphasis_spans") or []}
@@ -368,10 +360,10 @@ def dimensions_page(data: dict[str, Any], number: int, indexes: tuple[int, int])
         page.y = block_top + 18
         page.draw.text((MARGIN_X, page.y), section["title"], font=font(28, role="heading"), fill=TEAL)
         page.y += 44
-        if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0"}:
+        if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0"}:
             spans = {item["paragraph_index"]: item["text"] for item in section.get("emphasis_spans") or []}
             for paragraph_index, paragraph in enumerate(section["paragraphs"]):
-                page.paragraph_emphasis(paragraph, spans.get(paragraph_index), size=23 if data.get("schema_version") == "2.10.0" else 22, gap=8)
+                page.paragraph_emphasis(paragraph, spans.get(paragraph_index), size=23 if data.get("schema_version") in {"2.10.0", "2.11.0"} else 22, gap=8)
         else:
             page.callout("", section["overview"], size=22, fill="#E7EFEA")
             for key, heading in zip(DIMENSION_PARAGRAPHS[section["id"]], DIMENSION_HEADINGS[section["id"]]):
@@ -434,7 +426,11 @@ def final_page(data: dict[str, Any]) -> Image.Image:
     return page.finish()
 
 
-def render_pdf(data: dict[str, Any], card_path: Path, output: Path, pages_dir: Path | None = None) -> dict[str, Any]:
+def render_pdf(data: dict[str, Any], card_path: Path, output: Path, pages_dir: Path | None = None, style_mode: str = "primary") -> dict[str, Any]:
+    global RENDER_STYLE
+    if style_mode not in {"primary", "stable"}:
+        raise ValueError("style_mode 必须是primary或stable")
+    RENDER_STYLE = style_mode
     validate(data)
     if data["document_mode"] != "full_calibrated":
         raise ValueError("未完成五条校准时只生成初步分析，不生成正式PDF")
@@ -448,13 +444,17 @@ def render_pdf(data: dict[str, Any], card_path: Path, output: Path, pages_dir: P
     ]
     if len(pages) != 10:
         raise ValueError("PDF页数必须恰好为10页")
+    overflow = any(bool(page.info.get("overflow", False)) for page in pages)
+    text_render_completed = all(bool(page.info.get("text_render_completed", True)) for page in pages)
+    if overflow or not text_render_completed:
+        raise ValueError("PDF渲染完整性检查未通过")
     if pages_dir:
         pages_dir.mkdir(parents=True, exist_ok=True)
         for index, image in enumerate(pages, start=1):
             image.save(pages_dir / f"page-{index:02d}.png", format="PNG")
     output.parent.mkdir(parents=True, exist_ok=True)
     pages[0].save(output, format="PDF", save_all=True, append_images=pages[1:], resolution=150.0, quality=92)
-    return {"pages": 10, "page_size": [WIDTH, HEIGHT], "card_size": [1242, 1660], "wechat_embedded": True, "wechat_asset": "assets/wechat-contact.jpg", "wechat_sha256": wechat_sha256, "logo_embedded": True, "logo_asset": "assets/rensheng-youji-logo.png", "logo_sha256": logo_sha256, "body_font": "assets/fonts/lxgw/LXGWWenKai-Regular.ttf", "body_font_sha256": body_font_sha256}
+    return {"pages": 10, "page_size": [WIDTH, HEIGHT], "card_size": [1242, 1660], "wechat_embedded": True, "wechat_asset": "assets/wechat-contact.jpg", "wechat_sha256": wechat_sha256, "logo_embedded": True, "logo_asset": "assets/rensheng-youji-logo.png", "logo_sha256": logo_sha256, "body_font": "assets/fonts/lxgw/LXGWWenKai-Regular.ttf", "body_font_sha256": body_font_sha256, "render_mode": style_mode, "overflow": overflow, "text_render_completed": text_render_completed}
 
 
 def main() -> int:
@@ -463,10 +463,11 @@ def main() -> int:
     parser.add_argument("--card", type=Path, required=True, help="新版1242×1660人生卡片PNG")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--pages-dir", type=Path)
+    parser.add_argument("--style-mode", choices=("primary", "stable"), default="primary")
     args = parser.parse_args()
     try:
         data = json.loads(args.input.read_text(encoding="utf-8"))
-        result = render_pdf(data, args.card, args.out, args.pages_dir)
+        result = render_pdf(data, args.card, args.out, args.pages_dir, args.style_mode)
     except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
         print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False))
         return 1

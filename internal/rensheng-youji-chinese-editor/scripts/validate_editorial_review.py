@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 BANNED = {"组织化过劳型", "先扎根后显声", "表达窗口", "能力输出", "可见度", "物质与经营底色", "资源伴随期待", "表达被规训", "花不显", "现实落点", "核对点", "经营责任", "经营基础", "进入经营期", "经营底色", "经营扩张", "输出与经营"}
+MINGLI_TERMS = {"命盘", "命局", "原局", "年柱", "月柱", "日柱", "时柱", "天干", "地支", "干支", "日主", "身强", "身弱", "比肩", "劫财", "食神", "伤官", "食伤", "正印", "偏印", "正财", "偏财", "正官", "七杀", "格局", "调候", "喜用", "忌神", "大运", "流年", "藏干", "透干", "根苗花果", "根气", "冲根", "引动"}
 
 
 def digest(paragraphs: list[str]) -> str:
@@ -73,12 +74,13 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
             after_spans = after.get("emphasis_spans") or []
             before_map = [(item.get("paragraph_index"), item.get("claim_ids")) for item in before_spans if isinstance(item, dict)]
             after_map = [(item.get("paragraph_index"), item.get("claim_ids")) for item in after_spans if isinstance(item, dict)]
-            if before_map != after_map:
-                errors.append(f"{section_id} 编辑不得改变重点判断的段落和Core来源")
+            if len(after_map) > len(before_map) or any(item not in before_map for item in after_map):
+                errors.append(f"{section_id} 编辑不得增加重点判断或改变其Core来源；只允许删除不适合突出显示的句子")
             for span in after_spans:
                 paragraph_index = span.get("paragraph_index") if isinstance(span, dict) else None
-                if not isinstance(paragraph_index, int) or paragraph_index >= len(after_text) or span.get("text") not in after_text[paragraph_index]:
-                    errors.append(f"{section_id} 编辑后的重点句必须仍是对应正文的精确子串")
+                span_text = span.get("text") if isinstance(span, dict) else None
+                if not isinstance(paragraph_index, int) or paragraph_index >= len(after_text) or not isinstance(span_text, str) or span_text not in after_text[paragraph_index] or not re.search(r"[。！？]$", span_text.strip()):
+                    errors.append(f"{section_id} 编辑后的重点句必须是对应正文中带句末标点的完整句子")
         if before_text != after_text:
             changed += 1
         if not isinstance(record.get("changes"), list):
@@ -89,6 +91,9 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
     found = sorted(term for term in BANNED if term in visible)
     if found:
         errors.append("终稿仍含生硬或生造表达：" + "、".join(found))
+    mingli_found = sorted(term for term in MINGLI_TERMS if term in visible)
+    if mingli_found:
+        errors.append("终稿仍含用户不可见的内部命理术语：" + "、".join(mingli_found))
     if re.search(r"校准后的现实线索|校准确认|符合.+判断", visible):
         errors.append("终稿不得展示校准过程")
     third_person = [term for term in ("这个人", "命主", "本人") if term in visible]
@@ -96,6 +101,16 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
         third_person.append("他／她")
     if third_person:
         errors.append("终稿必须统一使用第二人称“你”，禁止出现：" + "、".join(sorted(set(third_person))))
+    for section_id, section in final_map.items():
+        for index, paragraph in enumerate(section.get("paragraphs") or []):
+            if not isinstance(paragraph, str):
+                continue
+            if re.search(r"(?:与此同时|因为|但是|但|而|其中|意味着|例如|包括)[，：；]?\s*$", paragraph):
+                errors.append(f"{section_id} 第{index + 1}段以未完成连接语结束")
+            fragments = [part.strip() for part in re.split(r"[。！？]", paragraph) if part.strip()]
+            suspicious = {"引", "的", "有", "但", "而", "与", "和", "或", "并", "是", "为"}
+            if any(re.sub(r"[^\u3400-\u9fff]", "", part) in suspicious for part in fragments):
+                errors.append(f"{section_id} 第{index + 1}段含疑似残字或残句")
     if (is_v21 or is_v22) and visible.count("经营") > 2:
         errors.append("终稿中“经营”出现过多；仅可用于真实经商、创业或利润责任语境")
     sentences = [re.sub(r"[，；：、\s]", "", item) for item in re.split(r"[。！？]", visible) if len(re.findall(r"[\u3400-\u9fff]", item)) >= 12]

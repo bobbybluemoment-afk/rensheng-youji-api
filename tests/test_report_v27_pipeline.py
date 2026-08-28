@@ -167,7 +167,7 @@ class ReportV27PipelineTest(unittest.TestCase):
                 "--analysis", str(paths["analysis"]),
                 "--free-card", str(free_card),
                 "--calibration-questions", str(paths["questions"]),
-                "--out-dir", str(delivery), "--keep-pages",
+                "--out-dir", str(delivery), "--keep-pages", "--allow-test-fixture",
             ], cwd=ROOT, text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             manifest = json.loads((delivery / "report-delivery-manifest.json").read_text(encoding="utf-8"))
