@@ -13,6 +13,14 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 
 def main() -> int:
+    reference_test = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/audit_skill_references.py"), str(ROOT)],
+        cwd=ROOT, text=True, capture_output=True, check=False,
+    )
+    if reference_test.returncode:
+        print("FAILED: Skill declares a missing local dependency")
+        print(reference_test.stdout or reference_test.stderr)
+        return 1
     try:
         import lunar_python  # noqa: F401
         from PIL import Image  # noqa: F401
@@ -41,6 +49,7 @@ def main() -> int:
         ROOT / "scripts/apply_calibration_delta.py",
         ROOT / "scripts/audit_claim_diversity.py",
         ROOT / "scripts/audit_report_claim_coverage.py",
+        ROOT / "scripts/audit_skill_references.py",
         ROOT / "assets/wechat-contact.jpg",
         ROOT / "assets/rensheng-youji-logo.png",
         ROOT / "assets/asset-manifest.json",

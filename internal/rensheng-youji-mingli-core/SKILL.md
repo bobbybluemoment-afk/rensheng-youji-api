@@ -64,7 +64,7 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 9. [annual-activation.md](references/annual-activation.md)：按大运主题分析流年执行、相邻年份连续性和伏笔。
 10. [blind-school-cross-method.md](references/blind-school-cross-method.md)：用宾主、体用、做功和多层象法生成组织、行业、岗位、工作对象与成果形式候选，并保留不同作者口径与禁断边界。
 11. [calibration-confidence.md](references/calibration-confidence.md)：生成现实候选，吸收用户反馈并标注置信度。
-12. [candidate-relations-and-calibrated-synthesis.md](references/candidate-relations-and-calibrated-synthesis.md)：先建立候选共存、主次、阶段、条件与互斥关系，再用校准结果重构完整人物。
+12. [candidate-relations-and-calibrated-synthesis.md](references/candidate-relations-and-calibrated-synthesis.md)：校准前建立候选关系并冻结完整人物，校准后只以增量调整现实候选状态。
 13. [domain-independent-analysis.md](references/domain-independent-analysis.md)：先完成六个领域各自的判断、机制与覆盖，再限制共享主线比例和跨章复用。
 14. [report-grade-reality-mapping.md](references/report-grade-reality-mapping.md)：建立开放现实候选、人物形成链、领域联动链和报告级判断台账。
 15. [safety-boundaries.md](references/safety-boundaries.md)：执行非宿命表达、高风险边界和不确定性披露。
