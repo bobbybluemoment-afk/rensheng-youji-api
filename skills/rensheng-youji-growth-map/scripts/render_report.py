@@ -561,7 +561,7 @@ def _validate_v27(data: dict[str, Any]) -> None:
     if data.get("document_mode") not in {"full_calibrated", "preliminary_uncalibrated"}:
         errors.append("document_mode 值无效")
     source = data.get("source", {})
-    expected_cores = {"0.9.0", "0.10.0", "0.11.0"} if data.get("schema_version") == "2.13.0" else {"0.8.1"} if data.get("schema_version") == "2.12.0" else {"0.8.0"} if data.get("schema_version") in {"2.10.0", "2.11.0"} else {"0.7.0"} if data.get("schema_version") == "2.9.0" else {"0.6.0"} if data.get("schema_version") == "2.8.0" else {"0.5.0"}
+    expected_cores = {"0.9.0", "0.10.0", "0.11.0", "0.12.0"} if data.get("schema_version") == "2.13.0" else {"0.8.1"} if data.get("schema_version") == "2.12.0" else {"0.8.0"} if data.get("schema_version") in {"2.10.0", "2.11.0"} else {"0.7.0"} if data.get("schema_version") == "2.9.0" else {"0.6.0"} if data.get("schema_version") == "2.8.0" else {"0.5.0"}
     if source.get("core_version") not in expected_cores:
         errors.append(f"{data.get('schema_version')}报告必须来自core_version={sorted(expected_cores)}之一")
     if source.get("analysis_as_of") != data.get("generated_on"):

@@ -21,7 +21,7 @@ description: 人生有迹内部八字分析核心。仅供人生有迹卡片、�
 
 - `request`：分析基准日期、时间范围、历法和时区口径；
 - `person`：姓名可选，出生年月日时、出生地、性别；
-- `chart`：四柱、各柱十神、地支主气/中气/余气及对应十神；纳音和神煞均为上游确定性可选输入，缺失时Core不得补算；
+- `chart`：四柱、各柱十神、地支主气/中气/余气及对应十神；
 - `solar_terms_and_boundaries`：节气、日界、时辰边界和真太阳时处理结果；
 - `five_elements`：确定性权重结果可选；没有固定算法时必须为 `null`；
 - `luck_cycles`：起运时间、顺逆、每步大运干支、藏干和时间范围；
@@ -63,14 +63,15 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 8. [luck-cycle-theme.md](references/luck-cycle-theme.md)：确定每步大运的阶段主题、激活键和前后承接。
 9. [annual-activation.md](references/annual-activation.md)：按大运主题分析流年执行、相邻年份连续性和伏笔。
 10. [blind-school-cross-method.md](references/blind-school-cross-method.md)：用宾主、体用、做功和多层象法生成组织、行业、岗位、工作对象与成果形式候选，并保留不同作者口径与禁断边界。
-11. [independent-method-analysis.md](references/independent-method-analysis.md)：强制各方法隔离推演、分别生成技术结论和现实候选，再按方法家族独立性综合；规定单方法补充、神煞纳音辅助和冲突处理。
+11. [independent-method-analysis.md](references/independent-method-analysis.md)：强制九种方法隔离推演、分别生成技术结论和现实候选，再按方法家族独立性综合；规定单方法补充和冲突处理。
 12. [method-failure-and-recovery.md](references/method-failure-and-recovery.md)：规定逐方法校验、三轮局部修复、失败状态、最低方法覆盖和降级交付。
-13. [calibration-confidence.md](references/calibration-confidence.md)：生成现实候选，吸收用户反馈并标注置信度。
-14. [candidate-relations-and-calibrated-synthesis.md](references/candidate-relations-and-calibrated-synthesis.md)：校准前建立候选关系并冻结完整人物，校准后只以增量调整现实候选状态。
-15. [domain-independent-analysis.md](references/domain-independent-analysis.md)：先完成六个领域各自的判断、机制与覆盖，再限制共享主线比例和跨章复用。
-16. [report-grade-reality-mapping.md](references/report-grade-reality-mapping.md)：建立开放现实候选、人物形成链、领域联动链和报告级判断台账。
-17. [safety-boundaries.md](references/safety-boundaries.md)：执行非宿命表达、高风险边界和不确定性披露。
-18. [post-calibration-report-selection.md](references/post-calibration-report-selection.md)：冻结报告候选池，并在校准后确定性生成最终选材与单章降级状态。
+13. [core-production-bridge.md](references/core-production-bridge.md)：把已校验方法包确定性汇总为综合输入，约束AI语义综合，再由程序组装完整Core与报告来源。
+14. [calibration-confidence.md](references/calibration-confidence.md)：生成现实候选，吸收用户反馈并标注置信度。
+15. [candidate-relations-and-calibrated-synthesis.md](references/candidate-relations-and-calibrated-synthesis.md)：校准前建立候选关系并冻结完整人物，校准后只以增量调整现实候选状态。
+16. [domain-independent-analysis.md](references/domain-independent-analysis.md)：先完成六个领域各自的判断、机制与覆盖，再限制共享主线比例和跨章复用。
+17. [report-grade-reality-mapping.md](references/report-grade-reality-mapping.md)：建立开放现实候选、人物形成链、领域联动链和报告级判断台账。
+18. [safety-boundaries.md](references/safety-boundaries.md)：执行非宿命表达、高风险边界和不确定性披露。
+19. [post-calibration-report-selection.md](references/post-calibration-report-selection.md)：冻结报告候选池，并在校准后确定性生成最终选材与单章降级状态。
 
 ## 执行规则
 
@@ -95,8 +96,6 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 ### 5. 强制每种方法独立推演
 
 格局成败、气势意向与形象方局、调候、十神网络、根苗花果、盲派和岁运连续性必须分别只读取冻结排盘事实，各自产生命理技术结论与现实候选；宫位六亲、干支根气另作部分独立分析。任何方法不得读取其他方法已经生成的结论后再改写成同一方向。全部方法冻结后，综合层才可以归并同向、互补、条件、阶段、上下位和真正冲突。
-
-神煞与纳音只使用上游确定性提供的数据；缺少时明确 `unavailable`，不得由模型补算。它们单独支持的内容只能作为待验证辅助线索，不能进入报告必写或重点候选。
 
 多方法一致必须按不同主要方法家族计算，不能把扶抑、病药、通关、旺衰、根透、刑冲合害等同源术语拆成多票。只有至少两个不同主要方法家族独立同向时，结构置信度才可为高。单一主要方法若新增实质信息、条件明确、可观察且没有事实冲突，可以保留为补充判断。
 
@@ -242,7 +241,7 @@ validation: []
 8. `interaction_network`
    - 生克、制化、刑冲合害破、合化条件和全局作用；
 9. `independent_method_analyses`
-   - 十一个方法家族各自独立生成的技术结论、现实候选、成立条件、反证和边界；
+   - 九个方法家族各自独立生成的技术结论、现实候选、成立条件、反证和边界；
 10. `method_execution_audit`
     - 每个方法的完成、失败、重试和降级结果，以及完整、降级或仅初步分析的交付决定；
 11. `method_synthesis`
@@ -310,20 +309,26 @@ validation: []
 
 不要省略没有明显结论的栏目。使用空数组、`null` 或“证据不足”保留结构，不得补造内容。
 
-完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.11.0`。每个方法生成后先运行：
+完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.12.0`。每个方法生成后先运行：
 
 ```bash
 python3 scripts/validate_method_packet.py method-analysis-pattern-structure.json \
   --expected-method pattern_structure
 ```
 
-全部方法完成或被合法归类后，先由脚本生成报告来源映射，再运行完整校验：
+九个方法完成或被合法归类后，按生产桥生成受约束综合输入。AI只生成规定的语义综合区块，随后由程序组装完整Core并自动生成报告来源：
 
 ```bash
-python3 ../../scripts/build_report_source_bundle.py analysis-output-before-sources.json \
-  --output analysis-output.json
-python3 scripts/validate_analysis_output.py <analysis-output.json>
-python3 ../../scripts/audit_claim_diversity.py <analysis-output.json>
+python3 ../../scripts/prepare_core_synthesis.py analysis-input.json \
+  --method-packet-dir method-packets \
+  --output core-synthesis-input.json
+python3 ../../scripts/validate_core_synthesis.py \
+  core-synthesis-input.json core-semantic-analysis.json
+python3 ../../scripts/finalize_core_analysis.py \
+  core-synthesis-input.json core-semantic-analysis.json \
+  --output analysis-output-initial.json
+python3 scripts/validate_analysis_output.py analysis-output-initial.json
+python3 ../../scripts/audit_claim_diversity.py analysis-output-initial.json
 ```
 
 只有输出校验通过后，才把 `analysis_bundle` 交给下游卡片、报告或网页流程。

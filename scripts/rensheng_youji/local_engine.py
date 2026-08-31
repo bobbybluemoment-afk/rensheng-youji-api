@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from .analysis import generate_card_copy
 from .bazi import calculate_bazi
@@ -38,14 +39,22 @@ def build_profile(
     warnings: list[str] = []
     birthplace = f"{country}·{city}"
     if time_basis == "true_solar_adjusted":
+        location = resolve_location(city, longitude, timezone)
+        utc_offset = input_time.replace(tzinfo=ZoneInfo(location.timezone)).utcoffset()
         final_time = input_time
         time_info = {
             "input_local_time": birth,
             "time_basis": time_basis,
             "true_solar_time": birth,
             "correction_minutes": 0.0,
+            "longitude": location.longitude,
+            "timezone": location.timezone,
+            "resolved_location": location.resolved_name,
+            "utc_offset_hours": (utc_offset.total_seconds() / 3600) if utc_offset else 0.0,
             "note": "输入时间已由用户校正为真太阳时，本地引擎未重复校正。",
         }
+        if location.resolved_name:
+            birthplace = f"{country}·{location.resolved_name}"
     else:
         location = resolve_location(city, longitude, timezone)
         final_time, correction, utc_offset = adjust_to_true_solar(input_time, location)

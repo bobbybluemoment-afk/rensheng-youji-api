@@ -23,7 +23,7 @@ class CoreV010MethodIndependenceTest(unittest.TestCase):
             if item["method_id"] != "climate_adjustment"
         ]
         errors = validate(analysis)
-        self.assertTrue(any("11个规定方法家族" in item or "缺少方法家族" in item for item in errors))
+        self.assertTrue(any("9个规定方法家族" in item or "缺少方法家族" in item for item in errors))
 
     def test_method_cannot_read_another_method_result(self) -> None:
         analysis = self_test_fixture()
@@ -68,14 +68,12 @@ class CoreV010MethodIndependenceTest(unittest.TestCase):
         errors = validate(analysis)
         self.assertTrue(any("same_direction成员必须使用相同标准化现实方向" in item for item in errors))
 
-    def test_auxiliary_role_cannot_hide_primary_method_support(self) -> None:
+    def test_removed_auxiliary_role_is_rejected(self) -> None:
         analysis = self_test_fixture()
         cluster = analysis["method_synthesis"]["clusters"][0]
-        cluster["report_role"] = "auxiliary_only"
-        analysis["method_synthesis"]["primary_synthesis_ids"].remove(cluster["synthesis_id"])
-        analysis["method_synthesis"]["auxiliary_only_synthesis_ids"].append(cluster["synthesis_id"])
+        cluster["report_role"] = "removed_legacy_role"
         errors = validate(analysis)
-        self.assertTrue(any("auxiliary_only只能由神煞或纳音辅助方法支持" in item for item in errors))
+        self.assertTrue(any("report_role" in item for item in errors))
 
     def test_single_primary_method_supplement_is_allowed(self) -> None:
         analysis = self_test_fixture()

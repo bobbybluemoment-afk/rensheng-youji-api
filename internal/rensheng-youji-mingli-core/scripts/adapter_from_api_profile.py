@@ -202,7 +202,6 @@ def adapt_profile(
         "chart": {
             "day_master": day_master,
             "pillars": pillar_details,
-            "nayin": None,
             "calculation_engine": "rensheng-youji-api/lunar_python",
             "calculation_version": str(profile.get("version")),
         },
@@ -210,7 +209,7 @@ def adapt_profile(
             "timezone_resolved": timezone_name,
             "utc_offset": f"{float(time_info.get('utc_offset_hours', 8)):+.1f}",
             "daylight_saving_applied": False,
-            "true_solar_time_applied": time_info.get("time_basis") == "local_civil",
+            "true_solar_time_applied": True,
             "true_solar_datetime": iso_local(time_info["true_solar_time"], timezone_name),
             "nearest_solar_terms": [
                 {

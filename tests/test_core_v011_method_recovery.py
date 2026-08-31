@@ -54,10 +54,6 @@ class CoreV011MethodRecoveryTest(unittest.TestCase):
         method["attempt_count"] = 3
         self.assertEqual(validate_packet(packet, "pattern_structure"), [])
 
-    def test_auxiliary_unavailable_does_not_need_retries(self) -> None:
-        packet = method_packet("shen_sha_auxiliary")
-        self.assertEqual(validate_packet(packet, "shen_sha_auxiliary"), [])
-
     def test_delivery_decision_uses_anchor_coverage(self) -> None:
         self.assertEqual(method_delivery_decision(set(PRIMARY_METHODS))[0], "full")
         self.assertEqual(method_delivery_decision(set(PRIMARY_METHODS) - {"climate_adjustment"})[0], "degraded")

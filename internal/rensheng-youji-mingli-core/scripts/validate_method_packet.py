@@ -14,7 +14,6 @@ PRIMARY = {
     "ten_god_dynamics", "root_seed_flower_fruit", "blind_school", "timing_continuity",
 }
 PARTIAL = {"position_relationship", "stem_branch_dynamics"}
-AUXILIARY = {"shen_sha_auxiliary", "nayin_auxiliary"}
 GROUPS = {
     "pattern_structure": "pattern_organization",
     "momentum_configuration": "momentum_intention",
@@ -25,14 +24,12 @@ GROUPS = {
     "timing_continuity": "timing_execution",
     "position_relationship": "position_interface",
     "stem_branch_dynamics": "stem_branch_structure",
-    "shen_sha_auxiliary": "symbolic_auxiliary",
-    "nayin_auxiliary": "symbolic_auxiliary",
 }
 ALLOWED_ROOTS = {
     "request", "person", "chart", "solar_terms_and_boundaries", "five_elements",
     "luck_cycles", "annual_cycles", "chart_facts", "chart_audit",
 }
-TERMINAL_FAILURES = {"insufficient_evidence", "blocked_input", "generation_failed", "unavailable"}
+TERMINAL_FAILURES = {"insufficient_evidence", "blocked_input", "generation_failed"}
 
 
 def validate(packet: Any, expected_method: str | None = None) -> list[str]:
@@ -58,7 +55,7 @@ def validate(packet: Any, expected_method: str | None = None) -> list[str]:
         return errors + ["method_id不是规定方法家族"]
     if expected_method and method_id != expected_method:
         errors.append(f"方法包应为{expected_method}，实际为{method_id}")
-    tier = "primary" if method_id in PRIMARY else "partial" if method_id in PARTIAL else "auxiliary"
+    tier = "primary" if method_id in PRIMARY else "partial"
     if method.get("tier") != tier:
         errors.append(f"tier必须为{tier}")
     if method.get("independence_group") != GROUPS[method_id]:
@@ -73,14 +70,12 @@ def validate(packet: Any, expected_method: str | None = None) -> list[str]:
         errors.append("status无效")
     if status == "generation_failed" and attempts != 3:
         errors.append("generation_failed必须完成三轮局部修复")
-    if status == "unavailable" and method_id not in AUXILIARY:
-        errors.append("unavailable只允许用于神煞或纳音")
     if status == "complete" and method.get("failure_reasons"):
         errors.append("complete方法不得保留failure_reasons")
     if status != "complete" and not method.get("failure_reasons"):
         errors.append("未完成方法必须说明failure_reasons")
-    if status != "complete" and method_id not in AUXILIARY and not method.get("degradation_effects"):
-        errors.append("未完成的主要或部分独立方法必须说明degradation_effects")
+    if status != "complete" and not method.get("degradation_effects"):
+        errors.append("未完成方法必须说明degradation_effects")
     if not method.get("limitations"):
         errors.append("limitations至少说明一项方法边界")
     refs = method.get("input_fact_refs") or []

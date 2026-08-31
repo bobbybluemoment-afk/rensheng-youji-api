@@ -29,9 +29,25 @@ python3 scripts/build_visual_series.py visual-signals.json \
   --output visual-series.json
 ```
 
-6. 将 `visual-series.json` 原样放入 `trend_panel`。不得手改起点、OHLC、事业层级、元宝数量或桃花年份。
-7. 组合完整 `free-card-output.json`。
-8. 运行 `python3 scripts/validate_free_card_output.py free-card-output.json`。
+6. 按 [content-selection.md](references/content-selection.md) 生成且只生成 `card-content.json`；它包含 `identity`、`mingju_analysis`、`current_issue`、`full_report_hint` 和 `disclaimers`，不得包含 `source` 或 `trend_panel`。
+7. 从仓库根目录运行确定性组装器。不得由模型手工拼接 `free-card-output.json`：
+
+```bash
+python3 scripts/assemble_free_card.py \
+  --analysis analysis-output-calibrated.json \
+  --content card-content.json \
+  --series visual-series.json \
+  --output free-card-output.json
+```
+
+8. 运行最终校验：
+
+```bash
+python3 internal/rensheng-youji-free-card-output/scripts/validate_free_card_output.py \
+  free-card-output.json
+```
+
+确定性组装器负责从 Core 写入 `source`、把 `visual-series.json` 原样锁入 `trend_panel`，并在写盘前执行同一套最终校验。任一步失败时只修复对应的 `card-content.json` 或 `visual-signals.json`，不得手改趋势序列或最终输出。
 
 只有校验通过后才能交给绘图层。
 

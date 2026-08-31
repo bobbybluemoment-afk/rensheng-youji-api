@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.15.0",
+  "version": "2.16.0",
   "visibility": "internal",
   "stages": [
     {
@@ -39,7 +39,7 @@
     "pages": 10,
     "card_page": 2,
     "report_schema_version": "2.13.0",
-    "core_version": "0.11.0",
+    "core_version": "0.12.0",
     "content_brief_schema_version": "1.5.0",
     "report_draft_schema_version": "1.5.0",
     "editorial_review_version": "2.4.0",
@@ -48,5 +48,5 @@
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "Core 0.11.0强制各方法独立推演、独立产生命理结论与现实候选，并逐方法校验。单个方法失败只允许修复自身，最多重试3次；仍失败时退出综合投票，不得用占位内容补齐。全部7个主要方法完成时完整交付；满足结构、现实与时序锚点且至少5个主要方法完成时允许标明缺口的降级交付；不足时只交付初步分析，不冻结Baseline或生成正式报告。证据、领域判断和来源映射按实际有效结论动态生成，report_source_bundle由确定性程序构建。正式报告继续使用schema 2.13.0，事实提纲和初稿使用1.5.0，中文编辑使用2.4.0。"
+  "notes": "Core 0.12.0固定使用7个主要方法和2个部分独立方法，不再接收、生成或分析神煞与纳音。九个方法包逐一校验后，由prepare_core_synthesis.py确定性汇总排盘事实、方法、证据、方法审计和语义输出契约；AI只生成规定的语义综合区块；validate_core_synthesis.py执行完整来源与结构校验；finalize_core_analysis.py确定性组装完整Core、初始化校准状态并生成report_source_bundle。单方法和语义综合各最多局部修复3次。正式报告继续使用schema 2.13.0，事实提纲和初稿使用1.5.0，中文编辑使用2.4.0。"
 }

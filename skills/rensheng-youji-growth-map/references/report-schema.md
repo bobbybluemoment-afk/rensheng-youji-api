@@ -18,7 +18,7 @@
 - 正式报告：`document_mode=full_calibrated`，必须完成五条现实校准、事实提纲、人物初稿和中文编辑，生成10页PDF。
 - 未校准版：`document_mode=preliminary_uncalibrated`，只生成初步Markdown与新版卡片，不生成正式PDF。
 
-正式报告使用 `schema_version=2.13.0`，当前Core使用 `core_version=0.11.0`。校准前，规定方法家族必须分别产生命理技术结论和现实候选并逐方法校验；单个方法最多重试3次，仍失败则排除。只有 `delivery_decision` 为 `full` 或 `degraded` 才能冻结Core候选池；`preliminary_only` 不得进入正式报告。校准后只能通过绑定Baseline哈希的增量文件调整状态，再由确定性选材程序生成最终报告名单。
+正式报告使用 `schema_version=2.13.0`，当前Core使用 `core_version=0.12.0`。校准前，九个规定方法家族必须分别产生命理技术结论和现实候选并逐方法校验，再通过生产桥完成受约束语义综合与确定性组装；单个方法最多重试3次，仍失败则排除。只有 `delivery_decision` 为 `full` 或 `degraded` 才能冻结Core候选池；`preliminary_only` 不得进入正式报告。校准后只能通过绑定Baseline哈希的增量文件调整状态，再由确定性选材程序生成最终报告名单。
 
 ## 2. 来源链路
 
@@ -41,7 +41,7 @@
   "document_mode": "full_calibrated",
   "source": {
     "analysis_id": "与Core和卡片一致",
-    "core_version": "0.11.0",
+    "core_version": "0.12.0",
     "analysis_as_of": "YYYY-MM-DD",
     "calibration_status": "calibrated"
   },

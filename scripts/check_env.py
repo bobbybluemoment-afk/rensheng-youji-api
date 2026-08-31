@@ -21,6 +21,14 @@ def main() -> int:
         print("FAILED: Skill declares a missing local dependency")
         print(reference_test.stdout or reference_test.stderr)
         return 1
+    pipeline_test = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/audit_pipeline_contract.py"), str(ROOT)],
+        cwd=ROOT, text=True, capture_output=True, check=False,
+    )
+    if pipeline_test.returncode:
+        print("FAILED: production pipeline contains an unproduced input or missing stage contract")
+        print(pipeline_test.stdout or pipeline_test.stderr)
+        return 1
     try:
         import lunar_python  # noqa: F401
         from PIL import Image  # noqa: F401
@@ -34,6 +42,7 @@ def main() -> int:
         ROOT / "assets/fonts/lxgw/LXGWWenKai-Regular.ttf",
         ROOT / "internal/rensheng-youji-mingli-core/SKILL.md",
         ROOT / "internal/rensheng-youji-mingli-core/references/method-failure-and-recovery.md",
+        ROOT / "internal/rensheng-youji-mingli-core/references/core-production-bridge.md",
         ROOT / "internal/rensheng-youji-mingli-core/scripts/validate_method_packet.py",
         ROOT / "internal/rensheng-youji-report-content-brief/SKILL.md",
         ROOT / "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py",
@@ -48,6 +57,12 @@ def main() -> int:
         ROOT / "skills/rensheng-youji-growth-map/scripts/generate_full_report.py",
         ROOT / "skills/rensheng-youji-growth-map/scripts/render_report_pdf.py",
         ROOT / "scripts/core_baseline.py",
+        ROOT / "internal/pipeline-contract.json",
+        ROOT / "scripts/audit_pipeline_contract.py",
+        ROOT / "scripts/core_synthesis_contract.py",
+        ROOT / "scripts/prepare_core_synthesis.py",
+        ROOT / "scripts/validate_core_synthesis.py",
+        ROOT / "scripts/finalize_core_analysis.py",
         ROOT / "scripts/build_report_source_bundle.py",
         ROOT / "scripts/apply_calibration_delta.py",
         ROOT / "scripts/resolve_report_sources.py",
@@ -92,6 +107,8 @@ def main() -> int:
             "tests.test_report_v212_core_traceability.ReportV212CoreTraceabilityTest",
             "tests.test_report_v213_post_calibration_selection.ReportV213PostCalibrationSelectionTest",
             "tests.test_core_v011_method_recovery.CoreV011MethodRecoveryTest",
+            "tests.test_core_v012_production_bridge.CoreV012ProductionBridgeTest",
+            "tests.test_pipeline_contract.PipelineContractTest",
         ],
         cwd=ROOT,
         text=True,
@@ -107,10 +124,10 @@ def main() -> int:
         cwd=ROOT, text=True, capture_output=True, check=False,
     )
     if core_test.returncode:
-        print("FAILED: v0.11.0 Core method recovery, delivery decision, synthesis, candidate reserves and deterministic report sources")
+        print("FAILED: v0.12.0 Core nine-method isolation, production bridge, synthesis validation or deterministic assembly")
         print(core_test.stdout or core_test.stderr)
         return 7
-    print("READY: dependencies, chart, v2 card, Core v0.11.0 independent method retry and isolation, coverage-based delivery decision, deterministic report sources, calibration delta, post-calibration source resolution, sparse emphasis, stable fallback and fixed 10-page report pipeline passed")
+    print("READY: dependencies, chart, v2 card, Core v0.12.0 nine-method isolation, synthesis production bridge, deterministic assembly and report sources, calibration delta, post-calibration source resolution, sparse emphasis, stable fallback and fixed 10-page report pipeline passed")
     return 0
 
 

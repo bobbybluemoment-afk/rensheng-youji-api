@@ -185,8 +185,7 @@ PRIMARY_METHODS = {
     "timing_continuity",
 }
 PARTIAL_METHODS = {"position_relationship", "stem_branch_dynamics"}
-AUXILIARY_METHODS = {"shen_sha_auxiliary", "nayin_auxiliary"}
-ALL_METHODS = PRIMARY_METHODS | PARTIAL_METHODS | AUXILIARY_METHODS
+ALL_METHODS = PRIMARY_METHODS | PARTIAL_METHODS
 METHOD_GROUPS = {
     "pattern_structure": "pattern_organization",
     "momentum_configuration": "momentum_intention",
@@ -197,8 +196,6 @@ METHOD_GROUPS = {
     "timing_continuity": "timing_execution",
     "position_relationship": "position_interface",
     "stem_branch_dynamics": "stem_branch_structure",
-    "shen_sha_auxiliary": "symbolic_auxiliary",
-    "nayin_auxiliary": "symbolic_auxiliary",
 }
 ALLOWED_METHOD_INPUT_ROOTS = {
     "request",
@@ -274,8 +271,8 @@ def validate(data: Any) -> list[str]:
     meta = data.get("analysis_meta")
     require_keys(meta, {"analysis_id", "request_id", "core_version", "generated_at", "analysis_as_of", "target_range", "input_completeness", "status"}, "analysis_meta", errors)
     if isinstance(meta, dict):
-        if meta.get("core_version") != "0.11.0":
-            errors.append("analysis_meta.core_version 必须为 0.11.0")
+        if meta.get("core_version") != "0.12.0":
+            errors.append("analysis_meta.core_version 必须为 0.12.0")
         if meta.get("status") not in {"complete", "pass_with_flags"}:
             errors.append("analysis_meta.status 必须是 complete 或 pass_with_flags")
         try:
@@ -371,7 +368,7 @@ def validate(data: Any) -> list[str]:
     hypothesis_to_method: dict[str, str] = {}
     hypothesis_by_id: dict[str, dict[str, Any]] = {}
     if not isinstance(method_items, list) or len(method_items) != len(ALL_METHODS):
-        errors.append("independent_method_analyses 必须恰好包含11个规定方法家族")
+        errors.append("independent_method_analyses 必须恰好包含9个规定方法家族")
     else:
         for index, method_item in enumerate(method_items):
             path = f"independent_method_analyses[{index}]"
@@ -385,7 +382,7 @@ def validate(data: Any) -> list[str]:
             if method_id in method_by_id:
                 errors.append(f"{path}.method_id 不能重复")
             method_by_id[method_id] = method_item
-            expected_tier = "primary" if method_id in PRIMARY_METHODS else "partial" if method_id in PARTIAL_METHODS else "auxiliary"
+            expected_tier = "primary" if method_id in PRIMARY_METHODS else "partial"
             if method_item.get("tier") != expected_tier:
                 errors.append(f"{path}.tier 必须为{expected_tier}")
             if method_item.get("independence_group") != METHOD_GROUPS[method_id]:
@@ -398,14 +395,12 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"{path}.attempt_count 必须为1—3")
             if status == "generation_failed" and attempt_count != 3:
                 errors.append(f"{path} generation_failed必须经过三轮局部修复")
-            if method_id not in AUXILIARY_METHODS and status == "unavailable":
-                errors.append(f"{path} unavailable只允许用于神煞或纳音辅助方法")
             if status == "complete" and method_item.get("failure_reasons"):
                 errors.append(f"{path} complete方法不得保留failure_reasons")
             if status != "complete" and not method_item.get("failure_reasons"):
                 errors.append(f"{path} 未完成方法必须说明failure_reasons")
-            if status != "complete" and method_id not in AUXILIARY_METHODS and not method_item.get("degradation_effects"):
-                errors.append(f"{path} 未完成的主要或部分独立方法必须说明降级影响")
+            if status != "complete" and not method_item.get("degradation_effects"):
+                errors.append(f"{path} 未完成方法必须说明降级影响")
             if status != "blocked_input" and not method_item.get("input_fact_refs"):
                 errors.append(f"{path}.input_fact_refs 至少引用一项冻结排盘事实")
             for fact_ref in method_item.get("input_fact_refs") or []:
@@ -422,8 +417,6 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"{path} 完成的主要方法至少包含两条技术结论和两条现实候选")
             elif method_id in PARTIAL_METHODS and (len(conclusions) < 1 or len(hypotheses) < 1):
                 errors.append(f"{path} 完成的部分独立方法至少包含一条技术结论和一条现实候选")
-            elif method_id in AUXILIARY_METHODS and (len(conclusions) < 1 or len(hypotheses) < 1):
-                errors.append(f"{path} 完成的辅助方法至少包含一条技术结论和一条现实候选")
             local_conclusion_ids: set[str] = set()
             for conclusion_index, conclusion in enumerate(conclusions):
                 conclusion_path = f"{path}.technical_conclusions[{conclusion_index}]"
@@ -520,7 +513,7 @@ def validate(data: Any) -> list[str]:
         errors.append("cross_method_analysis.methods 必须只包含实际完成的主要方法家族")
 
     synthesis = data.get("method_synthesis")
-    require_keys(synthesis, {"summary", "clusters", "conflicts", "primary_synthesis_ids", "supplemental_synthesis_ids", "to_verify_synthesis_ids", "auxiliary_only_synthesis_ids"}, "method_synthesis", errors)
+    require_keys(synthesis, {"summary", "clusters", "conflicts", "primary_synthesis_ids", "supplemental_synthesis_ids", "to_verify_synthesis_ids"}, "method_synthesis", errors)
     synthesis_by_id: dict[str, dict[str, Any]] = {}
     if isinstance(synthesis, dict):
         clusters = synthesis.get("clusters")
@@ -549,6 +542,8 @@ def validate(data: Any) -> list[str]:
                     errors.append(f"{path}.independence_groups 必须由成员方法确定")
                 primary_support = actual_methods & PRIMARY_METHODS
                 role = cluster.get("report_role")
+                if role not in {"primary", "supplemental", "to_verify", "excluded"}:
+                    errors.append(f"{path}.report_role 值无效")
                 if role == "primary" and (len(primary_support) < 2 or len(actual_groups) < 2):
                     errors.append(f"{path} primary判断至少需要两个主要方法家族独立同向")
                 if role == "primary" and cluster.get("relationship_type") != "same_direction":
@@ -559,8 +554,6 @@ def validate(data: Any) -> list[str]:
                         errors.append(f"{path} same_direction成员必须使用相同标准化现实方向")
                 if role == "supplemental" and not primary_support:
                     errors.append(f"{path} supplemental判断至少需要一个主要方法支持")
-                if role == "auxiliary_only" and actual_methods - AUXILIARY_METHODS:
-                    errors.append(f"{path} auxiliary_only只能由神煞或纳音辅助方法支持")
                 if cluster.get("structural_confidence") == "high" and (len(primary_support) < 2 or len(actual_groups) < 2):
                     errors.append(f"{path} high结构置信度至少需要两个不同主要方法家族")
                 if cluster.get("reality_confirmation") == "contradicted" and role != "excluded":
@@ -569,7 +562,6 @@ def validate(data: Any) -> list[str]:
             "primary": set(synthesis.get("primary_synthesis_ids") or []),
             "supplemental": set(synthesis.get("supplemental_synthesis_ids") or []),
             "to_verify": set(synthesis.get("to_verify_synthesis_ids") or []),
-            "auxiliary_only": set(synthesis.get("auxiliary_only_synthesis_ids") or []),
         }
         for role, listed in role_lists.items():
             actual = {item_id for item_id, item in synthesis_by_id.items() if item.get("report_role") == role}
@@ -1115,8 +1107,6 @@ def self_test_fixture() -> dict[str, Any]:
         ("timing_continuity", "primary", "timing_execution", 2),
         ("position_relationship", "partial", "position_interface", 1),
         ("stem_branch_dynamics", "partial", "stem_branch_structure", 1),
-        ("shen_sha_auxiliary", "auxiliary", "symbolic_auxiliary", 0),
-        ("nayin_auxiliary", "auxiliary", "symbolic_auxiliary", 0),
     ]
     method_evidence_ids: dict[str, list[str]] = {}
     evidence_cursor = 1
@@ -1177,10 +1167,10 @@ def self_test_fixture() -> dict[str, Any]:
             "method_id": method_id,
             "tier": tier,
             "independence_group": group,
-            "status": "complete" if conclusion_count else "unavailable",
+            "status": "complete",
             "attempt_count": 1,
-            "failure_reasons": [] if conclusion_count else ["上游未提供确定性辅助数据"],
-            "degradation_effects": [] if conclusion_count else ["辅助方法不参与综合计票"],
+            "failure_reasons": [],
+            "degradation_effects": [],
             "input_fact_refs": ["chart_facts.pillars"],
             "source_method_ids_read": [],
             "technical_conclusions": conclusions,
@@ -1291,7 +1281,7 @@ def self_test_fixture() -> dict[str, Any]:
         }
 
     data = {
-        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.11.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
+        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.12.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
         "chart_facts": {"day_master": "甲", "pillars": {"year": pillar, "month": pillar, "day": {**pillar, "stem_ten_god": "日主"}, "hour": pillar}, "luck_cycles": [{}], "annual_cycles": [{}]},
         "chart_audit": {"status": "pass", "checks": [], "boundary_dependencies": [], "versions": []},
         "social_context_model": empty_section(),
@@ -1303,14 +1293,14 @@ def self_test_fixture() -> dict[str, Any]:
         "method_execution_audit": {
             "retry_limit": 3,
             "completed_method_ids": [item[0] for item in method_specs if item[3]],
-            "excluded_method_ids": ["shen_sha_auxiliary", "nayin_auxiliary"],
+            "excluded_method_ids": [],
             "failed_method_ids": [],
             "primary_completed_count": 7,
             "structural_anchor_complete": True,
             "reality_anchor_complete": True,
             "timing_anchor_complete": True,
             "delivery_decision": "full",
-            "degradation_reasons": ["神煞与纳音无确定性上游数据，不参与综合计票"],
+            "degradation_reasons": [],
             "stage_validation_passed": True,
         },
         "method_synthesis": {
@@ -1320,7 +1310,6 @@ def self_test_fixture() -> dict[str, Any]:
             "primary_synthesis_ids": [f"syn_{i}" for i in range(1, 7)],
             "supplemental_synthesis_ids": ["syn_supplemental"],
             "to_verify_synthesis_ids": [],
-            "auxiliary_only_synthesis_ids": [],
         },
         "cross_method_analysis": {"summary": "自检", "methods": sorted(PRIMARY_METHODS), "agreements": ["自检交叉支持"], "conflicts": [], "findings": []},
         "blind_school_cross_analysis": {

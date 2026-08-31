@@ -64,8 +64,8 @@ def freeze(source: Path, baseline: Path, lock_path: Path) -> dict[str, Any]:
     validate_core(source)
     data = json.loads(source.read_text(encoding="utf-8"))
     meta = data.get("analysis_meta", {})
-    if meta.get("core_version") != "0.11.0":
-        raise ValueError("Only core_version=0.11.0 can be frozen by this workflow")
+    if meta.get("core_version") != "0.12.0":
+        raise ValueError("Only core_version=0.12.0 can be frozen by this workflow")
     if data.get("method_execution_audit", {}).get("delivery_decision") == "preliminary_only":
         raise ValueError("preliminary_only Core cannot be frozen for the full calibrated report workflow")
     if any(item.get("source_layer") == "user_fact" for item in data.get("evidence_registry", [])):
