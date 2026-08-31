@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rensheng-youji.local/schemas/analysis-output.schema.json",
-  "title": "人生有迹完整命理分析母稿 v0.10.0",
+  "title": "人生有迹完整命理分析母稿 v0.11.0",
   "description": "内置分析核心返回的统一 analysis_bundle。包含各方法独立命理推演、独立现实候选、现实综合、完整人物画像、实体证据台账、开放现实候选、形成链、领域联动与校准审计。",
   "type": "object",
   "additionalProperties": false,
@@ -15,6 +15,7 @@
     "stems_branches_roots",
     "interaction_network",
     "independent_method_analyses",
+    "method_execution_audit",
     "method_synthesis",
     "cross_method_analysis",
     "blind_school_cross_analysis",
@@ -303,15 +304,18 @@
       "maxItems": 11,
       "items": {"$ref": "#/$defs/independentMethodAnalysis"}
     },
+    "method_execution_audit": {
+      "$ref": "#/$defs/methodExecutionAudit"
+    },
     "method_synthesis": {
       "type": "object",
       "additionalProperties": false,
       "required": ["summary", "clusters", "conflicts", "primary_synthesis_ids", "supplemental_synthesis_ids", "to_verify_synthesis_ids", "auxiliary_only_synthesis_ids"],
       "properties": {
         "summary": {"type": "string", "minLength": 4},
-        "clusters": {"type": "array", "minItems": 6, "items": {"$ref": "#/$defs/methodSynthesisCluster"}},
+        "clusters": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/methodSynthesisCluster"}},
         "conflicts": {"type": "array", "items": {"$ref": "#/$defs/methodConflict"}},
-        "primary_synthesis_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+        "primary_synthesis_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
         "supplemental_synthesis_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
         "to_verify_synthesis_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
         "auxiliary_only_synthesis_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}
@@ -362,22 +366,22 @@
       "additionalProperties": false,
       "required": ["source_boundaries", "host_guest_map", "body_function_map", "work_paths", "image_hypotheses", "reality_image_candidates", "virtual_real_completeness", "timing_activation", "agreements", "conflicts", "prohibited_extensions"],
       "properties": {
-        "source_boundaries": {"type": "array", "minItems": 2, "items": {"type": "string"}},
+        "source_boundaries": {"type": "array", "items": {"type": "string"}},
         "host_guest_map": {"type": "array", "items": {"type": "object"}},
         "body_function_map": {"type": "array", "items": {"type": "object"}},
-        "work_paths": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/workPath"}},
+        "work_paths": {"type": "array", "items": {"$ref": "#/$defs/workPath"}},
         "image_hypotheses": {"type": "array", "items": {"type": "object"}},
-        "reality_image_candidates": {"type": "array", "minItems": 4, "items": {"$ref": "#/$defs/realityImageCandidate"}},
+        "reality_image_candidates": {"type": "array", "items": {"$ref": "#/$defs/realityImageCandidate"}},
         "virtual_real_completeness": {"type": "array", "items": {"type": "object"}},
         "timing_activation": {"type": "array", "items": {"type": "object"}},
         "agreements": {"type": "array", "items": {"type": "string"}},
         "conflicts": {"type": "array", "items": {"type": "string"}},
-        "prohibited_extensions": {"type": "array", "minItems": 4, "items": {"type": "string"}}
+        "prohibited_extensions": {"type": "array", "items": {"type": "string"}}
       }
     },
     "evidence_registry": {
       "type": "array",
-      "minItems": 24,
+      "minItems": 1,
       "items": {"$ref": "#/$defs/registeredEvidence"}
     },
     "root_seed_flower_fruit_map": {
@@ -411,14 +415,12 @@
         },
         "continuity": {
           "type": "array",
-          "minItems": 3,
           "items": {
             "type": "string"
           }
         },
         "domain_lifecycles": {
           "type": "array",
-          "minItems": 3,
           "items": {"$ref": "#/$defs/domainLifecycle"}
         },
         "findings": {
@@ -582,7 +584,7 @@
     },
     "report_claim_ledger": {
       "type": "array",
-      "minItems": 48,
+      "minItems": 1,
       "items": {
         "$ref": "#/$defs/reportClaim"
       }
@@ -631,8 +633,8 @@
     },
     "reality_candidate_pool": {
       "type": "array",
-      "minItems": 18,
-      "maxItems": 30,
+      "minItems": 10,
+      "maxItems": 24,
       "items": {
         "$ref": "#/$defs/realityCandidate"
       }
@@ -1564,17 +1566,38 @@
     "independentMethodAnalysis": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["method_id", "tier", "independence_group", "status", "input_fact_refs", "source_method_ids_read", "technical_conclusions", "reality_hypotheses", "limitations"],
+      "required": ["method_id", "tier", "independence_group", "status", "attempt_count", "failure_reasons", "degradation_effects", "input_fact_refs", "source_method_ids_read", "technical_conclusions", "reality_hypotheses", "limitations"],
       "properties": {
         "method_id": {"type": "string", "enum": ["pattern_structure", "momentum_configuration", "climate_adjustment", "ten_god_dynamics", "root_seed_flower_fruit", "blind_school", "timing_continuity", "position_relationship", "stem_branch_dynamics", "shen_sha_auxiliary", "nayin_auxiliary"]},
         "tier": {"type": "string", "enum": ["primary", "partial", "auxiliary"]},
         "independence_group": {"type": "string", "minLength": 3},
-        "status": {"type": "string", "enum": ["complete", "unavailable"]},
-        "input_fact_refs": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+        "status": {"type": "string", "enum": ["complete", "insufficient_evidence", "blocked_input", "generation_failed", "unavailable"]},
+        "attempt_count": {"type": "integer", "minimum": 1, "maximum": 3},
+        "failure_reasons": {"type": "array", "items": {"type": "string", "minLength": 4}},
+        "degradation_effects": {"type": "array", "items": {"type": "string", "minLength": 4}},
+        "input_fact_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
         "source_method_ids_read": {"type": "array", "maxItems": 0, "items": {"type": "string"}},
         "technical_conclusions": {"type": "array", "items": {"$ref": "#/$defs/methodTechnicalConclusion"}},
         "reality_hypotheses": {"type": "array", "items": {"$ref": "#/$defs/methodRealityHypothesis"}},
         "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+      }
+    },
+    "methodExecutionAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["retry_limit", "completed_method_ids", "excluded_method_ids", "failed_method_ids", "primary_completed_count", "structural_anchor_complete", "reality_anchor_complete", "timing_anchor_complete", "delivery_decision", "degradation_reasons", "stage_validation_passed"],
+      "properties": {
+        "retry_limit": {"type": "integer", "minimum": 3, "maximum": 3},
+        "completed_method_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "excluded_method_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "failed_method_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "primary_completed_count": {"type": "integer", "minimum": 0, "maximum": 7},
+        "structural_anchor_complete": {"type": "boolean"},
+        "reality_anchor_complete": {"type": "boolean"},
+        "timing_anchor_complete": {"type": "boolean"},
+        "delivery_decision": {"type": "string", "enum": ["full", "degraded", "preliminary_only"]},
+        "degradation_reasons": {"type": "array", "items": {"type": "string"}},
+        "stage_validation_passed": {"type": "boolean"}
       }
     },
     "methodSynthesisCluster": {
@@ -1615,7 +1638,7 @@
         "claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family",
         "claim", "plain_claim", "new_information", "mechanism_chain",
         "evidence_ids", "supporting_methods", "synthesis_ids", "method_hypothesis_ids",
-        "report_role", "applicable_conditions", "reality_confirmation",
+        "report_role", "coverage_tags", "applicable_conditions", "reality_confirmation",
         "allowed_examples", "counterevidence", "confidence", "unsupported_extensions",
         "calibration_status", "origin"
       ],
@@ -1629,11 +1652,12 @@
         "plain_claim": {"type": "string", "minLength": 12},
         "new_information": {"type": "string", "minLength": 4},
         "mechanism_chain": {"type": "array", "minItems": 2, "items": {"type": "string"}},
-        "evidence_ids": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "evidence_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
         "supporting_methods": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
         "synthesis_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
         "method_hypothesis_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
         "report_role": {"type": "string", "enum": ["primary", "supplemental", "to_verify"]},
+        "coverage_tags": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "enum": ["feature", "behavior", "formation", "challenge", "current_change", "response", "parent_kin_interaction", "support_and_constraint", "independence_and_reciprocity", "baseline_signals", "stress_sequence", "recovery_pattern"]}},
         "applicable_conditions": {"type": "array", "minItems": 1, "items": {"type": "string"}},
         "reality_confirmation": {"type": "string", "enum": ["unverified", "supported", "confirmed", "contradicted"]},
         "allowed_examples": {"type": "array", "items": {"type": "string"}},
@@ -1726,23 +1750,22 @@
       "additionalProperties": false,
       "required": ["summary_materials", "claim_ids", "claim_priority", "domain_specific_claim_ids", "mainline_claim_ids", "mandatory_candidate_ids", "emphasis_candidate_ids", "domain_mechanisms", "survives_without_mainline", "formation_chain_ids", "linkage_chain_ids", "concrete_candidates", "coverage", "coverage_claim_map", "evidence_gaps"],
       "properties": {
-        "summary_materials": {"type": "array", "minItems": 8, "items": {"type": "string"}},
-        "claim_ids": {"type": "array", "minItems": 8, "uniqueItems": true, "items": {"type": "string"}},
-        "claim_priority": {"type": "array", "minItems": 8, "uniqueItems": true, "items": {"type": "string"}},
-        "domain_specific_claim_ids": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string"}},
+        "summary_materials": {"type": "array", "items": {"type": "string"}},
+        "claim_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "claim_priority": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "domain_specific_claim_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
         "mainline_claim_ids": {"type": "array", "maxItems": 2, "uniqueItems": true, "items": {"type": "string"}},
-        "mandatory_candidate_ids": {"type": "array", "minItems": 2, "maxItems": 4, "uniqueItems": true, "items": {"type": "string"}},
-        "emphasis_candidate_ids": {"type": "array", "minItems": 0, "maxItems": 4, "uniqueItems": true, "items": {"type": "string"}},
-        "domain_mechanisms": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string", "minLength": 4}},
-        "survives_without_mainline": {"const": true},
+        "mandatory_candidate_ids": {"type": "array", "maxItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "emphasis_candidate_ids": {"type": "array", "maxItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "domain_mechanisms": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 4}},
+        "survives_without_mainline": {"type": "boolean"},
         "formation_chain_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
         "linkage_chain_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
         "concrete_candidates": {"type": "array", "items": {"type": "string"}},
-        "coverage": {"type": "array", "minItems": 6, "uniqueItems": true, "items": {"type": "string"}},
+        "coverage": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
         "coverage_claim_map": {
           "type": "object",
-          "minProperties": 6,
-          "additionalProperties": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}}
+          "additionalProperties": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}
         },
         "evidence_gaps": {"type": "array", "items": {"type": "string"}}
       }
@@ -1871,7 +1894,7 @@
         },
         "evidence_ids": {
           "type": "array",
-          "minItems": 2,
+          "minItems": 1,
           "uniqueItems": true,
           "items": {"type": "string"}
         },

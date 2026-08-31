@@ -2,7 +2,7 @@
 
 Core负责冻结完整判断候选池，不在校准前决定最终报告名单。每个报告素材区必须提供：
 
-- 至少8条候选判断和无重复的 `claim_priority`；
+- 当前证据实际允许的候选判断和无重复的 `claim_priority`；
 - 2—4条 `mandatory_candidate_ids`；
 - 允许为空的 `emphasis_candidate_ids`；
 - 六项通用人物覆盖，以及家庭、身心的专属覆盖；

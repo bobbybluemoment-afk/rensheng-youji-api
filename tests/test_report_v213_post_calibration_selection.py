@@ -50,13 +50,13 @@ def selection_fixture() -> dict:
 
 
 class ReportV213PostCalibrationSelectionTest(unittest.TestCase):
-    def test_core_rejects_missing_shared_coverage_before_freeze(self) -> None:
+    def test_core_requires_an_explicit_gap_when_shared_coverage_is_missing(self) -> None:
         analysis = self_test_fixture()
         source = analysis["report_source_bundle"]["dimensions"]["career"]
         source["coverage"].remove("response")
         source["coverage_claim_map"].pop("response")
         errors = validate_analysis(analysis)
-        self.assertTrue(any("统一人物覆盖项" in item or "coverage_claim_map" in item for item in errors))
+        self.assertTrue(any("evidence_gaps" in item for item in errors))
 
     def test_rejected_mandatory_candidate_is_replaced_without_mutating_baseline(self) -> None:
         baseline, lock = locked_fixture()

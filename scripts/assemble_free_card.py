@@ -29,8 +29,10 @@ def main() -> int:
     try:
         analysis, content, series = load(args.analysis), load(args.content), load(args.series)
         meta = analysis["analysis_meta"]
-        if meta.get("status") != "complete":
-            raise ValueError("Core analysis_meta.status 必须为 complete")
+        if meta.get("status") not in {"complete", "pass_with_flags"}:
+            raise ValueError("Core analysis_meta.status 必须为 complete 或 pass_with_flags")
+        if analysis.get("method_execution_audit", {}).get("delivery_decision") == "preliminary_only":
+            raise ValueError("preliminary_only Core 不得生成带20年趋势的正式卡片")
         result = {
             "schema_version": "1.1.0",
             "source": {

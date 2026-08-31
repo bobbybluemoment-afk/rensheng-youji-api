@@ -64,12 +64,13 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 9. [annual-activation.md](references/annual-activation.md)：按大运主题分析流年执行、相邻年份连续性和伏笔。
 10. [blind-school-cross-method.md](references/blind-school-cross-method.md)：用宾主、体用、做功和多层象法生成组织、行业、岗位、工作对象与成果形式候选，并保留不同作者口径与禁断边界。
 11. [independent-method-analysis.md](references/independent-method-analysis.md)：强制各方法隔离推演、分别生成技术结论和现实候选，再按方法家族独立性综合；规定单方法补充、神煞纳音辅助和冲突处理。
-12. [calibration-confidence.md](references/calibration-confidence.md)：生成现实候选，吸收用户反馈并标注置信度。
-13. [candidate-relations-and-calibrated-synthesis.md](references/candidate-relations-and-calibrated-synthesis.md)：校准前建立候选关系并冻结完整人物，校准后只以增量调整现实候选状态。
-14. [domain-independent-analysis.md](references/domain-independent-analysis.md)：先完成六个领域各自的判断、机制与覆盖，再限制共享主线比例和跨章复用。
-15. [report-grade-reality-mapping.md](references/report-grade-reality-mapping.md)：建立开放现实候选、人物形成链、领域联动链和报告级判断台账。
-16. [safety-boundaries.md](references/safety-boundaries.md)：执行非宿命表达、高风险边界和不确定性披露。
-17. [post-calibration-report-selection.md](references/post-calibration-report-selection.md)：冻结报告候选池，并在校准后确定性生成最终选材与单章降级状态。
+12. [method-failure-and-recovery.md](references/method-failure-and-recovery.md)：规定逐方法校验、三轮局部修复、失败状态、最低方法覆盖和降级交付。
+13. [calibration-confidence.md](references/calibration-confidence.md)：生成现实候选，吸收用户反馈并标注置信度。
+14. [candidate-relations-and-calibrated-synthesis.md](references/candidate-relations-and-calibrated-synthesis.md)：校准前建立候选关系并冻结完整人物，校准后只以增量调整现实候选状态。
+15. [domain-independent-analysis.md](references/domain-independent-analysis.md)：先完成六个领域各自的判断、机制与覆盖，再限制共享主线比例和跨章复用。
+16. [report-grade-reality-mapping.md](references/report-grade-reality-mapping.md)：建立开放现实候选、人物形成链、领域联动链和报告级判断台账。
+17. [safety-boundaries.md](references/safety-boundaries.md)：执行非宿命表达、高风险边界和不确定性披露。
+18. [post-calibration-report-selection.md](references/post-calibration-report-selection.md)：冻结报告候选池，并在校准后确定性生成最终选材与单章降级状态。
 
 ## 执行规则
 
@@ -98,6 +99,8 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 神煞与纳音只使用上游确定性提供的数据；缺少时明确 `unavailable`，不得由模型补算。它们单独支持的内容只能作为待验证辅助线索，不能进入报告必写或重点候选。
 
 多方法一致必须按不同主要方法家族计算，不能把扶抑、病药、通关、旺衰、根透、刑冲合害等同源术语拆成多票。只有至少两个不同主要方法家族独立同向时，结构置信度才可为高。单一主要方法若新增实质信息、条件明确、可观察且没有事实冲突，可以保留为补充判断。
+
+每个方法先单独保存方法包并校验。输出错误最多进行三轮局部修复；第三轮仍失败则按失败类型记录 `generation_failed`、`blocked_input` 或 `insufficient_evidence`，清空半成品并排除计票。七个主要方法全部完成时为 `full`；至少五个完成且结构、现实机制与岁运锚点齐全时为 `degraded`；其余为 `preliminary_only`。不得因单个辅助或部分独立方法失败停止全部可靠内容，也不得让 `preliminary_only` 进入完整报告。
 
 ### 6. 把命盘当作现实中的人
 
@@ -129,7 +132,7 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 
 ### 12. 校准而不倒推
 
-生成18—30个可证伪现实候选，完整覆盖六个报告领域，并逐条标注固定领域、现实维度、候选类型、时间范围、实体证据和受影响的报告判断。提出问题前必须先建立候选关系图，区分可共存、互补、主次、阶段、情境、上下位和真正互斥。报告层只从中选择最有区分度的少数候选，通过固定题型组织成同一比较轴下的A/B/C。
+生成10—24个可证伪现实候选，尽量覆盖六个报告领域，并逐条标注固定领域、现实维度、候选类型、时间范围、实体证据和受影响的报告判断。提出问题前必须先建立候选关系图，区分可共存、互补、主次、阶段、情境、上下位和真正互斥。报告层只从中选择最有区分度的少数候选，通过固定题型组织成同一比较轴下的A/B/C。
 
 吸收用户选择、D“都不符合／不确定”和补充事实时，不能把“未选择”等同于“被否定”。得到校准的候选分别进入主要确认、未选但仍受支持、条件成立、降低优先、明确排除或仍不确定。只有在相同时间、相同口径和相同比较轴下真正互斥时，才排除未选候选。不得倒改四柱和结构事实，也不得因为用户只选A就把完整人物写成单一A类型。
 
@@ -156,7 +159,7 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 - 3—6条人物形成链；
 - 3—6条跨领域联动链；
 - 完整人生主线素材；
-- 六个现实领域各8—12条报告级素材；
+- 六个现实领域优先各4—6条真正不同的报告级判断；证据较少时允许2—3条或明确证据缺口；
 - 可以使用的具体例子与禁止外推范围。
 
 这些内容用于约束报告写作，不是用户可见文章。Core中的技术短语必须紧接现实解释；不得用“底色、表达窗口、输出、可见度、先扎根后显声”等抽象词代替事实。
@@ -170,9 +173,9 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 - `new_information`：相对同领域其他判断新增了什么；
 - `plain_claim`：不含命理术语、可以原句进入报告的完整判断句。
 
-每个领域至少八条候选判断、三个判断家族、两个机制家族和三个现实问题轴。不同编号但语义高度相似的句子视为重复，不得用换词满足数量。`report_source_bundle` 保存完整候选池、稳定优先级、2—4条必进候选和覆盖项备用映射；不得在校准前锁定最终 `mandatory_claim_ids`。校准后由确定性程序从仍有效的候选中选出1—2条必进判断。
+判断充足的领域优先覆盖三个判断家族、两个机制家族和三个现实问题轴；判断较少时按证据缩短。不同编号但语义高度相似的句子视为重复，不得用换词满足数量。`report_source_bundle` 必须由脚本根据判断台账生成稳定优先级、0—2条必进候选和实际覆盖映射；不得让模型手工复制ID，也不得在校准前锁定最终 `mandatory_claim_ids`。校准后由确定性程序从仍有效的候选中选出1—2条必进判断。
 
-六个领域的 `coverage` 必须共同包含 `feature`、`behavior`、`formation`、`challenge`、`current_change`、`response`。`coverage_claim_map` 必须为每项绑定至少两个候选判断；家庭和身体情绪还要覆盖各自专属项目。缺少任意规定覆盖项时必须在冻结Baseline前返工对应领域。
+六个领域优先覆盖 `feature`、`behavior`、`formation`、`challenge`、`current_change`、`response`，家庭和身体情绪还要覆盖各自专属项目。每个实际覆盖项至少绑定一个真实判断；缺少项目时写入 `evidence_gaps` 并降级章节，不得制造备用判断。
 
 内部 `mechanism_chain`、`evidence_registry`、`domain_mechanisms` 和技术审计允许并应保留必要命理术语；禁止术语只适用于最终用户可见正文。不得为了通过正文术语检查而清洗或改写内部Core。
 
@@ -192,7 +195,7 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 
 自身、家庭、资源、人际、亲密关系、对象画像、互动关系、事业、财富、迁移、身心和连续性必须都有实质分析或明确的证据不足说明。不得把事业分析换词复制进其他领域。
 
-六个报告领域必须先独立分析、再与人生主线联动。每个领域至少6条领域专属候选、2个领域自身机制；共享人生主线判断不得超过30%，同一判断最多进入两个领域。去掉共享主线后仍须形成完整人物侧面。家庭重点分析父母亲友、借力与受限、独立与回馈；身体与情绪重点分析基础信号、压力反应顺序和恢复方式。不得把事业中的协调与收尾直接移植到家庭章节。
+六个报告领域必须先独立分析、再与人生主线联动。证据充足时每个领域优先形成4—6条领域专属候选和2个领域自身机制；证据不足时按实际内容降级。共享人生主线判断不得超过30%，同一判断最多进入两个领域。去掉共享主线后仍须形成独立人物侧面或明确证据缺口。家庭重点分析父母亲友、借力与受限、独立与回馈；身体与情绪重点分析基础信号、压力反应顺序和恢复方式。不得把事业中的协调与收尾直接移植到家庭章节。
 
 ## 完整输出契约
 
@@ -240,74 +243,85 @@ validation: []
    - 生克、制化、刑冲合害破、合化条件和全局作用；
 9. `independent_method_analyses`
    - 十一个方法家族各自独立生成的技术结论、现实候选、成立条件、反证和边界；
-10. `method_synthesis`
+10. `method_execution_audit`
+    - 每个方法的完成、失败、重试和降级结果，以及完整、降级或仅初步分析的交付决定；
+11. `method_synthesis`
    - 现实候选的同向、互补、条件、阶段、上下位与冲突综合，以及结构置信度和报告角色；
-11. `cross_method_analysis`
+12. `cross_method_analysis`
    - 方法综合的文字摘要，不得替代独立方法结构；
-12. `root_seed_flower_fruit_map`
+13. `root_seed_flower_fruit_map`
     - 时间顺序与同时共存的多维现实映射；
-13. `natal_portrait`
+14. `natal_portrait`
     - 原局人物主轴的简要总结；
-14. `complete_self_portrait`
+15. `complete_self_portrait`
     - 外在呈现、内在动力、认知决策、情绪安全感、行动执行、价值边界、压力恢复、内部矛盾、环境适配和发展线；
-15. `family_system`
+16. `family_system`
     - 早年资源、期待与代价、家庭角色、独立边界、伴侣与家庭接口、模式重复与修正；
-16. `resource_relationship`
+17. `resource_relationship`
     - 六类资源的获得、保存、交换、放大与损耗；
-17. `social_relationship_style`
+18. `social_relationship_style`
     - 一般人际中的接近、信任、群体位置、利益交换、竞争合作和边界；
-18. `relationship_system`
+19. `relationship_system`
     - 亲密关系中的自己：需要、表达、冲突、修复、承诺和现实条件；
-19. `partner_profiles`
+20. `partner_profiles`
     - 容易被吸引、适合长期、强吸引高摩擦三类对象特质候选及证据限制；
-20. `interaction_dynamics`
+21. `interaction_dynamics`
     - 相识、建立信任、升温、冲突、修复、承诺和跨领域影响；
-21. `environment_and_mobility`
+22. `environment_and_mobility`
     - 城市、平台、规则密度、迁移和生活节奏的适配条件；
-22. `reality_domains`
+23. `reality_domains`
     - 事业、财富、学习、关系、家庭、迁移、健康与成长的完整分析；
-23. `domain_connections`
+24. `domain_connections`
     - 各领域之间的因果和时间传导；
-24. `luck_cycle_themes`
+25. `luck_cycle_themes`
     - 每步大运主题、机会、成本、激活键、前后承接；
-25. `annual_theme_activation`
+26. `annual_theme_activation`
     - 每年执行机制、变化强度、方向、领域影响、承接和伏笔；
-26. `monthly_theme_activation`
+27. `monthly_theme_activation`
     - 仅在有可靠月度数据时输出，否则为 `null`；
-27. `life_stages`
+28. `life_stages`
     - 主要人生阶段的主线与社会现实背景；
-28. `turning_points`
+29. `turning_points`
     - 准备、发生、落地、消化四类转折点；
-29. `report_claim_ledger`
+30. `report_claim_ledger`
     - 可进入报告的判断台账；每条包含现实结论、来源、支持方法、置信度、可用例子、反证和禁止外推；
-30. `formation_chains`
+31. `formation_chains`
     - 3—6条从家庭、教育或早期条件到习惯、能力、限制与成年表现的人物形成链；
-31. `domain_linkage_chains`
+32. `domain_linkage_chains`
     - 3—6条事业、财富、关系、家庭、迁移与身心之间的传导链；
-32. `report_source_bundle`
+33. `report_source_bundle`
     - 完整人生主线和六个现实领域的报告级素材，只提供事实与候选，不直接写最终文章；
-33. `reality_candidate_pool`
-    - 18—30条可验证现实候选；从工作方式、组织属性、行业、职能岗位、财富机制、家庭生态、伴侣特征等开放维度生成。每条包含所属维度、现实标签、属性、固定 `domain`、`candidate_kind`、`time_scope`、`calibration_targets`、2—3个可观察例子、替代解释、反证和禁止外推；候选需完整覆盖六个报告领域；
-34. `candidate_relation_map`
+34. `reality_candidate_pool`
+    - 10—24条可验证现实候选；从工作方式、组织属性、行业、职能岗位、财富机制、家庭生态、伴侣特征等开放维度生成。每条包含所属维度、现实标签、属性、固定 `domain`、`candidate_kind`、`time_scope`、`calibration_targets`、2—3个可观察例子、替代解释、反证和禁止外推；候选尽量覆盖六个报告领域；
+35. `candidate_relation_map`
     - 校准候选之间的共存、互补、条件、阶段、上下位与互斥关系；
-35. `calibration_state`
+36. `calibration_state`
     - 历史反馈、被支持和被否定的候选及更新结果；
-36. `calibration_delta`
+37. `calibration_delta`
     - 校准只改变候选与报告判断的状态，并记录用户事实证据；不得改写独立方法推演与综合结构；
-37. `not_inferable_register`
+38. `not_inferable_register`
     - 本次证据不足、禁止下结论的项目及需要补充的资料；
-38. `portrait_balance_audit`
+39. `portrait_balance_audit`
     - 画像覆盖、薄弱领域、被删除的无证据判断和跨领域路径审计；
-39. `uncertainty_register`
+40. `uncertainty_register`
     - 边界、流派差异、时柱依赖与替代解释；
-40. `safety_boundaries`
+41. `safety_boundaries`
     - 健康、财富、关系及高风险事项的表达边界。
 
 不要省略没有明显结论的栏目。使用空数组、`null` 或“证据不足”保留结构，不得补造内容。
 
-完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.10.0`。完成分析后运行：
+完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.11.0`。每个方法生成后先运行：
 
 ```bash
+python3 scripts/validate_method_packet.py method-analysis-pattern-structure.json \
+  --expected-method pattern_structure
+```
+
+全部方法完成或被合法归类后，先由脚本生成报告来源映射，再运行完整校验：
+
+```bash
+python3 ../../scripts/build_report_source_bundle.py analysis-output-before-sources.json \
+  --output analysis-output.json
 python3 scripts/validate_analysis_output.py <analysis-output.json>
 python3 ../../scripts/audit_claim_diversity.py <analysis-output.json>
 ```

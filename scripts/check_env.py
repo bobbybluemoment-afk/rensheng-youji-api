@@ -33,6 +33,8 @@ def main() -> int:
         ROOT / "assets/fonts/noto/NotoSansCJKsc-Regular.otf",
         ROOT / "assets/fonts/lxgw/LXGWWenKai-Regular.ttf",
         ROOT / "internal/rensheng-youji-mingli-core/SKILL.md",
+        ROOT / "internal/rensheng-youji-mingli-core/references/method-failure-and-recovery.md",
+        ROOT / "internal/rensheng-youji-mingli-core/scripts/validate_method_packet.py",
         ROOT / "internal/rensheng-youji-report-content-brief/SKILL.md",
         ROOT / "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py",
         ROOT / "internal/rensheng-youji-report-writer/SKILL.md",
@@ -46,6 +48,7 @@ def main() -> int:
         ROOT / "skills/rensheng-youji-growth-map/scripts/generate_full_report.py",
         ROOT / "skills/rensheng-youji-growth-map/scripts/render_report_pdf.py",
         ROOT / "scripts/core_baseline.py",
+        ROOT / "scripts/build_report_source_bundle.py",
         ROOT / "scripts/apply_calibration_delta.py",
         ROOT / "scripts/resolve_report_sources.py",
         ROOT / "scripts/report_source_contract.py",
@@ -88,6 +91,7 @@ def main() -> int:
             "tests.test_report_v211_delivery_safety.ReportV211DeliverySafetyTest",
             "tests.test_report_v212_core_traceability.ReportV212CoreTraceabilityTest",
             "tests.test_report_v213_post_calibration_selection.ReportV213PostCalibrationSelectionTest",
+            "tests.test_core_v011_method_recovery.CoreV011MethodRecoveryTest",
         ],
         cwd=ROOT,
         text=True,
@@ -103,10 +107,10 @@ def main() -> int:
         cwd=ROOT, text=True, capture_output=True, check=False,
     )
     if core_test.returncode:
-        print("FAILED: v0.10.0 Core independent method analyses, synthesis, candidate reserves and report-grade source bundle")
+        print("FAILED: v0.11.0 Core method recovery, delivery decision, synthesis, candidate reserves and deterministic report sources")
         print(core_test.stdout or core_test.stderr)
         return 7
-    print("READY: dependencies, chart, v2 card, frozen Core v0.10.0, independent method analyses, synthesis, calibration delta, post-calibration source resolution, mandatory claim realization, evidence-based section degradation, sparse emphasis, stable fallback and fixed 10-page report pipeline passed")
+    print("READY: dependencies, chart, v2 card, Core v0.11.0 independent method retry and isolation, coverage-based delivery decision, deterministic report sources, calibration delta, post-calibration source resolution, sparse emphasis, stable fallback and fixed 10-page report pipeline passed")
     return 0
 
 

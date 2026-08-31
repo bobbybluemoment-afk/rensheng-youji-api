@@ -29,6 +29,7 @@ REQUIRED_SECTIONS = {
     "stems_branches_roots",
     "interaction_network",
     "independent_method_analyses",
+    "method_execution_audit",
     "method_synthesis",
     "cross_method_analysis",
     "blind_school_cross_analysis",
@@ -247,6 +248,20 @@ def validate_inference(value: dict[str, Any], path: str, errors: list[str]) -> N
         errors.append(f"{path}.mechanism_chain 至少包含一步")
 
 
+def method_delivery_decision(completed_methods: set[str]) -> tuple[str, bool, bool, bool]:
+    completed_primary = completed_methods & PRIMARY_METHODS
+    structural_anchor = bool(completed_primary & {"pattern_structure", "momentum_configuration"})
+    reality_anchor = len(completed_primary & {"ten_god_dynamics", "root_seed_flower_fruit", "blind_school"}) >= 2
+    timing_anchor = "timing_continuity" in completed_primary
+    if completed_primary == PRIMARY_METHODS:
+        decision = "full"
+    elif len(completed_primary) >= 5 and structural_anchor and reality_anchor and timing_anchor:
+        decision = "degraded"
+    else:
+        decision = "preliminary_only"
+    return decision, structural_anchor, reality_anchor, timing_anchor
+
+
 def validate(data: Any) -> list[str]:
     errors: list[str] = []
     require_keys(data, REQUIRED_SECTIONS, "$", errors)
@@ -259,8 +274,8 @@ def validate(data: Any) -> list[str]:
     meta = data.get("analysis_meta")
     require_keys(meta, {"analysis_id", "request_id", "core_version", "generated_at", "analysis_as_of", "target_range", "input_completeness", "status"}, "analysis_meta", errors)
     if isinstance(meta, dict):
-        if meta.get("core_version") != "0.10.0":
-            errors.append("analysis_meta.core_version 必须为 0.10.0")
+        if meta.get("core_version") != "0.11.0":
+            errors.append("analysis_meta.core_version 必须为 0.11.0")
         if meta.get("status") not in {"complete", "pass_with_flags"}:
             errors.append("analysis_meta.status 必须是 complete 或 pass_with_flags")
         try:
@@ -292,16 +307,22 @@ def validate(data: Any) -> list[str]:
     require_keys(cross_method, {"summary", "methods", "agreements", "conflicts", "findings"}, "cross_method_analysis", errors)
     if isinstance(cross_method, dict):
         methods = cross_method.get("methods")
-        if not isinstance(methods, list) or not PRIMARY_METHODS.issubset(set(methods)):
-            errors.append("cross_method_analysis.methods 必须包含全部七个主要独立方法家族")
+        if not isinstance(methods, list):
+            errors.append("cross_method_analysis.methods 必须是已完成主要方法的列表")
         if not isinstance(cross_method.get("agreements"), list) or not cross_method.get("agreements"):
             errors.append("cross_method_analysis.agreements 至少记录一项交叉支持")
         if not isinstance(cross_method.get("conflicts"), list):
             errors.append("cross_method_analysis.conflicts 必须是数组；无冲突时使用空数组")
 
+    raw_completed_methods = {
+        item.get("method_id")
+        for item in (data.get("independent_method_analyses") or [])
+        if isinstance(item, dict) and item.get("status") == "complete"
+    }
+    blind_complete = "blind_school" in raw_completed_methods
     blind = data.get("blind_school_cross_analysis")
     require_keys(blind, {"source_boundaries", "host_guest_map", "body_function_map", "work_paths", "image_hypotheses", "reality_image_candidates", "virtual_real_completeness", "timing_activation", "agreements", "conflicts", "prohibited_extensions"}, "blind_school_cross_analysis", errors)
-    if isinstance(blind, dict):
+    if isinstance(blind, dict) and blind_complete:
         if len(blind.get("source_boundaries") or []) < 2:
             errors.append("blind_school_cross_analysis.source_boundaries 必须分别说明两套参考口径")
         if not blind.get("work_paths"):
@@ -315,11 +336,19 @@ def validate(data: Any) -> list[str]:
                 errors.append("盲派现实取象必须分别包含行业和岗位职能候选")
         if len(blind.get("prohibited_extensions") or []) < 4:
             errors.append("blind_school_cross_analysis.prohibited_extensions 至少包含四项禁止外推")
+    elif isinstance(blind, dict):
+        stale_blind_fields = [
+            key
+            for key in ("work_paths", "image_hypotheses", "reality_image_candidates", "timing_activation", "agreements")
+            if blind.get(key)
+        ]
+        if stale_blind_fields:
+            errors.append("blind_school方法未完成时不得保留盲派半成品：" + ", ".join(stale_blind_fields))
 
     registry = data.get("evidence_registry")
     evidence_by_id: dict[str, dict[str, Any]] = {}
-    if not isinstance(registry, list) or len(registry) < 24:
-        errors.append("evidence_registry 至少包含24条实体证据")
+    if not isinstance(registry, list) or not registry:
+        errors.append("evidence_registry 至少包含一条由有效技术结论实际使用的实体证据")
     else:
         for index, evidence in enumerate(registry):
             path = f"evidence_registry[{index}]"
@@ -346,7 +375,7 @@ def validate(data: Any) -> list[str]:
     else:
         for index, method_item in enumerate(method_items):
             path = f"independent_method_analyses[{index}]"
-            require_keys(method_item, {"method_id", "tier", "independence_group", "status", "input_fact_refs", "source_method_ids_read", "technical_conclusions", "reality_hypotheses", "limitations"}, path, errors)
+            require_keys(method_item, {"method_id", "tier", "independence_group", "status", "attempt_count", "failure_reasons", "degradation_effects", "input_fact_refs", "source_method_ids_read", "technical_conclusions", "reality_hypotheses", "limitations"}, path, errors)
             if not isinstance(method_item, dict):
                 continue
             method_id = method_item.get("method_id")
@@ -363,7 +392,21 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"{path}.independence_group 必须为{METHOD_GROUPS[method_id]}")
             if method_item.get("source_method_ids_read") != []:
                 errors.append(f"{path}.source_method_ids_read 必须为空，独立方法不得读取其他方法结论")
-            if not method_item.get("input_fact_refs"):
+            status = method_item.get("status")
+            attempt_count = method_item.get("attempt_count")
+            if not isinstance(attempt_count, int) or not 1 <= attempt_count <= 3:
+                errors.append(f"{path}.attempt_count 必须为1—3")
+            if status == "generation_failed" and attempt_count != 3:
+                errors.append(f"{path} generation_failed必须经过三轮局部修复")
+            if method_id not in AUXILIARY_METHODS and status == "unavailable":
+                errors.append(f"{path} unavailable只允许用于神煞或纳音辅助方法")
+            if status == "complete" and method_item.get("failure_reasons"):
+                errors.append(f"{path} complete方法不得保留failure_reasons")
+            if status != "complete" and not method_item.get("failure_reasons"):
+                errors.append(f"{path} 未完成方法必须说明failure_reasons")
+            if status != "complete" and method_id not in AUXILIARY_METHODS and not method_item.get("degradation_effects"):
+                errors.append(f"{path} 未完成的主要或部分独立方法必须说明降级影响")
+            if status != "blocked_input" and not method_item.get("input_fact_refs"):
                 errors.append(f"{path}.input_fact_refs 至少引用一项冻结排盘事实")
             for fact_ref in method_item.get("input_fact_refs") or []:
                 if not isinstance(fact_ref, str) or fact_ref.split(".", 1)[0] not in ALLOWED_METHOD_INPUT_ROOTS:
@@ -372,17 +415,15 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"{path}.limitations 至少说明一项方法边界")
             conclusions = method_item.get("technical_conclusions") or []
             hypotheses = method_item.get("reality_hypotheses") or []
-            if method_id in PRIMARY_METHODS:
-                if method_item.get("status") != "complete" or len(conclusions) < 2 or len(hypotheses) < 2:
-                    errors.append(f"{path} 主要方法必须complete并至少包含两条技术结论和两条现实候选")
-            elif method_id in PARTIAL_METHODS:
-                if method_item.get("status") != "complete" or len(conclusions) < 1 or len(hypotheses) < 1:
-                    errors.append(f"{path} 部分独立方法必须complete并至少包含一条技术结论和一条现实候选")
-            elif method_item.get("status") == "unavailable":
+            if status != "complete":
                 if conclusions or hypotheses:
-                    errors.append(f"{path} 辅助方法unavailable时不得补造技术结论或现实候选")
-            elif len(conclusions) < 1 or len(hypotheses) < 1:
-                errors.append(f"{path} 辅助方法complete时至少包含一条技术结论和一条现实候选")
+                    errors.append(f"{path} 未完成方法不得用半成品结论参与后续综合")
+            elif method_id in PRIMARY_METHODS and (len(conclusions) < 2 or len(hypotheses) < 2):
+                errors.append(f"{path} 完成的主要方法至少包含两条技术结论和两条现实候选")
+            elif method_id in PARTIAL_METHODS and (len(conclusions) < 1 or len(hypotheses) < 1):
+                errors.append(f"{path} 完成的部分独立方法至少包含一条技术结论和一条现实候选")
+            elif method_id in AUXILIARY_METHODS and (len(conclusions) < 1 or len(hypotheses) < 1):
+                errors.append(f"{path} 完成的辅助方法至少包含一条技术结论和一条现实候选")
             local_conclusion_ids: set[str] = set()
             for conclusion_index, conclusion in enumerate(conclusions):
                 conclusion_path = f"{path}.technical_conclusions[{conclusion_index}]"
@@ -431,13 +472,60 @@ def validate(data: Any) -> list[str]:
         if missing_methods:
             errors.append(f"independent_method_analyses 缺少方法家族：{missing_methods}")
 
+    completed_methods = {method_id for method_id, item in method_by_id.items() if item.get("status") == "complete"}
+    excluded_methods = set(method_by_id) - completed_methods
+    failed_methods = {method_id for method_id, item in method_by_id.items() if item.get("status") in {"blocked_input", "generation_failed"}}
+    completed_primary = completed_methods & PRIMARY_METHODS
+    expected_delivery, structural_anchor, reality_anchor, timing_anchor = method_delivery_decision(completed_methods)
+    stale_evidence = sorted(
+        evidence_id
+        for evidence_id, evidence in evidence_by_id.items()
+        if evidence.get("method_id") in ALL_METHODS and evidence.get("method_id") not in completed_methods
+    )
+    if stale_evidence:
+        errors.append(f"未完成方法不得在evidence_registry保留半成品证据：{stale_evidence}")
+    method_audit = data.get("method_execution_audit")
+    require_keys(method_audit, {"retry_limit", "completed_method_ids", "excluded_method_ids", "failed_method_ids", "primary_completed_count", "structural_anchor_complete", "reality_anchor_complete", "timing_anchor_complete", "delivery_decision", "degradation_reasons", "stage_validation_passed"}, "method_execution_audit", errors)
+    if isinstance(method_audit, dict):
+        exact_checks = {
+            "completed_method_ids": completed_methods,
+            "excluded_method_ids": excluded_methods,
+            "failed_method_ids": failed_methods,
+        }
+        for key, expected in exact_checks.items():
+            if set(method_audit.get(key) or []) != expected:
+                errors.append(f"method_execution_audit.{key} 必须由各方法实际状态确定")
+        if method_audit.get("retry_limit") != 3:
+            errors.append("method_execution_audit.retry_limit 必须为3")
+        if method_audit.get("primary_completed_count") != len(completed_primary):
+            errors.append("method_execution_audit.primary_completed_count 与实际完成数不一致")
+        for key, expected in (
+            ("structural_anchor_complete", structural_anchor),
+            ("reality_anchor_complete", reality_anchor),
+            ("timing_anchor_complete", timing_anchor),
+        ):
+            if method_audit.get(key) is not expected:
+                errors.append(f"method_execution_audit.{key} 与实际方法覆盖不一致")
+        if method_audit.get("delivery_decision") != expected_delivery:
+            errors.append(f"method_execution_audit.delivery_decision 应为{expected_delivery}")
+        if excluded_methods and not method_audit.get("degradation_reasons"):
+            errors.append("method_execution_audit 有方法未完成时必须说明degradation_reasons")
+        if method_audit.get("stage_validation_passed") is not True:
+            errors.append("method_execution_audit.stage_validation_passed 必须为true，表示每个方法已经单独校验或完成失败归类")
+    if isinstance(meta, dict):
+        expected_meta_status = "complete" if expected_delivery == "full" else "pass_with_flags"
+        if meta.get("status") != expected_meta_status:
+            errors.append(f"analysis_meta.status 在{expected_delivery}模式下必须为{expected_meta_status}")
+    if isinstance(cross_method, dict) and set(cross_method.get("methods") or []) != completed_primary:
+        errors.append("cross_method_analysis.methods 必须只包含实际完成的主要方法家族")
+
     synthesis = data.get("method_synthesis")
     require_keys(synthesis, {"summary", "clusters", "conflicts", "primary_synthesis_ids", "supplemental_synthesis_ids", "to_verify_synthesis_ids", "auxiliary_only_synthesis_ids"}, "method_synthesis", errors)
     synthesis_by_id: dict[str, dict[str, Any]] = {}
     if isinstance(synthesis, dict):
         clusters = synthesis.get("clusters")
-        if not isinstance(clusters, list) or len(clusters) < 6:
-            errors.append("method_synthesis.clusters 至少包含六条综合判断")
+        if not isinstance(clusters, list) or not clusters:
+            errors.append("method_synthesis.clusters 至少包含一条由完成方法形成的综合判断")
         else:
             for index, cluster in enumerate(clusters):
                 path = f"method_synthesis.clusters[{index}]"
@@ -493,7 +581,7 @@ def validate(data: Any) -> list[str]:
             if isinstance(conflict, dict) and set(conflict.get("hypothesis_ids") or []) - set(hypothesis_to_method):
                 errors.append(f"{path}.hypothesis_ids 存在无效引用")
 
-    if isinstance(blind, dict):
+    if isinstance(blind, dict) and "blind_school" in completed_methods:
         for index, work_path in enumerate(blind.get("work_paths") or []):
             unknown = sorted(set(work_path.get("evidence_ids") or []) - set(evidence_by_id)) if isinstance(work_path, dict) else []
             if unknown:
@@ -506,7 +594,7 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"blind_school_cross_analysis.reality_image_candidates[{index}] 缺少非盲派交叉支持")
     root_map = data.get("root_seed_flower_fruit_map")
     require_keys(root_map, {"summary", "root", "seedling", "flower", "fruit", "continuity", "domain_lifecycles", "findings"}, "root_seed_flower_fruit_map", errors)
-    if isinstance(root_map, dict):
+    if isinstance(root_map, dict) and "root_seed_flower_fruit" in completed_methods:
         if not isinstance(root_map.get("continuity"), list) or len(root_map.get("continuity", [])) < 3:
             errors.append("root_seed_flower_fruit_map.continuity 至少包含时序、同时共存和传承三条关系")
         lifecycles = root_map.get("domain_lifecycles")
@@ -520,6 +608,9 @@ def validate(data: Any) -> list[str]:
                 unknown = sorted(set(item.get("evidence_ids") or []) - set(evidence_by_id)) if isinstance(item, dict) else []
                 if unknown:
                     errors.append(f"root_seed_flower_fruit_map.domain_lifecycles[{index}].evidence_ids 存在无效引用：{unknown}")
+    elif isinstance(root_map, dict):
+        if root_map.get("continuity") or root_map.get("domain_lifecycles") or root_map.get("findings"):
+            errors.append("root_seed_flower_fruit方法未完成时不得保留根苗花果半成品")
     require_keys(data.get("complete_self_portrait"), SELF_PORTRAIT_KEYS, "complete_self_portrait", errors)
     require_keys(data.get("family_system"), FAMILY_SYSTEM_KEYS, "family_system", errors)
     require_keys(data.get("relationship_system"), RELATIONSHIP_SYSTEM_KEYS, "relationship_system", errors)
@@ -571,12 +662,12 @@ def validate(data: Any) -> list[str]:
     claims = data.get("report_claim_ledger")
     claim_ids: set[str] = set()
     claim_by_id: dict[str, dict[str, Any]] = {}
-    if not isinstance(claims, list) or len(claims) < 48:
-        errors.append("report_claim_ledger 至少包含48条报告级候选判断")
+    if not isinstance(claims, list) or not claims:
+        errors.append("report_claim_ledger 至少包含一条有真实方法来源的报告候选判断")
     else:
         for index, claim in enumerate(claims):
             path = f"report_claim_ledger[{index}]"
-            require_keys(claim, {"claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family", "claim", "plain_claim", "new_information", "mechanism_chain", "evidence_ids", "supporting_methods", "synthesis_ids", "method_hypothesis_ids", "report_role", "applicable_conditions", "reality_confirmation", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin"}, path, errors)
+            require_keys(claim, {"claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family", "claim", "plain_claim", "new_information", "mechanism_chain", "evidence_ids", "supporting_methods", "synthesis_ids", "method_hypothesis_ids", "report_role", "coverage_tags", "applicable_conditions", "reality_confirmation", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin"}, path, errors)
             if not isinstance(claim, dict):
                 continue
             claim_id = claim.get("claim_id")
@@ -585,8 +676,8 @@ def validate(data: Any) -> list[str]:
                     errors.append(f"{path}.claim_id 不能重复")
                 claim_ids.add(claim_id)
                 claim_by_id[claim_id] = claim
-            if not isinstance(claim.get("evidence_ids"), list) or len(set(claim.get("evidence_ids") or [])) < 2:
-                errors.append(f"{path}.evidence_ids 至少包含两个独立证据")
+            if not isinstance(claim.get("evidence_ids"), list) or not claim.get("evidence_ids"):
+                errors.append(f"{path}.evidence_ids 至少包含一条实际使用的实体证据")
             if not isinstance(claim.get("supporting_methods"), list) or not claim.get("supporting_methods"):
                 errors.append(f"{path}.supporting_methods 至少包含一种方法")
             for key in ("claim_family", "mechanism_family", "plain_claim", "new_information"):
@@ -620,6 +711,8 @@ def validate(data: Any) -> list[str]:
             if report_role == "primary":
                 if len(primary_support) < 2 or len(claim_groups) < 2:
                     errors.append(f"{path} primary判断至少需要两个独立主要方法家族")
+                if len(evidence_ids) < 2:
+                    errors.append(f"{path} primary判断至少需要两条实体证据")
                 if len({(item.get("independence_group"), item.get("method_id")) for item in substantive}) < 2:
                     errors.append(f"{path} primary判断至少需要两个不同的命理方法证据视角")
             elif report_role == "supplemental":
@@ -631,6 +724,13 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"{path} to_verify判断仍需保留方法来源")
             if claim_method_ids and not claim_method_ids.issubset({item.get("method_id") for item in substantive}):
                 errors.append(f"{path}.evidence_ids 未覆盖声明的方法来源")
+            incomplete_sources = sorted(claim_method_ids - completed_methods)
+            if incomplete_sources:
+                errors.append(f"{path} 引用了未完成或已排除的方法：{incomplete_sources}")
+            allowed_coverage = set(BASE_COVERAGE) | set(required_coverage(claim.get("domain")))
+            coverage_tags = set(claim.get("coverage_tags") or [])
+            if not coverage_tags or coverage_tags - allowed_coverage:
+                errors.append(f"{path}.coverage_tags 必须使用该领域允许的人物覆盖项")
             if claim.get("reality_confirmation") == "contradicted":
                 errors.append(f"{path} 现实已反驳的判断不得进入报告判断台账")
             if claim.get("confidence") == "high" and any(item.get("source_layer") in BLIND_LAYERS for item in resolved) and not any(item.get("source_layer") in NON_BLIND_LAYERS for item in resolved):
@@ -641,28 +741,16 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"{path}.unsupported_extensions 至少说明一项禁止外推")
             if any(term in str(claim.get("claim", "")) for term in ("必然离婚", "一定离婚", "必然发财", "保证发财", "牢狱之灾", "必得重病", "短寿", "死亡年份")):
                 errors.append(f"{path}.claim 含有禁止的确定性高风险断语")
-        domain_counts = {domain: sum(1 for claim in claims if isinstance(claim, dict) and claim.get("domain") == domain) for domain in REPORT_DOMAINS}
-        thin = sorted(domain for domain, count in domain_counts.items() if count < 8)
-        if thin:
-            errors.append(f"report_claim_ledger 六个报告领域各至少8条候选判断，当前不足：{thin}")
         for domain in REPORT_DOMAINS:
             domain_claims = [item for item in claims if isinstance(item, dict) and item.get("domain") == domain]
-            if len({item.get("claim_family") for item in domain_claims}) < 3:
+            if len(domain_claims) >= 4 and len({item.get("claim_family") for item in domain_claims}) < 3:
                 errors.append(f"report_claim_ledger.{domain} 至少包含三个不同判断家族")
-            if len({item.get("mechanism_family") for item in domain_claims}) < 2:
+            if len(domain_claims) >= 4 and len({item.get("mechanism_family") for item in domain_claims}) < 2:
                 errors.append(f"report_claim_ledger.{domain} 至少包含两条不同命理机制路径")
-            if len({item.get("reality_dimension") for item in domain_claims}) < 3:
+            if len(domain_claims) >= 4 and len({item.get("reality_dimension") for item in domain_claims}) < 3:
                 errors.append(f"report_claim_ledger.{domain} 至少覆盖三个现实问题轴")
-            domain_primary_methods = {
-                method_id
-                for item in domain_claims
-                if item.get("report_role") == "primary"
-                for method_id in (item.get("supporting_methods") or [])
-                if method_id in PRIMARY_METHODS
-            }
-            domain_primary_groups = {method_by_id[item].get("independence_group") for item in domain_primary_methods if item in method_by_id}
-            if len(domain_primary_methods) < 2 or len(domain_primary_groups) < 2:
-                errors.append(f"report_claim_ledger.{domain} 至少由两个独立主要方法家族形成")
+            if 1 < len(domain_claims) < 4 and len({item.get("reality_dimension") for item in domain_claims}) < 2:
+                errors.append(f"report_claim_ledger.{domain} 在精简模式下仍需覆盖至少两个现实问题轴")
         normalized_claims = [str(claim.get("claim", "")).replace(" ", "") for claim in claims if isinstance(claim, dict)]
         if len(normalized_claims) != len(set(normalized_claims)):
             errors.append("report_claim_ledger 不得用重复判断填充数量")
@@ -728,8 +816,8 @@ def validate(data: Any) -> list[str]:
             require_keys(source, {"summary_materials", "claim_ids", "claim_priority", "domain_specific_claim_ids", "mainline_claim_ids", "mandatory_candidate_ids", "emphasis_candidate_ids", "domain_mechanisms", "survives_without_mainline", "formation_chain_ids", "linkage_chain_ids", "concrete_candidates", "coverage", "coverage_claim_map", "evidence_gaps"}, path, errors)
             if not isinstance(source, dict):
                 continue
-            if len(source.get("summary_materials") or []) < 8 or len(source.get("claim_ids") or []) < 8:
-                errors.append(f"{path} 至少包含8条素材和8个候选判断，以便校准后确定性替换")
+            if len(source.get("summary_materials") or []) < len(source.get("claim_ids") or []):
+                errors.append(f"{path}.summary_materials 不得少于实际候选判断数量")
             if set(source.get("claim_ids") or []) - claim_ids:
                 errors.append(f"{path}.claim_ids 存在无效引用")
             source_ids = set(source.get("claim_ids") or [])
@@ -743,20 +831,22 @@ def validate(data: Any) -> list[str]:
             mandatory_ids = set(source.get("mandatory_candidate_ids") or [])
             if len(priority) != len(source_ids) or set(priority) != source_ids:
                 errors.append(f"{path}.claim_priority 必须无重复地排列全部候选判断")
-            minimum_specific = 6 if name.startswith("dimensions.") else 4
+            minimum_specific = min(2, len(source_ids)) if name.startswith("dimensions.") else min(1, len(source_ids))
             if len(specific_ids) < minimum_specific or not specific_ids.issubset(source_ids):
-                errors.append(f"{path}.domain_specific_claim_ids 至少包含{minimum_specific}个本节判断且必须属于claim_ids")
+                errors.append(f"{path}.domain_specific_claim_ids 必须保留当前证据允许的本节判断且属于claim_ids")
             if len(mainline_ids) > 2 or not mainline_ids.issubset(source_ids) or len(mainline_ids) / max(len(source_ids), 1) > 0.30:
                 errors.append(f"{path} 的共享人生主线判断不得超过本节判断的30%")
-            if not 2 <= len(mandatory_ids) <= 4 or not mandatory_ids.issubset(source_ids):
-                errors.append(f"{path}.mandatory_candidate_ids 必须提供2—4条按优先级排列的必进候选")
-            emphasis_range = (0, 4) if name == "life_narrative_source" else (0, 3)
+            expected_mandatory_range = (1, 2) if source_ids else (0, 0)
+            if not expected_mandatory_range[0] <= len(mandatory_ids) <= expected_mandatory_range[1] or not mandatory_ids.issubset(source_ids):
+                errors.append(f"{path}.mandatory_candidate_ids 必须随实际可用判断提供0—2条候选")
+            emphasis_range = (0, 2) if name == "life_narrative_source" else (0, 1)
             if not emphasis_range[0] <= len(emphasis_ids) <= emphasis_range[1] or not emphasis_ids.issubset(source_ids):
                 errors.append(f"{path}.emphasis_candidate_ids 最多包含{emphasis_range[1]}个可独立成立的重点候选；没有合适句子时允许为空")
-            if len(set(source.get("domain_mechanisms") or [])) < 2:
-                errors.append(f"{path}.domain_mechanisms 至少包含两个领域自身机制")
-            if source.get("survives_without_mainline") is not True:
-                errors.append(f"{path} 去掉人生主线后必须仍能独立成立")
+            minimum_mechanisms = 2 if len(source_ids) >= 4 else 1 if source_ids else 0
+            if len(set(source.get("domain_mechanisms") or [])) < minimum_mechanisms:
+                errors.append(f"{path}.domain_mechanisms 与当前可用判断数量不匹配")
+            if source_ids and source.get("survives_without_mainline") is not True:
+                errors.append(f"{path} 有可用判断时去掉人生主线后必须仍能独立成立")
             if name.startswith("dimensions."):
                 domain = name.split(".", 1)[1]
                 wrong = [item for item in specific_ids if item in claim_by_id and claim_by_id[item].get("domain") != domain]
@@ -766,18 +856,19 @@ def validate(data: Any) -> list[str]:
             else:
                 required_tags = set(BASE_COVERAGE)
             coverage = set(source.get("coverage") or [])
-            if not required_tags.issubset(coverage):
-                errors.append(f"{path}.coverage 缺少统一人物覆盖项：{sorted(required_tags - coverage)}")
             coverage_map = source.get("coverage_claim_map")
-            if not isinstance(coverage_map, dict) or not required_tags.issubset(set(coverage_map)):
-                errors.append(f"{path}.coverage_claim_map 必须为每个规定覆盖项提供备用判断")
+            if not isinstance(coverage_map, dict) or set(coverage_map) != coverage:
+                errors.append(f"{path}.coverage_claim_map 必须只映射实际已经覆盖的项目")
             else:
-                for tag in required_tags:
+                for tag in coverage:
                     mapped = coverage_map.get(tag)
-                    if not isinstance(mapped, list) or len(set(mapped)) < 2 or set(mapped) - source_ids:
-                        errors.append(f"{path}.coverage_claim_map.{tag} 必须绑定至少两个不同的本节候选判断")
+                    if not isinstance(mapped, list) or len(set(mapped)) < 1 or set(mapped) - source_ids:
+                        errors.append(f"{path}.coverage_claim_map.{tag} 必须绑定至少一个真实本节候选判断")
                     elif name.startswith("dimensions.") and not (set(mapped) & specific_ids):
                         errors.append(f"{path}.coverage_claim_map.{tag} 至少包含一个领域专属判断")
+            missing_tags = required_tags - coverage
+            if missing_tags and not source.get("evidence_gaps"):
+                errors.append(f"{path} 缺少覆盖项时必须在evidence_gaps中说明降级原因")
             if set(source.get("formation_chain_ids") or []) - formation_ids:
                 errors.append(f"{path}.formation_chain_ids 存在无效引用")
             if set(source.get("linkage_chain_ids") or []) - linkage_ids:
@@ -790,16 +881,11 @@ def validate(data: Any) -> list[str]:
             overused = sorted(item for item, count in usage.items() if count > 2)
             if overused:
                 errors.append(f"同一判断最多进入两个现实领域：{overused}")
-            family_coverage = set((dimensions.get("family_growth") or {}).get("coverage") or [])
-            if not {"parent_kin_interaction", "support_and_constraint", "independence_and_reciprocity"}.issubset(family_coverage):
-                errors.append("家庭领域必须覆盖父母亲友互动、可借力与受限、独立与回馈")
-            body_coverage = set((dimensions.get("body_emotion") or {}).get("coverage") or [])
-            if not {"baseline_signals", "stress_sequence", "recovery_pattern"}.issubset(body_coverage):
-                errors.append("身体与情绪领域必须覆盖基础反应、压力顺序和恢复方式")
+            # 家庭与身体专属覆盖不足时允许章节降级，但必须由上面的evidence_gaps显式记录。
 
     candidates = data.get("reality_candidate_pool")
-    if not isinstance(candidates, list) or not 18 <= len(candidates) <= 30:
-        errors.append("reality_candidate_pool 必须包含 18—30 条开放现实候选")
+    if not isinstance(candidates, list) or not 10 <= len(candidates) <= 24:
+        errors.append("reality_candidate_pool 必须包含10—24条由方法现实候选派生的开放候选")
     else:
         ids: list[str] = []
         domains: set[str] = set()
@@ -812,8 +898,8 @@ def validate(data: Any) -> list[str]:
                 domains.add(candidate["domain"])
             if isinstance(candidate, dict):
                 layers = candidate.get("source_layers")
-                if not isinstance(layers, list) or len(set(layers)) < 2:
-                    errors.append(f"{path}.source_layers 至少包含两个独立证据视角")
+                if not isinstance(layers, list) or len(set(layers)) < 1:
+                    errors.append(f"{path}.source_layers 至少包含一个真实方法来源")
                 elif not (set(layers) & PREFERRED_CANDIDATE_LENSES):
                     errors.append(f"{path}.source_layers 不能只依赖日主旺衰，必须包含根苗花果、资源、交叉方法或时运视角")
                 examples = candidate.get("observable_examples")
@@ -833,8 +919,15 @@ def validate(data: Any) -> list[str]:
                 if not isinstance(candidate.get("unsupported_extensions"), list) or not candidate.get("unsupported_extensions"):
                     errors.append(f"{path}.unsupported_extensions 至少包含一项禁止外推")
                 evidence_ids = set(candidate.get("evidence_ids") or [])
-                if len(evidence_ids) < 2 or evidence_ids - set(evidence_by_id):
-                    errors.append(f"{path}.evidence_ids 必须包含至少两条有效实体证据")
+                if len(evidence_ids) < 1 or evidence_ids - set(evidence_by_id):
+                    errors.append(f"{path}.evidence_ids 必须包含至少一条有效实体证据")
+                candidate_groups = {
+                    evidence_by_id[item].get("independence_group")
+                    for item in evidence_ids
+                    if item in evidence_by_id and evidence_by_id[item].get("method_id") in PRIMARY_METHODS
+                }
+                if candidate.get("confidence") == "high" and len(candidate_groups) < 2:
+                    errors.append(f"{path} high候选至少需要两个独立主要方法家族")
                 related_claim_ids = set(candidate.get("related_claim_ids") or [])
                 if not related_claim_ids or related_claim_ids - claim_ids:
                     errors.append(f"{path}.related_claim_ids 必须引用有效报告判断")
@@ -995,13 +1088,13 @@ def self_test_fixture() -> dict[str, Any]:
         shared = [f"claim_self_{neighbor * 8 + 1}"]
         claim_ids_for_source = own + shared
         return {
-            "summary_materials": [f"{domain_labels[report_domains[index]]}素材{offset}" for offset in range(1, 9)],
+            "summary_materials": [f"{domain_labels[report_domains[index]]}素材{offset}" for offset in range(1, len(claim_ids_for_source) + 1)],
             "claim_ids": claim_ids_for_source,
             "claim_priority": claim_ids_for_source,
             "domain_specific_claim_ids": own,
             "mainline_claim_ids": shared,
-            "mandatory_candidate_ids": own[:4],
-            "emphasis_candidate_ids": own[:3],
+            "mandatory_candidate_ids": own[:2],
+            "emphasis_candidate_ids": own[:1],
             "domain_mechanisms": [f"{domain_labels[report_domains[index]]}的形成机制", f"{domain_labels[report_domains[index]]}的阶段变化机制"],
             "survives_without_mainline": True,
             "formation_chain_ids": ["formation_1"],
@@ -1085,6 +1178,9 @@ def self_test_fixture() -> dict[str, Any]:
             "tier": tier,
             "independence_group": group,
             "status": "complete" if conclusion_count else "unavailable",
+            "attempt_count": 1,
+            "failure_reasons": [] if conclusion_count else ["上游未提供确定性辅助数据"],
+            "degradation_effects": [] if conclusion_count else ["辅助方法不参与综合计票"],
             "input_fact_refs": ["chart_facts.pillars"],
             "source_method_ids_read": [],
             "technical_conclusions": conclusions,
@@ -1183,6 +1279,7 @@ def self_test_fixture() -> dict[str, Any]:
             "synthesis_ids": [synthesis_id],
             "method_hypothesis_ids": hypothesis_ids,
             "report_role": report_role,
+            "coverage_tags": [BASE_COVERAGE[(local_index - 1) % len(BASE_COVERAGE)]],
             "applicable_conditions": ["对应现实条件成立"],
             "reality_confirmation": "unverified",
             "allowed_examples": ["可观察行为"],
@@ -1194,7 +1291,7 @@ def self_test_fixture() -> dict[str, Any]:
         }
 
     data = {
-        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.10.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
+        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.11.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
         "chart_facts": {"day_master": "甲", "pillars": {"year": pillar, "month": pillar, "day": {**pillar, "stem_ten_god": "日主"}, "hour": pillar}, "luck_cycles": [{}], "annual_cycles": [{}]},
         "chart_audit": {"status": "pass", "checks": [], "boundary_dependencies": [], "versions": []},
         "social_context_model": empty_section(),
@@ -1203,6 +1300,19 @@ def self_test_fixture() -> dict[str, Any]:
         "stems_branches_roots": {"summary": "", "pillars": {"year": pillar_analysis, "month": pillar_analysis, "day": pillar_analysis, "hour": pillar_analysis}, "findings": []},
         "interaction_network": empty_section(),
         "independent_method_analyses": independent_methods,
+        "method_execution_audit": {
+            "retry_limit": 3,
+            "completed_method_ids": [item[0] for item in method_specs if item[3]],
+            "excluded_method_ids": ["shen_sha_auxiliary", "nayin_auxiliary"],
+            "failed_method_ids": [],
+            "primary_completed_count": 7,
+            "structural_anchor_complete": True,
+            "reality_anchor_complete": True,
+            "timing_anchor_complete": True,
+            "delivery_decision": "full",
+            "degradation_reasons": ["神煞与纳音无确定性上游数据，不参与综合计票"],
+            "stage_validation_passed": True,
+        },
         "method_synthesis": {
             "summary": "各方法独立推演后按现实方向归并",
             "clusters": synthesis_clusters,

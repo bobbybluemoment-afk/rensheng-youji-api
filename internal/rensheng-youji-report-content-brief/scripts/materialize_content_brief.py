@@ -17,7 +17,7 @@ def canonical_digest(value: Any) -> str:
 
 def snapshot(claim: dict[str, Any]) -> dict[str, Any]:
     base_keys = ("claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family", "claim", "plain_claim", "new_information", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin")
-    trace_keys = ("synthesis_ids", "method_hypothesis_ids", "report_role", "applicable_conditions", "reality_confirmation")
+    trace_keys = ("synthesis_ids", "method_hypothesis_ids", "report_role", "coverage_tags", "applicable_conditions", "reality_confirmation")
     keys = base_keys + tuple(key for key in trace_keys if key in claim)
     body = {key: claim[key] for key in keys}
     return {**body, "source_sha256": canonical_digest(body)}
@@ -93,7 +93,7 @@ def enrich_section(section: dict[str, Any], analysis: dict[str, Any], ledger: di
 def materialize(selection: dict[str, Any], analysis: dict[str, Any], resolved: dict[str, Any] | None = None) -> dict[str, Any]:
     result = json.loads(json.dumps(selection, ensure_ascii=False))
     meta = analysis["analysis_meta"]
-    is_v09 = meta.get("core_version") in {"0.9.0", "0.10.0"}
+    is_v09 = meta.get("core_version") in {"0.9.0", "0.10.0", "0.11.0"}
     is_v081 = meta.get("core_version") == "0.8.1"
     is_v08 = meta.get("core_version") == "0.8.0"
     result["schema_version"] = "1.5.0" if is_v09 else "1.4.0" if is_v081 else "1.3.0" if is_v08 else "1.2.0"
@@ -102,7 +102,7 @@ def materialize(selection: dict[str, Any], analysis: dict[str, Any], resolved: d
     sections = [result["life_overview"], *result["dimensions"], result["current_question"]]
     if is_v09:
         if not isinstance(resolved, dict):
-            raise ValueError("core_version=0.9.0/0.10.0 必须先提供校准后确定性选材文件")
+            raise ValueError("core_version=0.9.0/0.10.0/0.11.0 必须先提供校准后确定性选材文件")
         resolved_source = resolved.get("source") or {}
         if resolved_source.get("analysis_id") != meta.get("analysis_id") or resolved_source.get("analysis_sha256") != canonical_digest(analysis):
             raise ValueError("校准后选材文件与当前Core不一致")
