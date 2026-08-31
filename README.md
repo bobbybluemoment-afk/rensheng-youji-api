@@ -136,7 +136,7 @@ AI 只需询问出生年月日时、出生城市和性别；姓名可以不填�
 
 本项目采用“人生有迹有限个人使用许可 1.0”：允许个人非商业使用，禁止未经授权的商业使用、公开镜像、搬运和重新发布。第三方组件仍适用其各自的许可证。
 
-版本：2.12.1
+版本：2.13.0
 
 ## 维护验收
 
@@ -146,6 +146,7 @@ AI 只需询问出生年月日时、出生城市和性别；姓名可以不填�
 python -m unittest tests/test_free_card_v2_pipeline.py
 python -m unittest tests/test_full_report_pipeline.py
 python -m unittest tests/test_report_v28_traceability.py
+python -m unittest tests/test_report_v213_post_calibration_selection.py
 ```
 
-测试会使用固定脱敏样例生成临时PNG，并检查1242×1660尺寸、20年连续性、当前年位置、元宝尺度和桃花颜色。AI生成 Core 母稿的步骤仍需通过真实用户端到端调用单独检查。
+测试会使用固定脱敏样例生成临时PNG，并检查1242×1660尺寸、20年连续性、当前年位置、元宝尺度、桃花颜色、校准后判断替换、六领域覆盖和单章降级。AI生成 Core 母稿的步骤仍需通过真实用户端到端调用单独检查。
