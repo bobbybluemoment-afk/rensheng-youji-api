@@ -106,6 +106,36 @@
           "type": ["object", "null"],
           "additionalProperties": {"type": "string"}
         },
+        "shen_sha": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["calculation_engine", "calculation_version", "items"],
+              "properties": {
+                "calculation_engine": {"type": "string", "minLength": 1},
+                "calculation_version": {"type": "string", "minLength": 1},
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["symbol_id", "name", "rule_reference", "source_positions", "target_positions"],
+                    "properties": {
+                      "symbol_id": {"type": "string", "minLength": 1},
+                      "name": {"type": "string", "minLength": 1},
+                      "rule_reference": {"type": "string", "minLength": 1},
+                      "source_positions": {"type": "array", "items": {"type": "string"}},
+                      "target_positions": {"type": "array", "items": {"type": "string"}},
+                      "notes": {"type": "array", "items": {"type": "string"}}
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
         "calculation_engine": {"type": "string", "minLength": 1},
         "calculation_version": {"type": ["string", "null"]}
       }

@@ -103,10 +103,10 @@ def main() -> int:
         cwd=ROOT, text=True, capture_output=True, check=False,
     )
     if core_test.returncode:
-        print("FAILED: v0.9.0 Core candidate reserves, coverage mapping and report-grade source bundle")
+        print("FAILED: v0.10.0 Core independent method analyses, synthesis, candidate reserves and report-grade source bundle")
         print(core_test.stdout or core_test.stderr)
         return 7
-    print("READY: dependencies, chart, v2 card, frozen Core v0.9.0, calibration delta, post-calibration source resolution, mandatory claim realization, evidence-based section degradation, sparse emphasis, stable fallback and fixed 10-page report pipeline passed")
+    print("READY: dependencies, chart, v2 card, frozen Core v0.10.0, independent method analyses, synthesis, calibration delta, post-calibration source resolution, mandatory claim realization, evidence-based section degradation, sparse emphasis, stable fallback and fixed 10-page report pipeline passed")
     return 0
 
 

@@ -25,7 +25,8 @@ def _resolve_section(source: dict[str, Any], ledger: dict[str, dict[str, Any]], 
     priority = source.get("claim_priority") or source.get("claim_ids") or []
     pool = set(source.get("claim_ids") or [])
     rejected = [claim_id for claim_id in priority if ledger.get(claim_id, {}).get("calibration_status") == "reject"]
-    available = [claim_id for claim_id in priority if claim_id in pool and claim_id in ledger and claim_id not in rejected]
+    ineligible = [claim_id for claim_id in priority if ledger.get(claim_id, {}).get("report_role") not in {"primary", "supplemental"}]
+    available = [claim_id for claim_id in priority if claim_id in pool and claim_id in ledger and claim_id not in rejected and claim_id not in ineligible]
     specific_pool = set(source.get("domain_specific_claim_ids") or [])
     mainline_pool = set(source.get("mainline_claim_ids") or [])
     coverage_map = source.get("coverage_claim_map") or {}
@@ -115,6 +116,7 @@ def _resolve_section(source: dict[str, Any], ledger: dict[str, dict[str, Any]], 
         "missing_coverage": missing,
         "delivery_mode": mode,
         "rejected_claim_ids": rejected,
+        "ineligible_claim_ids": ineligible,
         "replacement_log": replacements,
         "evidence_gaps": _ordered_unique((source.get("evidence_gaps") or []) + (["校准后可用判断不足，章节按证据缩短。"] if mode != "normal" else [])),
     }
@@ -122,8 +124,8 @@ def _resolve_section(source: dict[str, Any], ledger: dict[str, dict[str, Any]], 
 
 def resolve(analysis: dict[str, Any]) -> dict[str, Any]:
     meta = analysis.get("analysis_meta") or {}
-    if meta.get("core_version") != "0.9.0":
-        raise ValueError("Post-calibration source resolution requires core_version=0.9.0")
+    if meta.get("core_version") != "0.10.0":
+        raise ValueError("Post-calibration source resolution requires core_version=0.10.0")
     ledger = {item.get("claim_id"): item for item in analysis.get("report_claim_ledger") or [] if isinstance(item, dict)}
     source_bundle = analysis.get("report_source_bundle") or {}
     dimensions = source_bundle.get("dimensions") or {}

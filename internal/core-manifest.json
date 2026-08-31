@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.13.0",
+  "version": "2.14.0",
   "visibility": "internal",
   "stages": [
     {
@@ -39,7 +39,7 @@
     "pages": 10,
     "card_page": 2,
     "report_schema_version": "2.13.0",
-    "core_version": "0.9.0",
+    "core_version": "0.10.0",
     "content_brief_schema_version": "1.5.0",
     "report_draft_schema_version": "1.5.0",
     "editorial_review_version": "2.4.0",
@@ -48,5 +48,5 @@
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "Core 0.9.0在校准前冻结完整分析与带优先级、覆盖备用映射的报告候选池；现实校准只以确定性增量调整状态。校准后由独立程序排除reject并生成正式报告选材，必进句与重点句只从仍有效的候选中确定。六领域统一覆盖契约在Core冻结前校验，判断不足时按单章normal、shortened、minimal或evidence_gap降级，不阻塞其他可靠内容。公开免费版在用户环境运行，不使用验证码、MCP或人生有迹云端接口。"
+  "notes": "Core 0.10.0强制格局、气势、调候、十神、根苗花果、盲派和岁运连续性等方法各自只读冻结排盘事实，分别形成技术结论与现实候选；综合层随后按独立方法家族归并同向、互补、条件、阶段与冲突。至少两个主要方法独立同向才能成为高置信主判断；单一主要方法可作为有条件的补充，神煞和纳音单独支持时不得进入报告。校准前冻结完整分析与报告候选池，校准后只调整状态并由确定性程序选材。正式报告继续使用schema 2.13.0，事实提纲和初稿使用1.5.0，中文编辑使用2.4.0。"
 }

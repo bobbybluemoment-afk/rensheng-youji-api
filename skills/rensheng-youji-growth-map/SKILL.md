@@ -163,7 +163,7 @@ python scripts/core_baseline.py verify \
 3. 完整读取 `internal/rensheng-youji-report-content-brief/SKILL.md`，从校准后Core、确定性选材和 `work/report-content-selection.json` 生成实体化 `work/report-content-brief.json`。事实提纲必须携带Core判断正文、机制、证据、限制、选材哈希和降级状态；不能只传判断编号。
 4. 完整读取 `internal/rensheng-youji-report-writer/SKILL.md`，从实体化事实提纲生成 `work/report-draft.json`。每个内容区必须把 `mandatory_claim_ids` 对应的 `plain_claim` 原句放入正文，并登记 `claim_realization_map`；写作层只补充形成过程、条件、例子和限制，不能重新概括锁定判断。正常章节写500—700个汉字；判断不足时按确定性选材给出的 `shortened`、`minimal` 或 `evidence_gap` 缩短，不得用重复内容凑字。
 5. 完整读取 `internal/rensheng-youji-chinese-editor/SKILL.md`，对初稿逐段执行第二遍中文编辑，生成 `work/editorial-review.json` 和正式 `work/report.json`。编辑记录必须保存初稿与终稿对应关系、降级状态和实际修改，不能再用几个布尔值代替编辑。
-6. 正式报告使用 `schema_version=2.13.0`、`document_mode=full_calibrated`。Core使用0.9.0、事实提纲和初稿使用1.5.0、中文编辑使用2.4.0。完整人生主线先根据全盘材料生成，再在第4页单独回应用户问题。六个领域先写各自的人物侧面，再用人生主线串联；用户关注方向只在当前阶段、问题回应、相关年度和行动建议中加重。
+6. 正式报告使用 `schema_version=2.13.0`、`document_mode=full_calibrated`。Core使用0.10.0、事实提纲和初稿使用1.5.0、中文编辑使用2.4.0。Core先让规定方法家族独立完成技术推演和现实候选，再由综合层形成可进入报告的主要、补充与待验证判断。完整人生主线先根据全盘材料生成，再在第4页单独回应用户问题。六个领域先写各自的人物侧面，再用人生主线串联；用户关注方向只在当前阶段、问题回应、相关年度和行动建议中加重。
 7. 时间分析继续使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系，同时概括更长阶段。
 8. 从同一份校准后 Core 母稿依次运行 `rensheng-youji-free-card-output` 与 `rensheng-youji-free-card-renderer` 的现有新版流程，生成 `work/free-card-output.json`。报告与卡片的分析编号、Core版本和明显关系机会年份必须一致。
 9. 运行统一交付命令：

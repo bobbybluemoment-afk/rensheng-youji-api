@@ -72,9 +72,12 @@ def apply_patch(baseline: dict[str, Any], lock: dict[str, Any], patch: dict[str,
     for evidence in patch.get("user_fact_evidence", []):
         if evidence.get("source_layer") != "user_fact" or evidence.get("evidence_id") in existing_evidence:
             raise ValueError("Calibration may append only new user_fact evidence")
-        result["evidence_registry"].append(evidence)
-        existing_evidence.add(evidence["evidence_id"])
-        user_fact_ids.append(evidence["evidence_id"])
+        normalized_evidence = dict(evidence)
+        normalized_evidence.setdefault("method_id", "user_fact")
+        normalized_evidence.setdefault("independence_group", "reality_confirmation")
+        result["evidence_registry"].append(normalized_evidence)
+        existing_evidence.add(normalized_evidence["evidence_id"])
+        user_fact_ids.append(normalized_evidence["evidence_id"])
     for update in claim_updates:
         if set(update["user_fact_evidence_ids"]) - set(user_fact_ids):
             raise ValueError(f"{update['claim_id']} references unregistered user fact evidence")

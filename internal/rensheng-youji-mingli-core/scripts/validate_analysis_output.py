@@ -28,6 +28,8 @@ REQUIRED_SECTIONS = {
     "day_master",
     "stems_branches_roots",
     "interaction_network",
+    "independent_method_analyses",
+    "method_synthesis",
     "cross_method_analysis",
     "blind_school_cross_analysis",
     "evidence_registry",
@@ -172,6 +174,42 @@ PREFERRED_CANDIDATE_LENSES = {
 BLIND_LAYERS = {"blind_shared", "blind_duan", "blind_yang"}
 NON_BLIND_LAYERS = {"natal", "root_seed_flower_fruit", "resource_relationship", "cross_method", "luck_cycle", "annual"}
 REPORT_DOMAINS = {"self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"}
+PRIMARY_METHODS = {
+    "pattern_structure",
+    "momentum_configuration",
+    "climate_adjustment",
+    "ten_god_dynamics",
+    "root_seed_flower_fruit",
+    "blind_school",
+    "timing_continuity",
+}
+PARTIAL_METHODS = {"position_relationship", "stem_branch_dynamics"}
+AUXILIARY_METHODS = {"shen_sha_auxiliary", "nayin_auxiliary"}
+ALL_METHODS = PRIMARY_METHODS | PARTIAL_METHODS | AUXILIARY_METHODS
+METHOD_GROUPS = {
+    "pattern_structure": "pattern_organization",
+    "momentum_configuration": "momentum_intention",
+    "climate_adjustment": "climate_environment",
+    "ten_god_dynamics": "relationship_action",
+    "root_seed_flower_fruit": "development_continuity",
+    "blind_school": "blind_action_path",
+    "timing_continuity": "timing_execution",
+    "position_relationship": "position_interface",
+    "stem_branch_dynamics": "stem_branch_structure",
+    "shen_sha_auxiliary": "symbolic_auxiliary",
+    "nayin_auxiliary": "symbolic_auxiliary",
+}
+ALLOWED_METHOD_INPUT_ROOTS = {
+    "request",
+    "person",
+    "chart",
+    "solar_terms_and_boundaries",
+    "five_elements",
+    "luck_cycles",
+    "annual_cycles",
+    "chart_facts",
+    "chart_audit",
+}
 
 
 def load_json(path: Path) -> Any:
@@ -221,8 +259,8 @@ def validate(data: Any) -> list[str]:
     meta = data.get("analysis_meta")
     require_keys(meta, {"analysis_id", "request_id", "core_version", "generated_at", "analysis_as_of", "target_range", "input_completeness", "status"}, "analysis_meta", errors)
     if isinstance(meta, dict):
-        if meta.get("core_version") != "0.9.0":
-            errors.append("analysis_meta.core_version 必须为 0.9.0")
+        if meta.get("core_version") != "0.10.0":
+            errors.append("analysis_meta.core_version 必须为 0.10.0")
         if meta.get("status") not in {"complete", "pass_with_flags"}:
             errors.append("analysis_meta.status 必须是 complete 或 pass_with_flags")
         try:
@@ -254,8 +292,8 @@ def validate(data: Any) -> list[str]:
     require_keys(cross_method, {"summary", "methods", "agreements", "conflicts", "findings"}, "cross_method_analysis", errors)
     if isinstance(cross_method, dict):
         methods = cross_method.get("methods")
-        if not isinstance(methods, list) or len(set(methods)) < 3:
-            errors.append("cross_method_analysis.methods 至少包含三个独立方法")
+        if not isinstance(methods, list) or not PRIMARY_METHODS.issubset(set(methods)):
+            errors.append("cross_method_analysis.methods 必须包含全部七个主要独立方法家族")
         if not isinstance(cross_method.get("agreements"), list) or not cross_method.get("agreements"):
             errors.append("cross_method_analysis.agreements 至少记录一项交叉支持")
         if not isinstance(cross_method.get("conflicts"), list):
@@ -285,7 +323,7 @@ def validate(data: Any) -> list[str]:
     else:
         for index, evidence in enumerate(registry):
             path = f"evidence_registry[{index}]"
-            require_keys(evidence, {"evidence_id", "source_layer", "method", "chart_refs", "observation", "interpretation", "limitations", "confidence"}, path, errors)
+            require_keys(evidence, {"evidence_id", "source_layer", "method", "method_id", "independence_group", "chart_refs", "observation", "interpretation", "limitations", "confidence"}, path, errors)
             if not isinstance(evidence, dict):
                 continue
             evidence_id = evidence.get("evidence_id")
@@ -297,6 +335,164 @@ def validate(data: Any) -> list[str]:
                 evidence_by_id[evidence_id] = evidence
             if not evidence.get("limitations"):
                 errors.append(f"{path}.limitations 至少说明一项限制")
+
+    method_items = data.get("independent_method_analyses")
+    method_by_id: dict[str, dict[str, Any]] = {}
+    conclusion_to_method: dict[str, str] = {}
+    hypothesis_to_method: dict[str, str] = {}
+    hypothesis_by_id: dict[str, dict[str, Any]] = {}
+    if not isinstance(method_items, list) or len(method_items) != len(ALL_METHODS):
+        errors.append("independent_method_analyses 必须恰好包含11个规定方法家族")
+    else:
+        for index, method_item in enumerate(method_items):
+            path = f"independent_method_analyses[{index}]"
+            require_keys(method_item, {"method_id", "tier", "independence_group", "status", "input_fact_refs", "source_method_ids_read", "technical_conclusions", "reality_hypotheses", "limitations"}, path, errors)
+            if not isinstance(method_item, dict):
+                continue
+            method_id = method_item.get("method_id")
+            if method_id not in ALL_METHODS:
+                errors.append(f"{path}.method_id 不是规定方法家族")
+                continue
+            if method_id in method_by_id:
+                errors.append(f"{path}.method_id 不能重复")
+            method_by_id[method_id] = method_item
+            expected_tier = "primary" if method_id in PRIMARY_METHODS else "partial" if method_id in PARTIAL_METHODS else "auxiliary"
+            if method_item.get("tier") != expected_tier:
+                errors.append(f"{path}.tier 必须为{expected_tier}")
+            if method_item.get("independence_group") != METHOD_GROUPS[method_id]:
+                errors.append(f"{path}.independence_group 必须为{METHOD_GROUPS[method_id]}")
+            if method_item.get("source_method_ids_read") != []:
+                errors.append(f"{path}.source_method_ids_read 必须为空，独立方法不得读取其他方法结论")
+            if not method_item.get("input_fact_refs"):
+                errors.append(f"{path}.input_fact_refs 至少引用一项冻结排盘事实")
+            for fact_ref in method_item.get("input_fact_refs") or []:
+                if not isinstance(fact_ref, str) or fact_ref.split(".", 1)[0] not in ALLOWED_METHOD_INPUT_ROOTS:
+                    errors.append(f"{path}.input_fact_refs 只能引用冻结事实，不能读取方法结论、报告候选或校准结果")
+            if not method_item.get("limitations"):
+                errors.append(f"{path}.limitations 至少说明一项方法边界")
+            conclusions = method_item.get("technical_conclusions") or []
+            hypotheses = method_item.get("reality_hypotheses") or []
+            if method_id in PRIMARY_METHODS:
+                if method_item.get("status") != "complete" or len(conclusions) < 2 or len(hypotheses) < 2:
+                    errors.append(f"{path} 主要方法必须complete并至少包含两条技术结论和两条现实候选")
+            elif method_id in PARTIAL_METHODS:
+                if method_item.get("status") != "complete" or len(conclusions) < 1 or len(hypotheses) < 1:
+                    errors.append(f"{path} 部分独立方法必须complete并至少包含一条技术结论和一条现实候选")
+            elif method_item.get("status") == "unavailable":
+                if conclusions or hypotheses:
+                    errors.append(f"{path} 辅助方法unavailable时不得补造技术结论或现实候选")
+            elif len(conclusions) < 1 or len(hypotheses) < 1:
+                errors.append(f"{path} 辅助方法complete时至少包含一条技术结论和一条现实候选")
+            local_conclusion_ids: set[str] = set()
+            for conclusion_index, conclusion in enumerate(conclusions):
+                conclusion_path = f"{path}.technical_conclusions[{conclusion_index}]"
+                require_keys(conclusion, {"conclusion_id", "statement", "mechanism_chain", "chart_refs", "evidence_ids", "conditions", "counterconditions", "time_scope", "confidence"}, conclusion_path, errors)
+                if not isinstance(conclusion, dict):
+                    continue
+                conclusion_id = conclusion.get("conclusion_id")
+                if not isinstance(conclusion_id, str) or conclusion_id in conclusion_to_method:
+                    errors.append(f"{conclusion_path}.conclusion_id 缺失或重复")
+                else:
+                    conclusion_to_method[conclusion_id] = method_id
+                    local_conclusion_ids.add(conclusion_id)
+                evidence_ids = set(conclusion.get("evidence_ids") or [])
+                chart_refs = set(conclusion.get("chart_refs") or [])
+                if not chart_refs or not chart_refs.issubset(set(method_item.get("input_fact_refs") or [])):
+                    errors.append(f"{conclusion_path}.chart_refs 必须来自本方法声明的input_fact_refs")
+                unknown = sorted(evidence_ids - set(evidence_by_id))
+                if unknown:
+                    errors.append(f"{conclusion_path}.evidence_ids 存在无效引用：{unknown}")
+                for evidence_id in evidence_ids & set(evidence_by_id):
+                    evidence = evidence_by_id[evidence_id]
+                    if evidence.get("method_id") != method_id:
+                        errors.append(f"{conclusion_path} 引用了其他方法的证据 {evidence_id}")
+                    if evidence.get("independence_group") != method_item.get("independence_group"):
+                        errors.append(f"{conclusion_path} 的证据独立家族与方法不一致")
+            for hypothesis_index, hypothesis in enumerate(hypotheses):
+                hypothesis_path = f"{path}.reality_hypotheses[{hypothesis_index}]"
+                require_keys(hypothesis, {"hypothesis_id", "derived_from_conclusion_ids", "domain", "normalized_direction", "statement", "observable_indicators", "conditions", "counterevidence", "unsupported_extensions", "added_information", "time_scope", "reality_confirmation"}, hypothesis_path, errors)
+                if not isinstance(hypothesis, dict):
+                    continue
+                hypothesis_id = hypothesis.get("hypothesis_id")
+                if not isinstance(hypothesis_id, str) or hypothesis_id in hypothesis_to_method:
+                    errors.append(f"{hypothesis_path}.hypothesis_id 缺失或重复")
+                else:
+                    hypothesis_to_method[hypothesis_id] = method_id
+                    hypothesis_by_id[hypothesis_id] = hypothesis
+                derived = set(hypothesis.get("derived_from_conclusion_ids") or [])
+                if not derived or derived - local_conclusion_ids:
+                    errors.append(f"{hypothesis_path} 只能引用本方法的技术结论")
+                if len(set(hypothesis.get("observable_indicators") or [])) < 2:
+                    errors.append(f"{hypothesis_path}.observable_indicators 至少包含两条可观察表现")
+                for key in ("conditions", "counterevidence", "unsupported_extensions"):
+                    if not hypothesis.get(key):
+                        errors.append(f"{hypothesis_path}.{key} 至少包含一项")
+        missing_methods = sorted(ALL_METHODS - set(method_by_id))
+        if missing_methods:
+            errors.append(f"independent_method_analyses 缺少方法家族：{missing_methods}")
+
+    synthesis = data.get("method_synthesis")
+    require_keys(synthesis, {"summary", "clusters", "conflicts", "primary_synthesis_ids", "supplemental_synthesis_ids", "to_verify_synthesis_ids", "auxiliary_only_synthesis_ids"}, "method_synthesis", errors)
+    synthesis_by_id: dict[str, dict[str, Any]] = {}
+    if isinstance(synthesis, dict):
+        clusters = synthesis.get("clusters")
+        if not isinstance(clusters, list) or len(clusters) < 6:
+            errors.append("method_synthesis.clusters 至少包含六条综合判断")
+        else:
+            for index, cluster in enumerate(clusters):
+                path = f"method_synthesis.clusters[{index}]"
+                require_keys(cluster, {"synthesis_id", "domain", "normalized_direction", "member_hypothesis_ids", "supporting_method_ids", "independence_groups", "relationship_type", "structural_confidence", "reality_confirmation", "counterevidence", "report_role", "reasoning"}, path, errors)
+                if not isinstance(cluster, dict):
+                    continue
+                synthesis_id = cluster.get("synthesis_id")
+                if not isinstance(synthesis_id, str) or synthesis_id in synthesis_by_id:
+                    errors.append(f"{path}.synthesis_id 缺失或重复")
+                    continue
+                synthesis_by_id[synthesis_id] = cluster
+                member_ids = set(cluster.get("member_hypothesis_ids") or [])
+                if not member_ids or member_ids - set(hypothesis_to_method):
+                    errors.append(f"{path}.member_hypothesis_ids 存在无效引用")
+                    continue
+                actual_methods = {hypothesis_to_method[item] for item in member_ids}
+                actual_groups = {method_by_id[item].get("independence_group") for item in actual_methods if item in method_by_id}
+                if set(cluster.get("supporting_method_ids") or []) != actual_methods:
+                    errors.append(f"{path}.supporting_method_ids 必须由成员现实候选确定")
+                if set(cluster.get("independence_groups") or []) != actual_groups:
+                    errors.append(f"{path}.independence_groups 必须由成员方法确定")
+                primary_support = actual_methods & PRIMARY_METHODS
+                role = cluster.get("report_role")
+                if role == "primary" and (len(primary_support) < 2 or len(actual_groups) < 2):
+                    errors.append(f"{path} primary判断至少需要两个主要方法家族独立同向")
+                if role == "primary" and cluster.get("relationship_type") != "same_direction":
+                    errors.append(f"{path} primary判断必须是不同主要方法独立得到的同向现实候选")
+                if cluster.get("relationship_type") == "same_direction":
+                    member_directions = {hypothesis_by_id[item].get("normalized_direction") for item in member_ids}
+                    if member_directions != {cluster.get("normalized_direction")}:
+                        errors.append(f"{path} same_direction成员必须使用相同标准化现实方向")
+                if role == "supplemental" and not primary_support:
+                    errors.append(f"{path} supplemental判断至少需要一个主要方法支持")
+                if role == "auxiliary_only" and actual_methods - AUXILIARY_METHODS:
+                    errors.append(f"{path} auxiliary_only只能由神煞或纳音辅助方法支持")
+                if cluster.get("structural_confidence") == "high" and (len(primary_support) < 2 or len(actual_groups) < 2):
+                    errors.append(f"{path} high结构置信度至少需要两个不同主要方法家族")
+                if cluster.get("reality_confirmation") == "contradicted" and role != "excluded":
+                    errors.append(f"{path} 现实已反驳时必须标记excluded")
+        role_lists = {
+            "primary": set(synthesis.get("primary_synthesis_ids") or []),
+            "supplemental": set(synthesis.get("supplemental_synthesis_ids") or []),
+            "to_verify": set(synthesis.get("to_verify_synthesis_ids") or []),
+            "auxiliary_only": set(synthesis.get("auxiliary_only_synthesis_ids") or []),
+        }
+        for role, listed in role_lists.items():
+            actual = {item_id for item_id, item in synthesis_by_id.items() if item.get("report_role") == role}
+            if listed != actual:
+                errors.append(f"method_synthesis.{role}_synthesis_ids 与clusters中的角色不一致")
+        for index, conflict in enumerate(synthesis.get("conflicts") or []):
+            path = f"method_synthesis.conflicts[{index}]"
+            require_keys(conflict, {"conflict_id", "hypothesis_ids", "same_scope", "resolution", "requires_calibration"}, path, errors)
+            if isinstance(conflict, dict) and set(conflict.get("hypothesis_ids") or []) - set(hypothesis_to_method):
+                errors.append(f"{path}.hypothesis_ids 存在无效引用")
+
     if isinstance(blind, dict):
         for index, work_path in enumerate(blind.get("work_paths") or []):
             unknown = sorted(set(work_path.get("evidence_ids") or []) - set(evidence_by_id)) if isinstance(work_path, dict) else []
@@ -380,7 +576,7 @@ def validate(data: Any) -> list[str]:
     else:
         for index, claim in enumerate(claims):
             path = f"report_claim_ledger[{index}]"
-            require_keys(claim, {"claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family", "claim", "plain_claim", "new_information", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin"}, path, errors)
+            require_keys(claim, {"claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family", "claim", "plain_claim", "new_information", "mechanism_chain", "evidence_ids", "supporting_methods", "synthesis_ids", "method_hypothesis_ids", "report_role", "applicable_conditions", "reality_confirmation", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin"}, path, errors)
             if not isinstance(claim, dict):
                 continue
             claim_id = claim.get("claim_id")
@@ -391,8 +587,8 @@ def validate(data: Any) -> list[str]:
                 claim_by_id[claim_id] = claim
             if not isinstance(claim.get("evidence_ids"), list) or len(set(claim.get("evidence_ids") or [])) < 2:
                 errors.append(f"{path}.evidence_ids 至少包含两个独立证据")
-            if not isinstance(claim.get("supporting_methods"), list) or len(set(claim.get("supporting_methods") or [])) < 2:
-                errors.append(f"{path}.supporting_methods 至少包含两种交叉方法")
+            if not isinstance(claim.get("supporting_methods"), list) or not claim.get("supporting_methods"):
+                errors.append(f"{path}.supporting_methods 至少包含一种方法")
             for key in ("claim_family", "mechanism_family", "plain_claim", "new_information"):
                 if not isinstance(claim.get(key), str) or len(claim.get(key, "").strip()) < 3:
                     errors.append(f"{path}.{key} 必须包含实质内容")
@@ -404,8 +600,39 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"{path}.evidence_ids 引用了不存在的实体证据：{unknown_evidence}")
             resolved = [evidence_by_id[item] for item in evidence_ids if item in evidence_by_id]
             substantive = [item for item in resolved if item.get("source_layer") not in {"user_fact", "social_prior"}]
-            if len({(item.get("source_layer"), item.get("method")) for item in substantive}) < 2:
-                errors.append(f"{path} 至少需要两个不同的命盘或时运证据视角")
+            hypothesis_ids = set(claim.get("method_hypothesis_ids") or [])
+            if not hypothesis_ids or hypothesis_ids - set(hypothesis_to_method):
+                errors.append(f"{path}.method_hypothesis_ids 必须引用有效的独立方法现实候选")
+            claim_method_ids = {hypothesis_to_method[item] for item in hypothesis_ids if item in hypothesis_to_method}
+            if set(claim.get("supporting_methods") or []) != claim_method_ids:
+                errors.append(f"{path}.supporting_methods 必须由method_hypothesis_ids确定")
+            synthesis_ids = set(claim.get("synthesis_ids") or [])
+            if not synthesis_ids or synthesis_ids - set(synthesis_by_id):
+                errors.append(f"{path}.synthesis_ids 必须引用有效综合判断")
+            synthesis_members = set()
+            for synthesis_id in synthesis_ids & set(synthesis_by_id):
+                synthesis_members.update(synthesis_by_id[synthesis_id].get("member_hypothesis_ids") or [])
+            if hypothesis_ids and not hypothesis_ids.issubset(synthesis_members):
+                errors.append(f"{path}.method_hypothesis_ids 必须属于所引用的综合判断")
+            claim_groups = {method_by_id[item].get("independence_group") for item in claim_method_ids if item in method_by_id}
+            primary_support = claim_method_ids & PRIMARY_METHODS
+            report_role = claim.get("report_role")
+            if report_role == "primary":
+                if len(primary_support) < 2 or len(claim_groups) < 2:
+                    errors.append(f"{path} primary判断至少需要两个独立主要方法家族")
+                if len({(item.get("independence_group"), item.get("method_id")) for item in substantive}) < 2:
+                    errors.append(f"{path} primary判断至少需要两个不同的命理方法证据视角")
+            elif report_role == "supplemental":
+                if not primary_support:
+                    errors.append(f"{path} supplemental判断至少需要一个主要方法支持")
+                if not claim.get("applicable_conditions") or not claim.get("new_information"):
+                    errors.append(f"{path} supplemental判断必须说明成立条件与新增信息")
+            elif report_role == "to_verify" and not claim_method_ids:
+                errors.append(f"{path} to_verify判断仍需保留方法来源")
+            if claim_method_ids and not claim_method_ids.issubset({item.get("method_id") for item in substantive}):
+                errors.append(f"{path}.evidence_ids 未覆盖声明的方法来源")
+            if claim.get("reality_confirmation") == "contradicted":
+                errors.append(f"{path} 现实已反驳的判断不得进入报告判断台账")
             if claim.get("confidence") == "high" and any(item.get("source_layer") in BLIND_LAYERS for item in resolved) and not any(item.get("source_layer") in NON_BLIND_LAYERS for item in resolved):
                 errors.append(f"{path} 高置信盲派判断必须有非盲派方法交叉支持")
             if claim.get("origin") == "user_fact_refinement" and not any(item.get("source_layer") == "user_fact" for item in resolved):
@@ -426,6 +653,16 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"report_claim_ledger.{domain} 至少包含两条不同命理机制路径")
             if len({item.get("reality_dimension") for item in domain_claims}) < 3:
                 errors.append(f"report_claim_ledger.{domain} 至少覆盖三个现实问题轴")
+            domain_primary_methods = {
+                method_id
+                for item in domain_claims
+                if item.get("report_role") == "primary"
+                for method_id in (item.get("supporting_methods") or [])
+                if method_id in PRIMARY_METHODS
+            }
+            domain_primary_groups = {method_by_id[item].get("independence_group") for item in domain_primary_methods if item in method_by_id}
+            if len(domain_primary_methods) < 2 or len(domain_primary_groups) < 2:
+                errors.append(f"report_claim_ledger.{domain} 至少由两个独立主要方法家族形成")
         normalized_claims = [str(claim.get("claim", "")).replace(" ", "") for claim in claims if isinstance(claim, dict)]
         if len(normalized_claims) != len(set(normalized_claims)):
             errors.append("report_claim_ledger 不得用重复判断填充数量")
@@ -496,6 +733,9 @@ def validate(data: Any) -> list[str]:
             if set(source.get("claim_ids") or []) - claim_ids:
                 errors.append(f"{path}.claim_ids 存在无效引用")
             source_ids = set(source.get("claim_ids") or [])
+            ineligible_source_ids = sorted(item for item in source_ids if item in claim_by_id and claim_by_id[item].get("report_role") not in {"primary", "supplemental"})
+            if ineligible_source_ids:
+                errors.append(f"{path}.claim_ids 含不得进入报告素材的待验证或辅助判断：{ineligible_source_ids}")
             priority = source.get("claim_priority") or []
             specific_ids = set(source.get("domain_specific_claim_ids") or [])
             mainline_ids = set(source.get("mainline_claim_ids") or [])
@@ -772,8 +1012,189 @@ def self_test_fixture() -> dict[str, Any]:
             "evidence_gaps": [],
         }
 
+    method_specs = [
+        ("pattern_structure", "primary", "pattern_organization", 2),
+        ("momentum_configuration", "primary", "momentum_intention", 2),
+        ("climate_adjustment", "primary", "climate_environment", 2),
+        ("ten_god_dynamics", "primary", "relationship_action", 2),
+        ("root_seed_flower_fruit", "primary", "development_continuity", 2),
+        ("blind_school", "primary", "blind_action_path", 2),
+        ("timing_continuity", "primary", "timing_execution", 2),
+        ("position_relationship", "partial", "position_interface", 1),
+        ("stem_branch_dynamics", "partial", "stem_branch_structure", 1),
+        ("shen_sha_auxiliary", "auxiliary", "symbolic_auxiliary", 0),
+        ("nayin_auxiliary", "auxiliary", "symbolic_auxiliary", 0),
+    ]
+    method_evidence_ids: dict[str, list[str]] = {}
+    evidence_cursor = 1
+    for method_id, _, _, conclusion_count in method_specs:
+        method_evidence_ids[method_id] = [f"evidence_{evidence_cursor + offset}" for offset in range(conclusion_count)]
+        evidence_cursor += conclusion_count
+
+    hypothesis_context = {
+        ("pattern_structure", 1): ("self_growth", "综合现实方向1"),
+        ("momentum_configuration", 1): ("self_growth", "综合现实方向1"),
+        ("climate_adjustment", 1): ("love_partner", "综合现实方向2"),
+        ("ten_god_dynamics", 1): ("love_partner", "综合现实方向2"),
+        ("root_seed_flower_fruit", 1): ("career", "综合现实方向3"),
+        ("blind_school", 1): ("career", "综合现实方向3"),
+        ("timing_continuity", 1): ("finance_resources", "综合现实方向4"),
+        ("pattern_structure", 2): ("finance_resources", "综合现实方向4"),
+        ("momentum_configuration", 2): ("body_emotion", "综合现实方向5"),
+        ("ten_god_dynamics", 2): ("body_emotion", "综合现实方向5"),
+        ("climate_adjustment", 2): ("family_growth", "综合现实方向6"),
+        ("root_seed_flower_fruit", 2): ("family_growth", "综合现实方向6"),
+        ("blind_school", 2): ("self_growth", "单一主要方法补充侧面"),
+    }
+
+    independent_methods = []
+    for method_index, (method_id, tier, group, conclusion_count) in enumerate(method_specs):
+        conclusions = [
+            {
+                "conclusion_id": f"mc_{method_id}_{offset}",
+                "statement": f"{method_id}第{offset}条独立技术结论用于结构自检",
+                "mechanism_chain": ["读取本方法规定的排盘事实", "形成不依赖其他方法的技术判断"],
+                "chart_refs": ["chart_facts.pillars"],
+                "evidence_ids": [method_evidence_ids[method_id][offset - 1]],
+                "conditions": ["本方法成立条件得到满足"],
+                "counterconditions": ["出现削弱本方法解释的结构条件"],
+                "time_scope": "原局长期",
+                "confidence": "to_verify",
+            }
+            for offset in range(1, conclusion_count + 1)
+        ]
+        hypotheses = [
+            {
+                "hypothesis_id": f"mh_{method_id}_{offset}",
+                "derived_from_conclusion_ids": [f"mc_{method_id}_{offset}"],
+                "domain": hypothesis_context.get((method_id, offset), (report_domains[(method_index + offset - 1) % len(report_domains)], f"{method_id}现实方向{offset}"))[0],
+                "normalized_direction": hypothesis_context.get((method_id, offset), (report_domains[(method_index + offset - 1) % len(report_domains)], f"{method_id}现实方向{offset}"))[1],
+                "statement": f"由{method_id}独立推演得到的第{offset}条可观察现实候选。",
+                "observable_indicators": [f"{method_id}表现{offset}A", f"{method_id}表现{offset}B"],
+                "conditions": ["对应现实条件成立"],
+                "counterevidence": ["持续出现相反现实表现"],
+                "unsupported_extensions": ["不能据此断定唯一现实结果"],
+                "added_information": f"新增{method_id}现实侧面{offset}",
+                "time_scope": "原局长期",
+                "reality_confirmation": "unverified",
+            }
+            for offset in range(1, conclusion_count + 1)
+        ]
+        independent_methods.append({
+            "method_id": method_id,
+            "tier": tier,
+            "independence_group": group,
+            "status": "complete" if conclusion_count else "unavailable",
+            "input_fact_refs": ["chart_facts.pillars"],
+            "source_method_ids_read": [],
+            "technical_conclusions": conclusions,
+            "reality_hypotheses": hypotheses,
+            "limitations": ["本方法不能单独保证具体事件"],
+        })
+
+    synthesis_pairs = [
+        (("pattern_structure", 1), ("momentum_configuration", 1)),
+        (("climate_adjustment", 1), ("ten_god_dynamics", 1)),
+        (("root_seed_flower_fruit", 1), ("blind_school", 1)),
+        (("timing_continuity", 1), ("pattern_structure", 2)),
+        (("momentum_configuration", 2), ("ten_god_dynamics", 2)),
+        (("climate_adjustment", 2), ("root_seed_flower_fruit", 2)),
+    ]
+    synthesis_clusters = []
+    for index, ((left, left_offset), (right, right_offset)) in enumerate(synthesis_pairs, 1):
+        member_ids = [f"mh_{left}_{left_offset}", f"mh_{right}_{right_offset}"]
+        groups = [next(item[2] for item in method_specs if item[0] == left), next(item[2] for item in method_specs if item[0] == right)]
+        synthesis_clusters.append({
+            "synthesis_id": f"syn_{index}",
+            "domain": report_domains[index - 1],
+            "normalized_direction": f"综合现实方向{index}",
+            "member_hypothesis_ids": member_ids,
+            "supporting_method_ids": [left, right],
+            "independence_groups": groups,
+            "relationship_type": "same_direction",
+            "structural_confidence": "high",
+            "reality_confirmation": "unverified",
+            "counterevidence": [],
+            "report_role": "primary",
+            "reasoning": "两个不同主要方法家族独立得到同向现实候选",
+        })
+    synthesis_clusters.append({
+        "synthesis_id": "syn_supplemental",
+        "domain": "self_growth",
+        "normalized_direction": "单一主要方法补充侧面",
+        "member_hypothesis_ids": ["mh_blind_school_2"],
+        "supporting_method_ids": ["blind_school"],
+        "independence_groups": ["blind_action_path"],
+        "relationship_type": "complementary",
+        "structural_confidence": "to_verify",
+        "reality_confirmation": "unverified",
+        "counterevidence": [],
+        "report_role": "supplemental",
+        "reasoning": "单一主要方法提供不矛盾且新增信息的补充侧面",
+    })
+
+    evidence_method_sequence = [
+        "pattern_structure", "pattern_structure", "momentum_configuration", "momentum_configuration",
+        "climate_adjustment", "climate_adjustment", "ten_god_dynamics", "ten_god_dynamics",
+        "root_seed_flower_fruit", "root_seed_flower_fruit", "blind_school", "blind_school",
+        "timing_continuity", "timing_continuity", "position_relationship", "stem_branch_dynamics",
+        "pattern_structure", "momentum_configuration", "climate_adjustment", "ten_god_dynamics",
+        "root_seed_flower_fruit", "blind_school", "timing_continuity", "pattern_structure",
+    ]
+    method_groups = {item[0]: item[2] for item in method_specs}
+    source_layers = {
+        "root_seed_flower_fruit": "root_seed_flower_fruit",
+        "blind_school": "blind_shared",
+        "timing_continuity": "luck_cycle",
+    }
+
+    def report_claim(number: int) -> dict[str, Any]:
+        domain_index = (number - 1) // 8
+        domain = report_domains[domain_index]
+        local_index = (number - 1) % 8 + 1
+        if number == 8:
+            synthesis_id = "syn_supplemental"
+            method_ids = ["blind_school"]
+            hypothesis_ids = ["mh_blind_school_2"]
+            evidence_ids = ["evidence_11", "evidence_12"]
+            report_role = "supplemental"
+            confidence = "to_verify"
+        else:
+            synthesis_index = domain_index + 1
+            synthesis_id = f"syn_{synthesis_index}"
+            pair = synthesis_pairs[synthesis_index - 1]
+            method_ids = [item[0] for item in pair]
+            hypothesis_ids = [f"mh_{method_id}_{offset}" for method_id, offset in pair]
+            evidence_ids = [method_evidence_ids[method_id][0] for method_id in method_ids]
+            report_role = "primary"
+            confidence = "high"
+        return {
+            "claim_id": f"claim_self_{number}",
+            "domain": domain,
+            "reality_dimension": f"axis_{local_index}",
+            "claim_family": f"family_{(number - 1) % 4 + 1}",
+            "mechanism_family": f"mechanism_{(number - 1) % 3 + 1}",
+            "claim": f"{domain_labels[domain]}的第{local_index}项内部自检判断",
+            "plain_claim": f"你在{domain_labels[domain]}方面可能呈现第{local_index}种可核对的独立表现。",
+            "new_information": f"{domain_labels[domain]}新增信息{local_index}",
+            "mechanism_chain": ["读取独立方法现实候选", "经综合层形成报告判断"],
+            "evidence_ids": evidence_ids,
+            "supporting_methods": method_ids,
+            "synthesis_ids": [synthesis_id],
+            "method_hypothesis_ids": hypothesis_ids,
+            "report_role": report_role,
+            "applicable_conditions": ["对应现实条件成立"],
+            "reality_confirmation": "unverified",
+            "allowed_examples": ["可观察行为"],
+            "counterevidence": [],
+            "confidence": confidence,
+            "unsupported_extensions": ["不能据此断定唯一现实结果"],
+            "calibration_status": "unverified",
+            "origin": "chart_baseline",
+        }
+
     data = {
-        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.9.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
+        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.10.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
         "chart_facts": {"day_master": "甲", "pillars": {"year": pillar, "month": pillar, "day": {**pillar, "stem_ten_god": "日主"}, "hour": pillar}, "luck_cycles": [{}], "annual_cycles": [{}]},
         "chart_audit": {"status": "pass", "checks": [], "boundary_dependencies": [], "versions": []},
         "social_context_model": empty_section(),
@@ -781,30 +1202,40 @@ def self_test_fixture() -> dict[str, Any]:
         "day_master": empty_section(),
         "stems_branches_roots": {"summary": "", "pillars": {"year": pillar_analysis, "month": pillar_analysis, "day": pillar_analysis, "hour": pillar_analysis}, "findings": []},
         "interaction_network": empty_section(),
-        "cross_method_analysis": {"summary": "自检", "methods": ["格局", "调候", "根苗花果"], "agreements": ["自检交叉支持"], "conflicts": [], "findings": []},
+        "independent_method_analyses": independent_methods,
+        "method_synthesis": {
+            "summary": "各方法独立推演后按现实方向归并",
+            "clusters": synthesis_clusters,
+            "conflicts": [],
+            "primary_synthesis_ids": [f"syn_{i}" for i in range(1, 7)],
+            "supplemental_synthesis_ids": ["syn_supplemental"],
+            "to_verify_synthesis_ids": [],
+            "auxiliary_only_synthesis_ids": [],
+        },
+        "cross_method_analysis": {"summary": "自检", "methods": sorted(PRIMARY_METHODS), "agreements": ["自检交叉支持"], "conflicts": [], "findings": []},
         "blind_school_cross_analysis": {
             "source_boundaries": ["段氏宾主体用与做功仅作交叉", "杨氏明暗虚实与岁运动静仅作交叉"],
             "host_guest_map": [], "body_function_map": [],
-            "work_paths": [{"path_id": "work_1", "actor": "命主", "tool": "专业能力", "target": "外部任务", "mechanism": ["整理后执行"], "direction": "由外向内取得结果", "result_type": "项目成果", "retained_by_subject": True, "costs": ["准备时间"], "failure_conditions": ["职责边界不清"], "evidence_ids": ["evidence_1"], "method_sources": ["blind_shared"], "confidence": "to_verify"}],
+            "work_paths": [{"path_id": "work_1", "actor": "命主", "tool": "专业能力", "target": "外部任务", "mechanism": ["整理后执行"], "direction": "由外向内取得结果", "result_type": "项目成果", "retained_by_subject": True, "costs": ["准备时间"], "failure_conditions": ["职责边界不清"], "evidence_ids": ["evidence_11"], "method_sources": ["blind_shared"], "confidence": "to_verify"}],
             "image_hypotheses": [],
             "reality_image_candidates": [
-                {"image_id": "image_org", "dimension": "organization", "candidate_labels": ["仅用于结构校验的组织候选"], "derivation_chain": ["宾主区分", "体用落实"], "evidence_ids": ["evidence_1", "evidence_2"], "non_blind_support": ["格局调候"], "counterevidence": ["自主性仍待验证"], "limitations": ["不能指定单位"], "confidence": "to_verify"},
-                {"image_id": "image_industry", "dimension": "industry", "candidate_labels": ["专业服务"], "derivation_chain": ["处理对象", "结果形式"], "evidence_ids": ["evidence_3", "evidence_4"], "non_blind_support": ["根苗花果"], "counterevidence": ["行业事实未知"], "limitations": ["不能指定行业"], "confidence": "to_verify"},
-                {"image_id": "image_function", "dimension": "function", "candidate_labels": ["研究分析"], "derivation_chain": ["工具能力", "工作动作"], "evidence_ids": ["evidence_5", "evidence_6"], "non_blind_support": ["十神网络"], "counterevidence": ["岗位事实未知"], "limitations": ["不能指定岗位"], "confidence": "to_verify"},
-                {"image_id": "image_result", "dimension": "result_form", "candidate_labels": ["项目成果"], "derivation_chain": ["做功路径", "结果归属"], "evidence_ids": ["evidence_7", "evidence_8"], "non_blind_support": ["岁运连续"], "counterevidence": ["成果事实未知"], "limitations": ["不能保证结果"], "confidence": "to_verify"}
+                {"image_id": "image_org", "dimension": "organization", "candidate_labels": ["仅用于结构校验的组织候选"], "derivation_chain": ["宾主区分", "体用落实"], "evidence_ids": ["evidence_11", "evidence_12"], "non_blind_support": ["格局调候"], "counterevidence": ["自主性仍待验证"], "limitations": ["不能指定单位"], "confidence": "to_verify"},
+                {"image_id": "image_industry", "dimension": "industry", "candidate_labels": ["专业服务"], "derivation_chain": ["处理对象", "结果形式"], "evidence_ids": ["evidence_11", "evidence_12"], "non_blind_support": ["根苗花果"], "counterevidence": ["行业事实未知"], "limitations": ["不能指定行业"], "confidence": "to_verify"},
+                {"image_id": "image_function", "dimension": "function", "candidate_labels": ["研究分析"], "derivation_chain": ["工具能力", "工作动作"], "evidence_ids": ["evidence_11", "evidence_12"], "non_blind_support": ["十神网络"], "counterevidence": ["岗位事实未知"], "limitations": ["不能指定岗位"], "confidence": "to_verify"},
+                {"image_id": "image_result", "dimension": "result_form", "candidate_labels": ["项目成果"], "derivation_chain": ["做功路径", "结果归属"], "evidence_ids": ["evidence_11", "evidence_12"], "non_blind_support": ["岁运连续"], "counterevidence": ["成果事实未知"], "limitations": ["不能保证结果"], "confidence": "to_verify"}
             ],
             "virtual_real_completeness": [], "timing_activation": [],
             "agreements": ["与根苗花果的积累路径方向一致"], "conflicts": ["旺衰权重在两套参考中不同"],
             "prohibited_extensions": ["不推具体职业", "不推收入金额", "不推疾病寿夭", "不推婚姻结果"]
         },
         "evidence_registry": [
-            {"evidence_id": f"evidence_{i}", "source_layer": "annual" if i == 3 else "luck_cycle" if i == 4 else "natal" if i % 2 else "root_seed_flower_fruit", "method": "流年执行" if i == 3 else "大运主题" if i == 4 else "格局调候" if i % 2 else "根苗花果", "chart_refs": ["chart_facts.pillars"], "observation": f"自检结构观察{i}", "interpretation": "仅用于校验实体证据引用关系", "limitations": ["不能外推具体职业"], "confidence": "to_verify"}
+            {"evidence_id": f"evidence_{i}", "source_layer": source_layers.get(evidence_method_sequence[i - 1], "cross_method"), "method": evidence_method_sequence[i - 1], "method_id": evidence_method_sequence[i - 1], "independence_group": method_groups[evidence_method_sequence[i - 1]], "chart_refs": ["chart_facts.pillars"], "observation": f"自检结构观察{i}", "interpretation": "仅用于校验实体证据引用关系", "limitations": ["不能外推具体职业"], "confidence": "to_verify"}
             for i in range(1, 25)
         ],
         "root_seed_flower_fruit_map": {"summary": "自检", "root": empty_section(), "seedling": empty_section(), "flower": empty_section(), "fruit": empty_section(), "continuity": ["根与苗跨阶段连续", "花与果在当前同时作用", "成果进入下一轮传承"], "domain_lifecycles": [
-            {"domain": "career", "root": "专业基础", "seedling": "技能训练", "flower": "方案呈现", "fruit": "项目成果", "continuity": "专业基础经训练转化为方案和成果", "evidence_ids": ["evidence_1", "evidence_2"], "confidence": "to_verify"},
-            {"domain": "finance_resources", "root": "资源来源", "seedling": "获取能力", "flower": "收入表现", "fruit": "资产留存", "continuity": "资源来源经能力转化为收入和留存", "evidence_ids": ["evidence_3", "evidence_4"], "confidence": "to_verify"},
-            {"domain": "love_partner", "root": "关系经验", "seedling": "信任能力", "flower": "吸引互动", "fruit": "长期关系", "continuity": "关系经验经信任建立进入互动和承诺", "evidence_ids": ["evidence_5", "evidence_6"], "confidence": "to_verify"}
+            {"domain": "career", "root": "专业基础", "seedling": "技能训练", "flower": "方案呈现", "fruit": "项目成果", "continuity": "专业基础经训练转化为方案和成果", "evidence_ids": ["evidence_9", "evidence_10"], "confidence": "to_verify"},
+            {"domain": "finance_resources", "root": "资源来源", "seedling": "获取能力", "flower": "收入表现", "fruit": "资产留存", "continuity": "资源来源经能力转化为收入和留存", "evidence_ids": ["evidence_9", "evidence_10"], "confidence": "to_verify"},
+            {"domain": "love_partner", "root": "关系经验", "seedling": "信任能力", "flower": "吸引互动", "fruit": "长期关系", "continuity": "关系经验经信任建立进入互动和承诺", "evidence_ids": ["evidence_9", "evidence_10"], "confidence": "to_verify"}
         ], "findings": []},
         "natal_portrait": empty_section(),
         "complete_self_portrait": complete_self_portrait,
@@ -822,15 +1253,12 @@ def self_test_fixture() -> dict[str, Any]:
         "monthly_theme_activation": None,
         "life_stages": [],
         "turning_points": [],
-        "report_claim_ledger": [
-            {"claim_id": f"claim_self_{i}", "domain": report_domains[(i - 1) // 8], "reality_dimension": f"axis_{(i - 1) % 8 + 1}", "claim_family": f"family_{(i - 1) % 4 + 1}", "mechanism_family": f"mechanism_{(i - 1) % 3 + 1}", "claim": f"{domain_labels[report_domains[(i - 1) // 8]]}的第{(i - 1) % 8 + 1}项内部自检判断", "plain_claim": f"你在{domain_labels[report_domains[(i - 1) // 8]]}方面可能呈现第{(i - 1) % 8 + 1}种可核对的独立表现。", "new_information": f"{domain_labels[report_domains[(i - 1) // 8]]}新增信息{(i - 1) % 8 + 1}", "mechanism_chain": ["识别本领域的结构条件", "形成与该领域对应的现实表现"], "evidence_ids": [f"evidence_{(i - 1) % 24 + 1}", f"evidence_{i % 24 + 1}"], "supporting_methods": ["格局调候", "根苗花果"], "allowed_examples": ["可观察行为"], "counterevidence": [], "confidence": "to_verify", "unsupported_extensions": ["不能据此断定唯一现实结果"], "calibration_status": "unverified", "origin": "chart_baseline"}
-            for i in range(1, 49)
-        ],
+        "report_claim_ledger": [report_claim(i) for i in range(1, 49)],
         "formation_chains": [
             {"chain_id": f"formation_{i}", "starting_condition": "早期规则较明确", "adaptation_need": "需要减少出错", "learned_response": "先观察再行动", "ability_formed": "能够整理复杂信息", "constraint": "进入新环境较慢", "adult_pattern": "先确认要求再执行", "linked_domains": ["self_growth", "career"], "current_change": "开始增加主动表达", "claim_ids": ["claim_self_1", "claim_self_2"], "confidence": "to_verify"}
             for i in range(1, 4)
         ],
-        "portrait_thesis": {"summary": "这是用于检验完整人物主轴、另一面、矛盾和当前变化是否同时存在的自检内容。", "primary_traits": ["先确认条件再行动", "重视专业积累"], "complementary_traits": ["条件明确时也能快速推进"], "internal_tensions": ["稳定准备与主动尝试并存"], "observable_patterns": ["先列步骤", "交付前核对", "在熟悉领域主动表达"], "formation_chain_ids": ["formation_1", "formation_2"], "current_shift": "当前阶段开始增加主动表达和尝试", "evidence_ids": ["evidence_1", "evidence_2", "evidence_3", "evidence_4"], "boundaries": ["不能指定具体职业"]},
+        "portrait_thesis": {"summary": "这是用于检验完整人物主轴、另一面、矛盾和当前变化是否同时存在的自检内容。", "primary_traits": ["先确认条件再行动", "重视专业积累"], "complementary_traits": ["条件明确时也能快速推进"], "internal_tensions": ["稳定准备与主动尝试并存"], "observable_patterns": ["先列步骤", "交付前核对", "在熟悉领域主动表达"], "formation_chain_ids": ["formation_1", "formation_2"], "current_shift": "当前阶段开始增加主动表达和尝试", "evidence_ids": ["evidence_1", "evidence_3", "evidence_9", "evidence_13"], "boundaries": ["不能指定具体职业"]},
         "domain_linkage_chains": [
             {"chain_id": f"linkage_{i}", "trigger": "责任增加", "transmission": ["提高稳定需求", "减少快速变化"], "affected_domains": ["career", "finance_resources"], "time_lag": "逐步出现", "amplifiers": [], "buffers": [], "claim_ids": ["claim_self_1", "claim_self_2"], "confidence": "to_verify"}
             for i in range(1, 4)

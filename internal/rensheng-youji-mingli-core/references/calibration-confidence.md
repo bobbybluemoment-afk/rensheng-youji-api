@@ -23,6 +23,10 @@
 
 每条候选的 `source_layers` 至少包含两个独立视角，并至少包含 `root_seed_flower_fruit_map`、`resource_relationship`、`cross_method_analysis`、`luck_cycle_themes`、`annual_theme_activation` 或 `domain_connections` 中的一项。日主旺衰可以参与判断，但不能单独支撑现实候选。
 
+Core 0.10.0 先完成 `independent_method_analyses` 和 `method_synthesis`。多方法一致只提高结构置信度，不能替代现实确认。校准优先核对 `to_verify`、真正冲突和区分度高的单方法补充；不得重复询问已经由多个主要方法同向且现实明确支持的内容。
+
+用户否定综合判断时，只调整综合判断、报告判断与现实候选的确认状态，不得回写任一方法的技术结论或独立现实候选。单一主要方法的 `supplemental` 可以被现实支持、弱化或排除；`auxiliary_only` 即使未被否定，也不能自动升级为报告主要判断。
+
 每条候选还必须标注：
 
 - `domain`：固定现实领域，不能使用临时自造分类；
