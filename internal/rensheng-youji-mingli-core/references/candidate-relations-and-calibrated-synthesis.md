@@ -62,4 +62,4 @@
 
 事实提纲可以使用 `match`、`supported_unselected`、`conditional`、`weakened`，以及命理证据充分但仍待验证的判断；`reject` 不得进入用户正文。
 
-报告必须区分主要表现、可共存侧面、阶段或情境变化和证据不足边界。每个内容区只使用校准后确定性选材生成的 `mandatory_claim_ids` 与冻结Core中的 `plain_claim`；不得保留已排除判断，也不得用校准答案临时创造替代句。
+报告必须区分主要表现、可共存侧面、阶段或情境变化和证据不足边界。每个内容区继续使用冻结Core指定的 `mandatory_claim_ids` 与 `plain_claim`，不得用校准答案替换指定判断。
