@@ -17,6 +17,7 @@ from validate_analysis_output import self_test_fixture, validate as validate_ana
 MATERIALIZE = ROOT / "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py"
 VALIDATE_BRIEF = ROOT / "internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py"
 VALIDATE_DRAFT = ROOT / "internal/rensheng-youji-report-writer/scripts/validate_report_draft.py"
+RESOLVE = ROOT / "scripts/resolve_report_sources.py"
 sys.path.insert(0, str(ROOT / "skills/rensheng-youji-growth-map/scripts"))
 from render_report_pdf import dimensions_page  # noqa: E402
 DIMENSIONS = ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]
@@ -51,12 +52,14 @@ class ReportV28TraceabilityTest(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as tmp:
             work = Path(tmp)
-            analysis_path, selection_path, brief_path = work / "analysis.json", work / "selection.json", work / "brief.json"
+            analysis_path, selection_path, brief_path, resolved_path = work / "analysis.json", work / "selection.json", work / "brief.json", work / "resolved.json"
             analysis_path.write_text(json.dumps(analysis, ensure_ascii=False), encoding="utf-8")
             selection_path.write_text(json.dumps(selection, ensure_ascii=False), encoding="utf-8")
-            result = subprocess.run([sys.executable, str(MATERIALIZE), str(selection_path), "--analysis", str(analysis_path), "--output", str(brief_path)], cwd=ROOT, text=True, capture_output=True, check=False)
+            result = subprocess.run([sys.executable, str(RESOLVE), str(analysis_path), "--output", str(resolved_path)], cwd=ROOT, text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            result = subprocess.run([sys.executable, str(VALIDATE_BRIEF), str(brief_path), "--analysis", str(analysis_path)], cwd=ROOT, text=True, capture_output=True, check=False)
+            result = subprocess.run([sys.executable, str(MATERIALIZE), str(selection_path), "--analysis", str(analysis_path), "--resolved-sources", str(resolved_path), "--output", str(brief_path)], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            result = subprocess.run([sys.executable, str(VALIDATE_BRIEF), str(brief_path), "--analysis", str(analysis_path), "--resolved-sources", str(resolved_path)], cwd=ROOT, text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             paragraphs = [long_paragraph("面对现实问题时会先确认条件再行动"), long_paragraph("过去形成的准备习惯会影响现在的判断"), long_paragraph("当前阶段需要把已有能力用在清楚目标上")]
             draft_section = {"paragraphs": paragraphs, "source_claim_ids": claim_ids, "paragraph_claim_map": [claim_ids[:2], claim_ids[2:4], claim_ids[4:6]]}

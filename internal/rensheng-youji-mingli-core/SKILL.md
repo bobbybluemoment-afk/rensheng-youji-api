@@ -64,10 +64,11 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 9. [annual-activation.md](references/annual-activation.md)：按大运主题分析流年执行、相邻年份连续性和伏笔。
 10. [blind-school-cross-method.md](references/blind-school-cross-method.md)：用宾主、体用、做功和多层象法生成组织、行业、岗位、工作对象与成果形式候选，并保留不同作者口径与禁断边界。
 11. [calibration-confidence.md](references/calibration-confidence.md)：生成现实候选，吸收用户反馈并标注置信度。
-12. [candidate-relations-and-calibrated-synthesis.md](references/candidate-relations-and-calibrated-synthesis.md)：先建立候选共存、主次、阶段、条件与互斥关系，再用校准结果重构完整人物。
+12. [candidate-relations-and-calibrated-synthesis.md](references/candidate-relations-and-calibrated-synthesis.md)：校准前建立候选关系并冻结完整人物，校准后只以增量调整现实候选状态。
 13. [domain-independent-analysis.md](references/domain-independent-analysis.md)：先完成六个领域各自的判断、机制与覆盖，再限制共享主线比例和跨章复用。
 14. [report-grade-reality-mapping.md](references/report-grade-reality-mapping.md)：建立开放现实候选、人物形成链、领域联动链和报告级判断台账。
 15. [safety-boundaries.md](references/safety-boundaries.md)：执行非宿命表达、高风险边界和不确定性披露。
+16. [post-calibration-report-selection.md](references/post-calibration-report-selection.md)：冻结报告候选池，并在校准后确定性生成最终选材与单章降级状态。
 
 ## 执行规则
 
@@ -127,7 +128,7 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 
 用户填写的关注方向和当前问题只用于排列“当前阶段回应、年度提醒与行动建议”的优先级，不是命理证据，也不得反向改写完整自身画像、家庭形成、能力资源、人生主线或六个生活领域的基础判断。必须先完成全盘母稿，再把关注方向放入当前阶段中回应。
 
-校准只能确认、部分支持、排除或保留原有候选。不得把用户回答扩写成新的人格类型、职业标签、健康标签或新的报告判断。初始Core冻结后，校准不得重写 `portrait_thesis`、判断正文、机制、证据或报告素材。
+校准只能确认、部分支持、排除或保留原有候选。不得把用户回答扩写成新的人格类型、职业标签、健康标签或新的报告判断。初始Core冻结后，校准不得重写 `portrait_thesis`、判断正文、机制、证据或报告候选池。最终报告名单必须在校准后由确定性选材程序生成，不属于Baseline中预先锁定的内容。
 
 ### 12. 先判断工作属性，再生成开放现实候选
 
@@ -160,7 +161,9 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 - `new_information`：相对同领域其他判断新增了什么；
 - `plain_claim`：不含命理术语、可以原句进入报告的完整判断句。
 
-每个领域至少四条判断、三个判断家族、两个机制家族和三个现实问题轴。不同编号但语义高度相似的句子视为重复，不得用换词满足数量。`report_source_bundle` 每个内容区锁定1—2条 `mandatory_claim_ids`，供下游确定性检查原句是否进入报告。
+每个领域至少八条候选判断、三个判断家族、两个机制家族和三个现实问题轴。不同编号但语义高度相似的句子视为重复，不得用换词满足数量。`report_source_bundle` 保存完整候选池、稳定优先级、2—4条必进候选和覆盖项备用映射；不得在校准前锁定最终 `mandatory_claim_ids`。校准后由确定性程序从仍有效的候选中选出1—2条必进判断。
+
+六个领域的 `coverage` 必须共同包含 `feature`、`behavior`、`formation`、`challenge`、`current_change`、`response`。`coverage_claim_map` 必须为每项绑定至少两个候选判断；家庭和身体情绪还要覆盖各自专属项目。缺少任意规定覆盖项时必须在冻结Baseline前返工对应领域。
 
 内部 `mechanism_chain`、`evidence_registry`、`domain_mechanisms` 和技术审计允许并应保留必要命理术语；禁止术语只适用于最终用户可见正文。不得为了通过正文术语检查而清洗或改写内部Core。
 
@@ -180,7 +183,7 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 
 自身、家庭、资源、人际、亲密关系、对象画像、互动关系、事业、财富、迁移、身心和连续性必须都有实质分析或明确的证据不足说明。不得把事业分析换词复制进其他领域。
 
-六个报告领域必须先独立分析、再与人生主线联动。每个领域至少4条领域专属判断、2个领域自身机制；共享人生主线判断不得超过30%，同一判断最多进入两个领域。去掉共享主线后仍须形成完整人物侧面。家庭重点分析父母亲友、借力与受限、独立与回馈；身体与情绪重点分析基础信号、压力反应顺序和恢复方式。不得把事业中的协调与收尾直接移植到家庭章节。
+六个报告领域必须先独立分析、再与人生主线联动。每个领域至少6条领域专属候选、2个领域自身机制；共享人生主线判断不得超过30%，同一判断最多进入两个领域。去掉共享主线后仍须形成完整人物侧面。家庭重点分析父母亲友、借力与受限、独立与回馈；身体与情绪重点分析基础信号、压力反应顺序和恢复方式。不得把事业中的协调与收尾直接移植到家庭章节。
 
 ## 完整输出契约
 
@@ -285,7 +288,7 @@ validation: []
 
 不要省略没有明显结论的栏目。使用空数组、`null` 或“证据不足”保留结构，不得补造内容。
 
-完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.8.1`。完成分析后运行：
+完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.9.0`。完成分析后运行：
 
 ```bash
 python3 scripts/validate_analysis_output.py <analysis-output.json>

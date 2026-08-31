@@ -88,16 +88,40 @@ def enrich_section(section: dict[str, Any], analysis: dict[str, Any], ledger: di
     }
 
 
-def materialize(selection: dict[str, Any], analysis: dict[str, Any]) -> dict[str, Any]:
+def materialize(selection: dict[str, Any], analysis: dict[str, Any], resolved: dict[str, Any] | None = None) -> dict[str, Any]:
     result = json.loads(json.dumps(selection, ensure_ascii=False))
     meta = analysis["analysis_meta"]
+    is_v09 = meta.get("core_version") == "0.9.0"
     is_v081 = meta.get("core_version") == "0.8.1"
     is_v08 = meta.get("core_version") == "0.8.0"
-    result["schema_version"] = "1.4.0" if is_v081 else "1.3.0" if is_v08 else "1.2.0"
+    result["schema_version"] = "1.5.0" if is_v09 else "1.4.0" if is_v081 else "1.3.0" if is_v08 else "1.2.0"
     result.setdefault("source", {}).update({"analysis_id": meta["analysis_id"], "core_version": meta["core_version"], "analysis_sha256": canonical_digest(analysis)})
     ledger = {item["claim_id"]: item for item in analysis["report_claim_ledger"]}
     sections = [result["life_overview"], *result["dimensions"], result["current_question"]]
-    if is_v08 or is_v081:
+    if is_v09:
+        if not isinstance(resolved, dict):
+            raise ValueError("core_version=0.9.0 必须先提供校准后确定性选材文件")
+        resolved_source = resolved.get("source") or {}
+        if resolved_source.get("analysis_id") != meta.get("analysis_id") or resolved_source.get("analysis_sha256") != canonical_digest(analysis):
+            raise ValueError("校准后选材文件与当前Core不一致")
+        expected_resolved_hash = canonical_digest({key: value for key, value in resolved.items() if key != "resolved_sha256"})
+        if resolved.get("resolved_sha256") != expected_resolved_hash:
+            raise ValueError("校准后选材文件哈希无效")
+        result["source"]["resolved_source_sha256"] = resolved["resolved_sha256"]
+        source_pairs = [
+            (result["life_overview"], resolved["life_overview"]),
+            *[(section, resolved["dimensions"][section["id"]]) for section in result["dimensions"]],
+            (result["current_question"], resolved["current_question"]),
+        ]
+        locked = ("claim_ids", "formation_chain_ids", "linkage_chain_ids", "coverage", "missing_coverage", "domain_specific_claim_ids", "mainline_claim_ids", "mandatory_claim_ids", "emphasis_claim_ids", "domain_mechanisms", "survives_without_mainline", "delivery_mode", "rejected_claim_ids", "replacement_log", "evidence_gaps")
+        for section, source_section in source_pairs:
+            for key in locked:
+                section[key] = json.loads(json.dumps(source_section[key], ensure_ascii=False))
+        result["calibration_internal"] = {
+            "rejected_claim_ids": sorted(claim_id for claim_id, claim in ledger.items() if claim.get("calibration_status") == "reject"),
+            "resolved_source_sha256": resolved["resolved_sha256"],
+        }
+    elif is_v08 or is_v081:
         source_bundle = analysis["report_source_bundle"]
         source_pairs = [
             (result["life_overview"], source_bundle["life_narrative_source"]),
@@ -117,10 +141,15 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("selection", type=Path)
     parser.add_argument("--analysis", type=Path, required=True)
+    parser.add_argument("--resolved-sources", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
-        result = materialize(json.loads(args.selection.read_text(encoding="utf-8")), json.loads(args.analysis.read_text(encoding="utf-8")))
+        result = materialize(
+            json.loads(args.selection.read_text(encoding="utf-8")),
+            json.loads(args.analysis.read_text(encoding="utf-8")),
+            json.loads(args.resolved_sources.read_text(encoding="utf-8")) if args.resolved_sources else None,
+        )
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:

@@ -43,8 +43,9 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
     is_v21 = review.get("version") == "2.1.0"
     is_v22 = review.get("version") == "2.2.0"
     is_v23 = review.get("version") == "2.3.0"
-    if review.get("version") not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
-        errors.append("编辑记录版本必须为2.0.0—2.3.0中的受支持版本")
+    is_v24 = review.get("version") == "2.4.0"
+    if review.get("version") not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.4.0"}:
+        errors.append("编辑记录版本必须为2.0.0—2.4.0中的受支持版本")
     if review.get("draft_id") != draft.get("draft_id") or review.get("final_report_id") != report.get("report_id"):
         errors.append("编辑记录与初稿或终稿来源不一致")
     draft_map, final_map = draft_sections(draft), report_sections(report)
@@ -65,10 +66,11 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
             errors.append(f"{section_id} 编辑前后判断来源发生变化")
         if set(record.get("source_claim_ids") or []) != set(after.get("source_claim_ids") or []):
             errors.append(f"{section_id} 编辑记录中的判断来源与终稿不一致")
-        if (is_v21 or is_v22 or is_v23) and before.get("paragraph_claim_map") != after.get("paragraph_claim_map"):
+        if (is_v21 or is_v22 or is_v23 or is_v24) and before.get("paragraph_claim_map") != after.get("paragraph_claim_map"):
             errors.append(f"{section_id} 编辑不得改变逐段Core判断映射")
-        if is_v22 or is_v23:
-            for key in ("domain_specific_claim_ids", "mainline_claim_ids", "mandatory_claim_ids", "domain_mechanisms", "survives_without_mainline"):
+        if is_v22 or is_v23 or is_v24:
+            fields = ("domain_specific_claim_ids", "mainline_claim_ids", "mandatory_claim_ids", "domain_mechanisms", "survives_without_mainline", "delivery_mode", "missing_coverage") if is_v24 else ("domain_specific_claim_ids", "mainline_claim_ids", "mandatory_claim_ids", "domain_mechanisms", "survives_without_mainline")
+            for key in fields:
                 if before.get(key) != after.get(key):
                     errors.append(f"{section_id} 编辑不得改变领域独立性字段：{key}")
             before_spans = before.get("emphasis_spans") or []
@@ -82,7 +84,7 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
                 span_text = span.get("text") if isinstance(span, dict) else None
                 if not isinstance(paragraph_index, int) or paragraph_index >= len(after_text) or not isinstance(span_text, str) or span_text not in after_text[paragraph_index] or not re.search(r"[。！？]$", span_text.strip()):
                     errors.append(f"{section_id} 编辑后的重点句必须是对应正文中带句末标点的完整句子")
-        if is_v23:
+        if is_v23 or is_v24:
             if before.get("claim_realization_map") != after.get("claim_realization_map"):
                 errors.append(f"{section_id} 编辑不得改变Core锁定判断的落地位置或原句")
             for item in after.get("claim_realization_map") or []:
@@ -126,14 +128,14 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
             suspicious = {"引", "的", "有", "但", "而", "与", "和", "或", "并", "是", "为"}
             if any(re.sub(r"[^\u3400-\u9fff]", "", part) in suspicious for part in fragments):
                 errors.append(f"{section_id} 第{index + 1}段含疑似残字或残句")
-    if (is_v21 or is_v22 or is_v23) and visible.count("经营") > 2:
+    if (is_v21 or is_v22 or is_v23 or is_v24) and visible.count("经营") > 2:
         errors.append("终稿中“经营”出现过多；仅可用于真实经商、创业或利润责任语境")
     sentences = [re.sub(r"[，；：、\s]", "", item) for item in re.split(r"[。！？]", visible) if len(re.findall(r"[\u3400-\u9fff]", item)) >= 12]
     duplicates = sorted({item for item in sentences if sentences.count(item) > 1})
-    if (is_v21 or is_v22 or is_v23) and duplicates:
+    if (is_v21 or is_v22 or is_v23 or is_v24) and duplicates:
         errors.append("终稿跨章节重复完整句子，说明仍在套用模板")
     checks = review.get("checks", {})
-    required = {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked", "emphasis_preserved", "domain_independence_checked", "mandatory_claims_preserved"} if is_v23 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked", "emphasis_preserved", "domain_independence_checked"} if is_v22 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked"} if is_v21 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden"}
+    required = {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked", "emphasis_preserved", "domain_independence_checked", "mandatory_claims_preserved", "degraded_sections_preserved"} if is_v24 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked", "emphasis_preserved", "domain_independence_checked", "mandatory_claims_preserved"} if is_v23 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked", "emphasis_preserved", "domain_independence_checked"} if is_v22 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked"} if is_v21 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden"}
     if set(checks) != required or not all(checks.values()):
         errors.append("编辑记录必须完成对应版本的全部检查，并由实际文本与来源校验支持")
     return errors

@@ -1,4 +1,4 @@
-# 人生有迹报告 JSON v2.12.0
+# 人生有迹报告 JSON v2.13.0
 
 ## 目录
 
@@ -18,7 +18,7 @@
 - 正式报告：`document_mode=full_calibrated`，必须完成五条现实校准、事实提纲、人物初稿和中文编辑，生成10页PDF。
 - 未校准版：`document_mode=preliminary_uncalibrated`，只生成初步Markdown与新版卡片，不生成正式PDF。
 
-正式报告使用 `schema_version=2.12.0`，Core使用 `core_version=0.8.1`。校准前的完整Core必须先冻结；校准后只能通过绑定Baseline哈希的增量文件调整候选与判断状态。
+正式报告使用 `schema_version=2.13.0`，Core使用 `core_version=0.9.0`。校准前的完整Core候选池必须先冻结；校准后只能通过绑定Baseline哈希的增量文件调整状态，再由确定性选材程序生成最终报告名单。
 
 ## 2. 来源链路
 
@@ -36,19 +36,20 @@
 
 ```json
 {
-  "schema_version": "2.12.0",
+  "schema_version": "2.13.0",
   "report_id": "唯一报告编号",
   "document_mode": "full_calibrated",
   "source": {
     "analysis_id": "与Core和卡片一致",
-    "core_version": "0.8.1",
+    "core_version": "0.9.0",
     "analysis_as_of": "YYYY-MM-DD",
     "calibration_status": "calibrated"
   },
   "source_artifacts": {
     "content_brief_id": "事实提纲编号",
     "report_draft_id": "人物初稿编号",
-    "editorial_review_id": "编辑记录编号"
+    "editorial_review_id": "编辑记录编号",
+    "resolved_source_sha256": "校准后确定性选材哈希"
   },
   "title": "人生有迹｜完整报告",
   "subtitle": "看见你带来的能力，理解你走过的路，也寻找新的可能",
@@ -64,7 +65,7 @@
   "cross_output_consistency": {"relationship_opportunity_years": []},
   "chart": {},
   "calibration": {"responses": []},
-  "editorial_review": {"version": "2.3.0", "review_id": "与source_artifacts一致"},
+  "editorial_review": {"version": "2.4.0", "review_id": "与source_artifacts一致"},
   "executive_summary": {
     "life_overview": {"paragraphs": [], "source_claim_ids": [], "paragraph_claim_map": [], "claim_realization_map": [], "emphasis_spans": [], "coverage": []},
     "capabilities_resources": []
@@ -101,7 +102,7 @@
 
 `executive_summary.life_overview` 包含：
 
-- `paragraphs`：3—4个自然段，总计500—700个汉字；
+- `paragraphs`：正常模式2—4个自然段，总计500—700个汉字；
 - `source_claim_ids`：至少6个有效判断来源；
 - `paragraph_claim_map`：每个自然段至少映射两个实体化Core判断；
 - `claim_realization_map`：逐条登记本区必须兑现判断的编号、段落编号和与Core完全一致的 `exact_span`；
@@ -125,16 +126,18 @@
 
 每个领域包含：
 
-- `paragraphs`：3—4个自然段，总计500—700个汉字；
+- `delivery_mode`：`normal`、`shortened`、`minimal` 或 `evidence_gap`；
+- `paragraphs`：正常模式2—4段、500—700字；缩短模式2—3段、320—500字；最小模式1—2段、180—320字；证据缺口模式1段、60—180字；
 - `source_claim_ids`：至少6个有效判断来源；
 - `paragraph_claim_map`：与自然段逐项对应，每段至少两个判断；
 - `claim_realization_map`：逐条证明 `mandatory_claim_ids` 对应的白话判断原句确实出现在正文；
-- `domain_specific_claim_ids`：至少4个领域专属判断；
+- `domain_specific_claim_ids`：正常至少4个，缩短至少3个，最小至少1个；
 - `mainline_claim_ids`：最多占本节判断的30%；
 - `domain_mechanisms`：至少两个领域自身机制；
-- `survives_without_mainline`：必须为 `true`；
+- `survives_without_mainline`：正常模式必须为 `true`，降级模式保留实际结果；
 - `emphasis_spans`：0—1条由Core重点判断支持的完整句子；没有合适重点时允许为空；
-- `coverage`：在内部记录特征、行为、形成、挑战、当前变化与应对是否覆盖；
+- `coverage`：记录实际覆盖的特征、行为、形成、挑战、当前变化与应对；
+- `missing_coverage`：记录校准排除后未能继续覆盖的项目，正常模式必须为空；
 - `confidence`：高置信、中等置信或待验证；
 - `audit`：来源、具体例子和证据缺口，只用于内部检查。
 
@@ -160,7 +163,7 @@
 
 ## 8. 中文编辑
 
-`editorial_review` 只保存 `review_id` 和 `version=2.3.0`；完整记录放在独立 `editorial-review.json`。
+`editorial_review` 只保存 `review_id` 和 `version=2.4.0`；完整记录放在独立 `editorial-review.json`。
 
 `life_overview`、`current_question_narrative` 和六个领域都保留 `emphasis_spans` 字段，允许空数组。每项保存 `paragraph_index`、正文中带句末标点的完整 `text` 和支撑它的 `claim_ids`；正文自身保持纯文本，由渲染器将重点判断独立成行。不得截取半句或为满足数量扩写。
 

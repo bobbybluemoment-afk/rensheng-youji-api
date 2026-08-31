@@ -13,6 +13,14 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 
 def main() -> int:
+    reference_test = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/audit_skill_references.py"), str(ROOT)],
+        cwd=ROOT, text=True, capture_output=True, check=False,
+    )
+    if reference_test.returncode:
+        print("FAILED: Skill declares a missing local dependency")
+        print(reference_test.stdout or reference_test.stderr)
+        return 1
     try:
         import lunar_python  # noqa: F401
         from PIL import Image  # noqa: F401
@@ -39,8 +47,11 @@ def main() -> int:
         ROOT / "skills/rensheng-youji-growth-map/scripts/render_report_pdf.py",
         ROOT / "scripts/core_baseline.py",
         ROOT / "scripts/apply_calibration_delta.py",
+        ROOT / "scripts/resolve_report_sources.py",
+        ROOT / "scripts/report_source_contract.py",
         ROOT / "scripts/audit_claim_diversity.py",
         ROOT / "scripts/audit_report_claim_coverage.py",
+        ROOT / "scripts/audit_skill_references.py",
         ROOT / "assets/wechat-contact.jpg",
         ROOT / "assets/rensheng-youji-logo.png",
         ROOT / "assets/asset-manifest.json",
@@ -76,6 +87,7 @@ def main() -> int:
             "tests.test_report_v28_traceability.ReportV28TraceabilityTest",
             "tests.test_report_v211_delivery_safety.ReportV211DeliverySafetyTest",
             "tests.test_report_v212_core_traceability.ReportV212CoreTraceabilityTest",
+            "tests.test_report_v213_post_calibration_selection.ReportV213PostCalibrationSelectionTest",
         ],
         cwd=ROOT,
         text=True,
@@ -91,10 +103,10 @@ def main() -> int:
         cwd=ROOT, text=True, capture_output=True, check=False,
     )
     if core_test.returncode:
-        print("FAILED: v0.8.1 Core domain independence and report-grade source bundle")
+        print("FAILED: v0.9.0 Core candidate reserves, coverage mapping and report-grade source bundle")
         print(core_test.stdout or core_test.stderr)
         return 7
-    print("READY: dependencies, chart, v2 card, frozen Core v0.8.1, calibration delta, mandatory claim realization, sparse emphasis, stable fallback and fixed 10-page report pipeline passed")
+    print("READY: dependencies, chart, v2 card, frozen Core v0.9.0, calibration delta, post-calibration source resolution, mandatory claim realization, evidence-based section degradation, sparse emphasis, stable fallback and fixed 10-page report pipeline passed")
     return 0
 
 

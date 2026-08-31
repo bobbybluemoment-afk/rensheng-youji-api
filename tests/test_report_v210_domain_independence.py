@@ -28,7 +28,7 @@ class ReportV210DomainIndependenceTest(unittest.TestCase):
     def test_shared_mainline_cannot_dominate(self) -> None:
         analysis = self_test_fixture()
         source = analysis["report_source_bundle"]["dimensions"]["career"]
-        source["mainline_claim_ids"] = source["claim_ids"][:2]
+        source["mainline_claim_ids"] = source["claim_ids"][:3]
         self.assertTrue(any("不得超过本节判断的30%" in item for item in validate_analysis(analysis)))
 
     def test_same_claim_cannot_fill_six_domains(self) -> None:

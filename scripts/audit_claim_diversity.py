@@ -46,8 +46,8 @@ def audit(data: dict[str, Any]) -> list[str]:
             errors.append(f"{claim_id} contains production-forbidden self-test wording")
     for domain in DOMAINS:
         items = [item for item in claims if item.get("domain") == domain]
-        if len(items) < 4:
-            errors.append(f"{domain} has fewer than four claims")
+        if len(items) < 8:
+            errors.append(f"{domain} has fewer than eight candidate claims")
             continue
         if len({item.get("claim_family") for item in items}) < 3:
             errors.append(f"{domain} must contain at least three claim families")
@@ -71,12 +71,12 @@ def audit(data: dict[str, Any]) -> list[str]:
     for source in sources:
         if not isinstance(source, dict):
             continue
-        mandatory = source.get("mandatory_claim_ids")
-        if not isinstance(mandatory, list) or not 1 <= len(mandatory) <= 2:
-            errors.append("Each report source must lock one or two mandatory claims")
+        mandatory = source.get("mandatory_candidate_ids")
+        if not isinstance(mandatory, list) or not 2 <= len(mandatory) <= 4:
+            errors.append("Each report source must provide two to four ranked mandatory candidates")
             continue
         if not set(mandatory).issubset(set(source.get("claim_ids") or [])) or any(item not in claim_index for item in mandatory):
-            errors.append("mandatory_claim_ids must be valid selected claims")
+            errors.append("mandatory_candidate_ids must be valid source candidates")
     return errors
 
 

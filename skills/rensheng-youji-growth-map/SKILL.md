@@ -159,13 +159,14 @@ python scripts/core_baseline.py verify \
    - [prosperity-guide.md](references/prosperity-guide.md)：现实行动建议；
    - [brand-and-conversion.md](references/brand-and-conversion.md)：免费使用与人工服务入口；
    - [safety-language.md](references/safety-language.md)：健康、财务、关系和隐私边界。
-2. 完整读取 `internal/rensheng-youji-report-content-brief/SKILL.md`，从校准后Core先生成 `work/report-content-selection.json`，再运行实体化脚本生成 `work/report-content-brief.json`。事实提纲必须携带Core判断正文、机制、证据、限制和哈希；不能只传判断编号。
-3. 完整读取 `internal/rensheng-youji-report-writer/SKILL.md`，从实体化事实提纲生成 `work/report-draft.json`。每个内容区必须把 `mandatory_claim_ids` 对应的 `plain_claim` 原句放入正文，并登记 `claim_realization_map`；写作层只补充形成过程、条件、例子和限制，不能重新概括锁定判断。完整人生主线写3—4个自然段、500—700个汉字；六个领域各写3—4个自然段、500—700个汉字。
-4. 完整读取 `internal/rensheng-youji-chinese-editor/SKILL.md`，对初稿逐段执行第二遍中文编辑，生成 `work/editorial-review.json` 和正式 `work/report.json`。编辑记录必须保存初稿与终稿对应关系和实际修改，不能再用几个布尔值代替编辑。
-5. 正式报告使用 `schema_version=2.12.0`、`document_mode=full_calibrated`。Core使用0.8.1、事实提纲和初稿使用1.4.0、中文编辑使用2.3.0。完整人生主线先根据全盘材料生成，再在第4页单独回应用户问题。六个领域先写各自的人物侧面，再用人生主线串联；用户关注方向只在当前阶段、问题回应、相关年度和行动建议中加重。
-6. 时间分析继续使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系，同时概括更长阶段。
-7. 从同一份校准后 Core 母稿依次运行 `rensheng-youji-free-card-output` 与 `rensheng-youji-free-card-renderer` 的现有新版流程，生成 `work/free-card-output.json`。报告与卡片的分析编号、Core版本和明显关系机会年份必须一致。
-8. 运行统一交付命令：
+2. 校准完成后先运行 `scripts/resolve_report_sources.py`，从冻结候选池排除 `reject`，按稳定优先级和覆盖备用映射生成 `work/resolved-report-sources.json`。不得手工编辑该文件，也不得直接沿用校准前的最终报告名单。
+3. 完整读取 `internal/rensheng-youji-report-content-brief/SKILL.md`，从校准后Core、确定性选材和 `work/report-content-selection.json` 生成实体化 `work/report-content-brief.json`。事实提纲必须携带Core判断正文、机制、证据、限制、选材哈希和降级状态；不能只传判断编号。
+4. 完整读取 `internal/rensheng-youji-report-writer/SKILL.md`，从实体化事实提纲生成 `work/report-draft.json`。每个内容区必须把 `mandatory_claim_ids` 对应的 `plain_claim` 原句放入正文，并登记 `claim_realization_map`；写作层只补充形成过程、条件、例子和限制，不能重新概括锁定判断。正常章节写500—700个汉字；判断不足时按确定性选材给出的 `shortened`、`minimal` 或 `evidence_gap` 缩短，不得用重复内容凑字。
+5. 完整读取 `internal/rensheng-youji-chinese-editor/SKILL.md`，对初稿逐段执行第二遍中文编辑，生成 `work/editorial-review.json` 和正式 `work/report.json`。编辑记录必须保存初稿与终稿对应关系、降级状态和实际修改，不能再用几个布尔值代替编辑。
+6. 正式报告使用 `schema_version=2.13.0`、`document_mode=full_calibrated`。Core使用0.9.0、事实提纲和初稿使用1.5.0、中文编辑使用2.4.0。完整人生主线先根据全盘材料生成，再在第4页单独回应用户问题。六个领域先写各自的人物侧面，再用人生主线串联；用户关注方向只在当前阶段、问题回应、相关年度和行动建议中加重。
+7. 时间分析继续使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系，同时概括更长阶段。
+8. 从同一份校准后 Core 母稿依次运行 `rensheng-youji-free-card-output` 与 `rensheng-youji-free-card-renderer` 的现有新版流程，生成 `work/free-card-output.json`。报告与卡片的分析编号、Core版本和明显关系机会年份必须一致。
+9. 运行统一交付命令：
 
 ```bash
 python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
@@ -177,13 +178,14 @@ python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
   --analysis-baseline work/analysis-baseline.json \
   --baseline-lock work/analysis-baseline-lock.json \
   --calibration-delta work/calibration-delta.json \
+  --resolved-sources work/resolved-report-sources.json \
   --free-card work/free-card-output.json \
   --calibration-questions work/calibration-questions.json \
   --out-dir work/delivery \
   --keep-pages
 ```
 
-9. 正式交付固定包含新版1242×1660卡片PNG、Markdown、恰好10页的PDF和 `report-delivery-manifest.json`。PDF第2页必须嵌入刚刚生成的同一张新版卡片；不得让用户模型自行决定版式、页数、换行、颜色或二维码位置。
+10. 正式交付固定包含新版1242×1660卡片PNG、Markdown、恰好10页的PDF和 `report-delivery-manifest.json`。PDF第2页必须嵌入刚刚生成的同一张新版卡片；不得让用户模型自行决定版式、页数、换行、颜色或二维码位置。
 
 ## 交付容错
 
@@ -192,7 +194,7 @@ python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
 1. 先生成少量重点判断的新版PDF；完整人生主线通常2条、当前问题通常1条、每个领域最多1条，没有合适句子时允许为空。
 2. 重点样式、换行或单页空间检查失败时，交付程序自动关闭重点样式，使用同一份已校验正文生成统一字号和颜色的稳定版PDF；不得重新推命或改写正文。
 3. 数组、对象、残句、内部命理术语或来源错误必须在写作/编辑阶段修复后重新校验，不能由PDF渲染器猜测或替换。
-4. 单个领域判断不足或重复时只返工该领域一次；仍不足则缩短该领域并明确证据不足，不用人生主线或校准答案填满，也不阻塞其余可靠内容交付。
+4. 单个领域判断不足不再临时返工冻结Core；确定性选材根据剩余判断自动进入 `shortened`、`minimal` 或 `evidence_gap`。写作层必须缩短该领域并明确证据边界，不用人生主线或校准答案填满，也不阻塞其余可靠内容交付。
 5. 只有四柱/时运计算失败、Core没有真实生成、冻结Core被校准改写、报告与卡片来源不一致、主要判断无来源，或稳定版仍发生缺字截断时，才停止错误交付。
 
 交付清单必须记录 `render_mode=primary|stable`、`visual_fallback_used`、实际 `overflow` 和 `text_render_completed`。不得把 `overflow=false` 作为固定值写入。
@@ -237,8 +239,8 @@ python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
 - 五题至少包含两道客观状态或事件题、一道带时间窗口的事件题，并且时间题实际绑定带大运或流年证据的 `timed_event` 候选；
 - 不包含“初始角色、核心配置、主线任务、人物小传”等旧卡片字段；
 - 六个领域均有实质内容或明确写证据不足，不能把事业段落换词复制到其他领域；
-- 六个领域各自写成3—4个连贯自然段，覆盖行为模式、形成经历、现实条件、重复挑战、阶段变化与应对，但不把这些覆盖项显示成固定小标题；
-- 每个领域和完整人生主线可见正文均为500—700个汉字；不再设置逐段机械字数；
+- 正常领域写成2—4个连贯自然段并完整覆盖行为模式、形成经历、现实条件、重复挑战、阶段变化与应对；降级领域严格按照选材状态缩短并记录缺失覆盖项；
+- 正常领域和完整人生主线为500—700个汉字；`shortened` 为320—500字，`minimal` 为180—320字，`evidence_gap` 为60—180字；不得为了统一篇幅重复判断；
 - 最终正文没有“现实落点、核对点、判断等级、校准后的现实线索”等内部栏目，也没有固定“好处—代价”句式；
 - 已执行事实提纲、人物初稿和可追溯中文编辑，初稿与终稿真实存在，编辑没有新增判断；
 - 每个自然段至少映射两个实体化Core判断，完整人生主线和六领域至少八成来源为命盘或时运基线；

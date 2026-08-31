@@ -6,11 +6,15 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from collections.abc import Iterable
 from datetime import date
 from pathlib import Path
 from typing import Any
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from report_source_contract import BASE_COVERAGE, delivery_rule, required_coverage  # noqa: E402
 
 DIMENSION_IDS = ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]
 DIMENSION_PARAGRAPHS = {
@@ -455,13 +459,22 @@ def _validate_v26(data: dict[str, Any]) -> None:
         raise ValueError(f"正式报告正文应为4300—6500个汉字，当前{total_cjk}")
 
 
-def _validate_narrative(section: Any, minimum: int, maximum: int, where: str, errors: list[str], require_map: bool = False) -> None:
+def _validate_narrative(section: Any, minimum: int, maximum: int, where: str, errors: list[str], require_map: bool = False, use_delivery_mode: bool = False) -> None:
     if not isinstance(section, dict):
         errors.append(f"{where} 必须是对象")
         return
+    mode = section.get("delivery_mode") if use_delivery_mode else None
+    rule = delivery_rule(mode) if mode in {"normal", "shortened", "minimal", "evidence_gap"} else None
+    if use_delivery_mode and rule is None:
+        errors.append(f"{where}.delivery_mode 无效")
+    if rule:
+        minimum, maximum = rule["cjk"]
+        minimum_paragraphs, maximum_paragraphs = rule["paragraphs"]
+    else:
+        minimum_paragraphs, maximum_paragraphs = 2, 4
     paragraphs = section.get("paragraphs")
-    if not isinstance(paragraphs, list) or not 2 <= len(paragraphs) <= 4 or any(not isinstance(item, str) for item in paragraphs):
-        errors.append(f"{where}.paragraphs 必须包含2—4个自然段")
+    if not isinstance(paragraphs, list) or not minimum_paragraphs <= len(paragraphs) <= maximum_paragraphs or any(not isinstance(item, str) for item in paragraphs):
+        errors.append(f"{where}.paragraphs 必须包含{minimum_paragraphs}—{maximum_paragraphs}个自然段")
         return
     count = cjk_count("".join(paragraphs))
     if not minimum <= count <= maximum:
@@ -471,7 +484,7 @@ def _validate_narrative(section: Any, minimum: int, maximum: int, where: str, er
         if any(cjk_count(sentence) > 70 for sentence in sentences):
             errors.append(f"{where}.paragraphs[{index}] 存在超过70个汉字的长句")
     claim_ids = section.get("source_claim_ids")
-    minimum_claims = 6 if require_map else 4
+    minimum_claims = rule["minimum_claims"] if rule else 6 if require_map else 4
     if not isinstance(claim_ids, list) or len(set(claim_ids)) < minimum_claims:
         errors.append(f"{where}.source_claim_ids 至少包含{minimum_claims}个不同判断来源")
     if require_map:
@@ -479,9 +492,10 @@ def _validate_narrative(section: Any, minimum: int, maximum: int, where: str, er
         if not isinstance(paragraph_map, list) or len(paragraph_map) != len(paragraphs):
             errors.append(f"{where}.paragraph_claim_map 必须与自然段逐项对应")
         else:
+            minimum_mapped = 2 if not rule or mode in {"normal", "shortened"} else 1 if mode == "minimal" else 0
             for index, mapped in enumerate(paragraph_map):
-                if not isinstance(mapped, list) or len(set(mapped)) < 2 or set(mapped) - set(claim_ids or []):
-                    errors.append(f"{where}.paragraph_claim_map[{index}] 必须引用本节至少两个不同判断")
+                if not isinstance(mapped, list) or len(set(mapped)) < minimum_mapped or set(mapped) - set(claim_ids or []):
+                    errors.append(f"{where}.paragraph_claim_map[{index}] 必须引用本节至少{minimum_mapped}个不同判断")
 
 
 def _validate_emphasis(section: Any, minimum: int, maximum: int, where: str, errors: list[str]) -> None:
@@ -521,8 +535,10 @@ def _validate_realizations(section: Any, where: str, errors: list[str]) -> None:
     paragraphs = section.get("paragraphs") or []
     mandatory = section.get("mandatory_claim_ids")
     records = section.get("claim_realization_map")
-    if not isinstance(mandatory, list) or not 1 <= len(mandatory) <= 2:
-        errors.append(f"{where}.mandatory_claim_ids 必须包含1—2条Core锁定判断")
+    minimum = 0 if section.get("delivery_mode") == "evidence_gap" else 1
+    maximum = 2 if section.get("delivery_mode") in {None, "normal"} else 1
+    if not isinstance(mandatory, list) or not minimum <= len(mandatory) <= maximum:
+        errors.append(f"{where}.mandatory_claim_ids 必须包含{minimum}—{maximum}条校准后锁定判断")
         return
     if not isinstance(records, list) or {item.get("claim_id") for item in records if isinstance(item, dict)} != set(mandatory):
         errors.append(f"{where}.claim_realization_map 必须逐条覆盖Core锁定判断")
@@ -545,7 +561,7 @@ def _validate_v27(data: dict[str, Any]) -> None:
     if data.get("document_mode") not in {"full_calibrated", "preliminary_uncalibrated"}:
         errors.append("document_mode 值无效")
     source = data.get("source", {})
-    expected_core = "0.8.1" if data.get("schema_version") == "2.12.0" else "0.8.0" if data.get("schema_version") in {"2.10.0", "2.11.0"} else "0.7.0" if data.get("schema_version") == "2.9.0" else "0.6.0" if data.get("schema_version") == "2.8.0" else "0.5.0"
+    expected_core = "0.9.0" if data.get("schema_version") == "2.13.0" else "0.8.1" if data.get("schema_version") == "2.12.0" else "0.8.0" if data.get("schema_version") in {"2.10.0", "2.11.0"} else "0.7.0" if data.get("schema_version") == "2.9.0" else "0.6.0" if data.get("schema_version") == "2.8.0" else "0.5.0"
     if source.get("core_version") != expected_core:
         errors.append(f"{data.get('schema_version')}报告必须来自core_version={expected_core}")
     if source.get("analysis_as_of") != data.get("generated_on"):
@@ -554,6 +570,8 @@ def _validate_v27(data: dict[str, Any]) -> None:
     for key in ("content_brief_id", "report_draft_id", "editorial_review_id"):
         if not artifacts.get(key):
             errors.append(f"source_artifacts.{key} 不能为空")
+    if data.get("schema_version") == "2.13.0" and not artifacts.get("resolved_source_sha256"):
+        errors.append("source_artifacts.resolved_source_sha256 不能为空")
     profile = data.get("profile", {})
     for key in ("identity_option", "birth", "location", "focus", "question"):
         if not profile.get(key):
@@ -578,13 +596,14 @@ def _validate_v27(data: dict[str, Any]) -> None:
     if data.get("document_mode") == "full_calibrated" and (not isinstance(responses, list) or len(responses) != 5):
         errors.append("正式报告必须保留五道内部校准响应供交付核对")
     editorial = data.get("editorial_review", {})
-    expected_editor = "2.3.0" if data.get("schema_version") == "2.12.0" else "2.2.0" if data.get("schema_version") in {"2.10.0", "2.11.0"} else "2.1.0" if data.get("schema_version") in {"2.8.0", "2.9.0"} else "2.0.0"
+    expected_editor = "2.4.0" if data.get("schema_version") == "2.13.0" else "2.3.0" if data.get("schema_version") == "2.12.0" else "2.2.0" if data.get("schema_version") in {"2.10.0", "2.11.0"} else "2.1.0" if data.get("schema_version") in {"2.8.0", "2.9.0"} else "2.0.0"
     if editorial.get("version") != expected_editor or editorial.get("review_id") != artifacts.get("editorial_review_id"):
         errors.append(f"报告必须引用{expected_editor}可追溯中文编辑记录")
     summary = data.get("executive_summary", {})
-    narrative_min, narrative_max = ((500, 700) if data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0"} else (350, 550))
-    require_map = data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0"}
-    _validate_narrative(summary.get("life_overview"), narrative_min, narrative_max, "executive_summary.life_overview", errors, require_map)
+    narrative_min, narrative_max = ((500, 700) if data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0"} else (350, 550))
+    require_map = data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0"}
+    is_v213 = data.get("schema_version") == "2.13.0"
+    _validate_narrative(summary.get("life_overview"), narrative_min, narrative_max, "executive_summary.life_overview", errors, require_map, is_v213)
     capabilities = summary.get("capabilities_resources")
     if not isinstance(capabilities, list) or not 2 <= len(capabilities) <= 4:
         errors.append("executive_summary.capabilities_resources 必须包含2—4项")
@@ -594,8 +613,8 @@ def _validate_v27(data: dict[str, Any]) -> None:
                 length(item, 16, 75, f"executive_summary.capabilities_resources[{index}]")
             except ValueError as exc:
                 errors.append(str(exc))
-    current_min, current_max = ((320, 650) if data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0"} else (280, 600))
-    _validate_narrative(data.get("current_question_narrative"), current_min, current_max, "current_question_narrative", errors, require_map)
+    current_min, current_max = ((320, 650) if data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0"} else (280, 600))
+    _validate_narrative(data.get("current_question_narrative"), current_min, current_max, "current_question_narrative", errors, require_map, is_v213)
     stage = data.get("stage_story", {})
     for key in ("previous_foundation", "recent_development", "present_task", "next_direction", "long_range"):
         if not stage.get(key):
@@ -604,35 +623,39 @@ def _validate_v27(data: dict[str, Any]) -> None:
     if not isinstance(dimensions, list) or [item.get("id") for item in dimensions if isinstance(item, dict)] != DIMENSION_IDS:
         errors.append("dimensions 必须按固定顺序完整包含六个现实领域")
     else:
-        required_coverage = {"feature", "behavior", "formation", "challenge", "current_change", "response"}
         claim_usage: dict[str, int] = {}
         for item in dimensions:
             where = f"dimensions.{item.get('id')}"
-            _validate_narrative(item, narrative_min, narrative_max, where, errors, require_map)
-            if not required_coverage.issubset(set(item.get("coverage") or [])):
+            _validate_narrative(item, narrative_min, narrative_max, where, errors, require_map, is_v213)
+            expected_missing = set(required_coverage(item.get("id")) if is_v213 else BASE_COVERAGE) - set(item.get("coverage") or [])
+            if is_v213 and set(item.get("missing_coverage") or []) != expected_missing:
+                errors.append(f"{where}.missing_coverage 与实际覆盖不一致")
+            if (not is_v213 or item.get("delivery_mode") == "normal") and expected_missing:
                 errors.append(f"{where}.coverage 缺少完整人物描述要素")
             if item.get("confidence") not in CONFIDENCE:
                 errors.append(f"{where}.confidence 值无效")
             if item.get("id") == "body_emotion" and not any(term in "".join(item.get("paragraphs") or []) for term in ("不构成疾病诊断", "不能据此诊断", "应以正规医疗评估为准")):
                 errors.append("身体与情绪章节必须说明不构成疾病诊断")
-            if data.get("schema_version") in {"2.10.0", "2.11.0", "2.12.0"}:
+            if data.get("schema_version") in {"2.10.0", "2.11.0", "2.12.0", "2.13.0"}:
                 source_ids = set(item.get("source_claim_ids") or [])
                 specific = set(item.get("domain_specific_claim_ids") or [])
                 mainline = set(item.get("mainline_claim_ids") or [])
-                if len(specific) < 4 or not specific.issubset(source_ids):
-                    errors.append(f"{where} 至少需要4个领域专属判断")
+                minimum_specific = delivery_rule(item.get("delivery_mode"))["minimum_specific"] if is_v213 and item.get("delivery_mode") in {"normal", "shortened", "minimal", "evidence_gap"} else 4
+                if len(specific) < minimum_specific or not specific.issubset(source_ids):
+                    errors.append(f"{where} 至少需要{minimum_specific}个领域专属判断")
                 if len(mainline) / max(len(source_ids), 1) > 0.30 or not mainline.issubset(source_ids):
                     errors.append(f"{where} 人生主线判断不得超过30%")
-                if len(set(item.get("domain_mechanisms") or [])) < 2 or item.get("survives_without_mainline") is not True:
+                minimum_mechanisms = 2 if not is_v213 or item.get("delivery_mode") in {"normal", "shortened"} else 1 if item.get("delivery_mode") == "minimal" else 0
+                if len(set(item.get("domain_mechanisms") or [])) < minimum_mechanisms or (item.get("delivery_mode") == "normal" and item.get("survives_without_mainline") is not True):
                     errors.append(f"{where} 缺少领域机制，或去掉主线后不能独立成立")
                 for claim_id in source_ids:
                     claim_usage[claim_id] = claim_usage.get(claim_id, 0) + 1
-        if data.get("schema_version") in {"2.10.0", "2.11.0", "2.12.0"}:
+        if data.get("schema_version") in {"2.10.0", "2.11.0", "2.12.0", "2.13.0"}:
             overused = sorted(item for item, count in claim_usage.items() if count > 2)
             if overused:
                 errors.append(f"同一Core判断最多进入两个现实领域：{overused}")
-    if data.get("schema_version") in {"2.10.0", "2.11.0", "2.12.0"}:
-        sparse = data.get("schema_version") in {"2.11.0", "2.12.0"}
+    if data.get("schema_version") in {"2.10.0", "2.11.0", "2.12.0", "2.13.0"}:
+        sparse = data.get("schema_version") in {"2.11.0", "2.12.0", "2.13.0"}
         _validate_emphasis(summary.get("life_overview"), 0 if sparse else 3, 2 if sparse else 4, "executive_summary.life_overview", errors)
         _validate_emphasis(data.get("current_question_narrative"), 0 if sparse else 2, 1 if sparse else 3, "current_question_narrative", errors)
         for item in dimensions or []:
@@ -645,7 +668,7 @@ def _validate_v27(data: dict[str, Any]) -> None:
         ], ensure_ascii=False)
         if "**" in narrative_text:
             errors.append("正文必须保存纯文本；重点样式只由emphasis_spans和渲染器生成")
-    if data.get("schema_version") == "2.12.0":
+    if data.get("schema_version") in {"2.12.0", "2.13.0"}:
         _validate_realizations(summary.get("life_overview"), "executive_summary.life_overview", errors)
         _validate_realizations(data.get("current_question_narrative"), "current_question_narrative", errors)
         for item in dimensions or []:
@@ -711,7 +734,7 @@ def _validate_v27(data: dict[str, Any]) -> None:
             errors.append(f"用户可见正文含禁用表达：{term}")
     if re.search(r"校准后的现实线索|校准确认|符合.{0,10}判断", visible):
         errors.append("用户可见正文不得展示校准过程")
-    if data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0"} and visible.count("经营") > 2:
+    if data.get("schema_version") in {"2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0"} and visible.count("经营") > 2:
         errors.append("用户可见正文中“经营”出现过多；仅可用于真实经商、创业或利润责任语境")
     found_mingli = sorted(term for term in MINGLI_TERMS if term in visible)
     if found_mingli or MINGLI_PATTERN.search(visible):
@@ -735,7 +758,7 @@ def _validate_v27(data: dict[str, Any]) -> None:
 
 
 def validate(data: dict[str, Any]) -> None:
-    if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0"}:
+    if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0"}:
         _validate_v27(data)
     else:
         _validate_v26(data)
@@ -830,7 +853,7 @@ def _render_v27(data: dict[str, Any]) -> str:
 
 
 def render(data: dict[str, Any]) -> str:
-    return _render_v27(data) if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0"} else _render_v26(data)
+    return _render_v27(data) if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0"} else _render_v26(data)
 
 
 def main() -> int:

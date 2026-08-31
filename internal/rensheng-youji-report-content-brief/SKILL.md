@@ -1,33 +1,43 @@
 ---
 name: rensheng-youji-report-content-brief
-description: 人生有迹内部报告事实整理层。接收已冻结并以校准增量合成的0.8.1 Core母稿，从六领域独立判断、人物形成链与领域联动链中选择材料，并实体化Core证据、必须兑现的白话判断和校准变化，生成不含用户文章的report-content-brief.json。用于完整报告写作前锁定事实与判断；不负责排盘、重新推命、写正文或渲染PDF。
+description: 人生有迹内部报告事实整理层。接收已冻结并以校准增量合成的0.9.0 Core母稿和确定性校准后选材，从六领域独立判断、人物形成链与领域联动链中实体化证据、必须兑现的白话判断和校准变化，生成不含用户文章的report-content-brief.json。用于完整报告写作前锁定事实与判断；不负责排盘、重新推命、自由选择报告结论、写正文或渲染PDF。
 ---
 
 # 报告事实整理层
 
 ## 工作顺序
 
-1. 读取校准后的 Core 母稿，确认 `core_version=0.8.1`，并确认它已通过Baseline冻结校验。
+1. 读取校准后的 Core 母稿，确认 `core_version=0.9.0`，并确认它已通过Baseline冻结校验。
 2. 读取 [content-brief.md](references/content-brief.md)。
 3. 优先选择 `match`，同时保留能够共存的 `supported_unselected`、明确场景的 `conditional`、降低优先的 `weakened`，以及确有多方法支持的 `unverified`；禁止使用 `reject`。
 4. 分别为完整人生主线、六个现实领域和当前问题准备材料。
 5. 用户关注方向只进入当前阶段、问题回应、相关年份与行动建议，不改变完整人生主线和六领域基础内容。
-6. 先生成 `report-content-selection.json`，只选择 `claim_ids`、形成链、联动链、允许例子和禁止外推，不手抄Core判断正文。
-   `report_source_bundle` 指定的 `mandatory_claim_ids` 必须进入相应内容区，不得被选择层删除或替换。
-7. 用确定性脚本把每条判断、实体证据、人物形成链、领域联动链、盲派现实取象、根苗花果领域生命周期、候选关系、校准变化和哈希写入事实提纲：
+6. 先运行校准后确定性选材程序。不得由模型手工删除、补充或替换判断：
+
+```bash
+python scripts/resolve_report_sources.py \
+  work/analysis-output-calibrated.json \
+  --output work/resolved-report-sources.json
+```
+
+7. 生成 `report-content-selection.json`，只补充允许例子和禁止外推；正式判断名单、覆盖项、重点句、必进句和降级模式必须来自 `resolved-report-sources.json`。
+8. 用确定性脚本把每条判断、实体证据、人物形成链、领域联动链、盲派现实取象、根苗花果领域生命周期、候选关系、校准变化和哈希写入事实提纲：
 
 ```bash
 python internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py \
   work/report-content-selection.json \
   --analysis work/analysis-output-calibrated.json \
+  --resolved-sources work/resolved-report-sources.json \
   --output work/report-content-brief.json
 ```
 
-8. 运行：
+9. 运行：
 
 ```bash
 python internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py \
-  work/report-content-brief.json --analysis work/analysis-output-calibrated.json
+  work/report-content-brief.json \
+  --analysis work/analysis-output-calibrated.json \
+  --resolved-sources work/resolved-report-sources.json
 ```
 
 ## 约束
@@ -40,3 +50,4 @@ python internal/rensheng-youji-report-content-brief/scripts/validate_content_bri
 - 具体组织、行业、岗位、收入或伴侣特征只能来自 Core 允许例子或开放候选。
 - 校准答案只作为内部筛选依据，不形成用户可见栏目。
 - 证据不足时记录缺口，不用常见人生路径补造。
+- `delivery_mode=normal` 时使用完整篇幅；`shortened`、`minimal` 或 `evidence_gap` 时按模式缩短对应章节，不得补入被排除判断，也不得阻塞其他可靠章节。

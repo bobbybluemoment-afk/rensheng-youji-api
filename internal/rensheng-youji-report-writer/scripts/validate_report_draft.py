@@ -6,11 +6,13 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
-DIMENSIONS = ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]
-REQUIRED_COVERAGE = {"feature", "behavior", "formation", "challenge", "current_change", "response"}
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from report_source_contract import BASE_COVERAGE, DIMENSIONS, delivery_rule, required_coverage  # noqa: E402
 BANNED = {"组织化过劳型", "先扎根后显声", "表达窗口", "能力输出", "可见度", "物质与经营底色", "资源伴随期待", "表达被规训", "经营责任", "经营基础", "进入经营期", "经营底色", "经营扩张", "输出与经营"}
 THIRD_PERSON = {"这个人", "命主", "本人"}
 MINGLI_TERMS = {"命盘", "命局", "原局", "年柱", "月柱", "日柱", "时柱", "天干", "地支", "干支", "日主", "身强", "身弱", "比肩", "劫财", "食神", "伤官", "食伤", "正印", "偏印", "正财", "偏财", "正官", "七杀", "格局", "调候", "喜用", "忌神", "大运", "流年", "藏干", "透干", "根苗花果", "根气", "冲根", "引动"}
@@ -20,13 +22,22 @@ def cjk(value: Any) -> int:
     return len(re.findall(r"[\u3400-\u9fff]", str(value)))
 
 
-def check_section(section: Any, minimum: int, maximum: int, where: str, errors: list[str], require_map: bool = True) -> set[str]:
+def check_section(section: Any, minimum: int, maximum: int, where: str, errors: list[str], require_map: bool = True, use_delivery_mode: bool = False) -> set[str]:
     if not isinstance(section, dict):
         errors.append(f"{where} 必须是对象")
         return set()
+    mode = section.get("delivery_mode") if use_delivery_mode else None
+    rule = delivery_rule(mode) if mode in {"normal", "shortened", "minimal", "evidence_gap"} else None
+    if use_delivery_mode and rule is None:
+        errors.append(f"{where}.delivery_mode 无效")
+    if rule:
+        minimum, maximum = rule["cjk"]
+        minimum_paragraphs, maximum_paragraphs = rule["paragraphs"]
+    else:
+        minimum_paragraphs, maximum_paragraphs = 2, 4
     paragraphs = section.get("paragraphs")
-    if not isinstance(paragraphs, list) or not 2 <= len(paragraphs) <= 4 or any(not isinstance(item, str) for item in paragraphs):
-        errors.append(f"{where}.paragraphs 必须包含2—4个自然段")
+    if not isinstance(paragraphs, list) or not minimum_paragraphs <= len(paragraphs) <= maximum_paragraphs or any(not isinstance(item, str) for item in paragraphs):
+        errors.append(f"{where}.paragraphs 必须包含{minimum_paragraphs}—{maximum_paragraphs}个自然段")
     else:
         count = cjk("".join(paragraphs))
         if not minimum <= count <= maximum:
@@ -41,7 +52,7 @@ def check_section(section: Any, minimum: int, maximum: int, where: str, errors: 
             if any(re.sub(r"[^\u3400-\u9fff]", "", sentence) in suspicious for sentence in sentences):
                 errors.append(f"{where}.paragraphs[{index}] 含疑似残字或残句")
     claim_ids = section.get("source_claim_ids")
-    minimum_claims = 6 if require_map else 4
+    minimum_claims = rule["minimum_claims"] if rule else 6 if require_map else 4
     if not isinstance(claim_ids, list) or len(set(claim_ids)) < minimum_claims:
         errors.append(f"{where} 至少引用{minimum_claims}个不同判断")
         return set()
@@ -50,9 +61,10 @@ def check_section(section: Any, minimum: int, maximum: int, where: str, errors: 
         if not isinstance(paragraph_map, list) or len(paragraph_map) != len(paragraphs or []):
             errors.append(f"{where}.paragraph_claim_map 必须与自然段逐项对应")
         else:
+            minimum_mapped = 2 if not rule or mode in {"normal", "shortened"} else 1 if mode == "minimal" else 0
             for index, mapped in enumerate(paragraph_map):
-                if not isinstance(mapped, list) or len(set(mapped)) < 2:
-                    errors.append(f"{where}.paragraph_claim_map[{index}] 至少包含两个不同Core判断")
+                if not isinstance(mapped, list) or len(set(mapped)) < minimum_mapped:
+                    errors.append(f"{where}.paragraph_claim_map[{index}] 至少包含{minimum_mapped}个不同Core判断")
                 elif set(mapped) - set(claim_ids):
                     errors.append(f"{where}.paragraph_claim_map[{index}] 引用了本节未声明的判断")
     return set(claim_ids)
@@ -122,21 +134,25 @@ def validate(data: Any, brief: Any | None = None) -> list[str]:
     is_v12 = data.get("schema_version") == "1.2.0"
     is_v13 = data.get("schema_version") == "1.3.0"
     is_v14 = data.get("schema_version") == "1.4.0"
-    is_traced = is_v11 or is_v12 or is_v13 or is_v14
-    if data.get("schema_version") not in {"1.0.0", "1.1.0", "1.2.0", "1.3.0", "1.4.0"}:
-        errors.append("schema_version 必须为1.0.0—1.4.0中的受支持版本")
-    used = check_section(data.get("life_overview"), 500 if is_traced else 350, 700 if is_traced else 550, "life_overview", errors, is_traced)
+    is_v15 = data.get("schema_version") == "1.5.0"
+    is_traced = is_v11 or is_v12 or is_v13 or is_v14 or is_v15
+    if data.get("schema_version") not in {"1.0.0", "1.1.0", "1.2.0", "1.3.0", "1.4.0", "1.5.0"}:
+        errors.append("schema_version 必须为1.0.0—1.5.0中的受支持版本")
+    used = check_section(data.get("life_overview"), 500 if is_traced else 350, 700 if is_traced else 550, "life_overview", errors, is_traced, is_v15)
     dimensions = data.get("dimensions")
-    if not isinstance(dimensions, list) or [item.get("id") for item in dimensions if isinstance(item, dict)] != DIMENSIONS:
+    if not isinstance(dimensions, list) or [item.get("id") for item in dimensions if isinstance(item, dict)] != list(DIMENSIONS):
         errors.append("dimensions 必须按固定顺序完整包含六个领域")
     else:
         for item in dimensions:
-            used |= check_section(item, 500 if is_traced else 380, 700 if is_traced else 650, f"dimensions.{item.get('id')}", errors, is_traced)
-            if not REQUIRED_COVERAGE.issubset(set(item.get("coverage") or [])):
+            used |= check_section(item, 500 if is_traced else 380, 700 if is_traced else 650, f"dimensions.{item.get('id')}", errors, is_traced, is_v15)
+            expected_missing = set(required_coverage(item.get("id")) if is_v15 else BASE_COVERAGE) - set(item.get("coverage") or [])
+            if is_v15 and set(item.get("missing_coverage") or []) != expected_missing:
+                errors.append(f"dimensions.{item.get('id')} 的缺失覆盖项与正文来源不一致")
+            if (not is_v15 or item.get("delivery_mode") == "normal") and expected_missing:
                 errors.append(f"dimensions.{item.get('id')} 缺少人物描述覆盖项")
     current = data.get("current_question")
     if isinstance(current, dict):
-        used |= check_section(current, 320 if is_traced else 280, 650 if is_traced else 600, "current_question", errors, is_traced)
+        used |= check_section(current, 320 if is_traced else 280, 650 if is_traced else 600, "current_question", errors, is_traced, is_v15)
     else:
         errors.append("current_question 必须是对象")
     visible_sections = [data.get("life_overview", {}), data.get("current_question", {}), *(data.get("dimensions") or [])]
@@ -177,14 +193,14 @@ def validate(data: Any, brief: Any | None = None) -> list[str]:
         }
         if is_traced and used - selected_payload:
             errors.append("初稿引用的判断没有实体化Core内容，禁止只凭编号写作")
-        if is_v12 or is_v13 or is_v14:
+        if is_v12 or is_v13 or is_v14 or is_v15:
             for index, section in enumerate([brief.get("life_overview"), brief.get("current_question"), *(brief.get("dimensions") or [])]):
                 if not isinstance(section, dict):
                     continue
                 for required in ("selected_evidence", "selected_formation_chains", "selected_linkage_chains", "selected_reality_candidates", "selected_candidate_relations", "portrait_context", "calibration_context"):
                     if required not in section:
                         errors.append(f"事实提纲第{index + 1}区缺少{required}，写作不得继续")
-        if is_v13 or is_v14:
+        if is_v13 or is_v14 or is_v15:
             check_emphasis(data.get("life_overview"), brief.get("life_overview"), 0, 2, "life_overview", errors)
             check_emphasis(data.get("current_question"), brief.get("current_question"), 0, 1, "current_question", errors)
             brief_dimensions = {item.get("id"): item for item in brief.get("dimensions") or [] if isinstance(item, dict)}
@@ -192,12 +208,12 @@ def validate(data: Any, brief: Any | None = None) -> list[str]:
                 if isinstance(section, dict):
                     brief_section = brief_dimensions.get(section.get("id"))
                     check_emphasis(section, brief_section, 0, 1, f"dimensions.{section.get('id')}", errors)
-                    for key in ("domain_specific_claim_ids", "mainline_claim_ids", "mandatory_claim_ids", "domain_mechanisms", "survives_without_mainline"):
+                    for key in ("domain_specific_claim_ids", "mainline_claim_ids", "mandatory_claim_ids", "domain_mechanisms", "survives_without_mainline", "delivery_mode", "missing_coverage") if is_v15 else ("domain_specific_claim_ids", "mainline_claim_ids", "mandatory_claim_ids", "domain_mechanisms", "survives_without_mainline"):
                         if not isinstance(brief_section, dict) or section.get(key) != brief_section.get(key):
                             errors.append(f"dimensions.{section.get('id')}.{key} 必须原样继承事实提纲")
             if "**" in json.dumps(data, ensure_ascii=False):
                 errors.append("初稿正文必须保存纯文本；加粗只由emphasis_spans和渲染器生成")
-        if is_v14:
+        if is_v14 or is_v15:
             check_realizations(data.get("life_overview"), brief.get("life_overview"), "life_overview", errors)
             check_realizations(data.get("current_question"), brief.get("current_question"), "current_question", errors)
             brief_dimensions = {item.get("id"): item for item in brief.get("dimensions") or [] if isinstance(item, dict)}

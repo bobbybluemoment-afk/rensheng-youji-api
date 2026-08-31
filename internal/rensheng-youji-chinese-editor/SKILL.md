@@ -8,11 +8,11 @@ description: 人生有迹内部中文编辑层。接收已校验的人物初稿�
 1. 完整读取 [natural-chinese.md](references/natural-chinese.md)。
 2. 对完整人生主线、六个现实领域和当前问题逐段执行第二遍编辑。
 3. 补全主体和动作，拆分长句，消除名词堆叠、翻译腔、命理术语泄露和固定模板。
-4. 保留初稿使用的所有判断编号、`paragraph_claim_map`、`claim_realization_map` 和领域独立性字段，不得增加新编号或改变逐段来源。`claim_realization_map.exact_span` 及其所在段落中的完整原句不得改写；如确需修改判断，退回Core而不是在编辑层偷换。
+4. 保留初稿使用的所有判断编号、`paragraph_claim_map`、`claim_realization_map`、领域独立性字段、`delivery_mode` 与 `missing_coverage`，不得增加新编号或改变逐段来源。`claim_realization_map.exact_span` 及其所在段落中的完整原句不得改写；如确需修改判断，退回Core而不是在编辑层偷换。
 5. 用户可见文字全部使用第二人称“你”，删除“这个人、他、她、命主、本人”等第三人称或内部称呼。
 6. 检查“经营”等高频抽象词的实际语境，并检查章节之间是否重复整句或固定模板。
 7. 可润色或删除不适合突出显示的重点句，但不得增加数量或改变Core来源。保留的重点句必须是带句末标点的完整判断；不得只保留半句、连接语、例子或解释。编辑后让精确句子继续写入 `emphasis_spans`。
-8. 输出终稿和独立编辑记录；编辑记录版本使用 `2.3.0`，并明确记录 `mandatory_claims_preserved=true`，不得只填写“已检查”。
+8. 输出终稿和独立编辑记录；编辑记录版本使用 `2.4.0`，并明确记录 `mandatory_claims_preserved=true`、`degraded_sections_preserved=true`，不得只填写“已检查”。
 9. 运行：
 
 ```bash

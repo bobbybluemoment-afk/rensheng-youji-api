@@ -14,6 +14,10 @@ from _jsonschema_subset import validate_schema_instance
 
 
 ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = ROOT.parents[1]
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from report_source_contract import BASE_COVERAGE, DIMENSIONS, required_coverage  # noqa: E402
+
 SCHEMA_PATH = ROOT / "schemas" / "analysis-output.schema.json"
 REQUIRED_SECTIONS = {
     "analysis_meta",
@@ -217,8 +221,8 @@ def validate(data: Any) -> list[str]:
     meta = data.get("analysis_meta")
     require_keys(meta, {"analysis_id", "request_id", "core_version", "generated_at", "analysis_as_of", "target_range", "input_completeness", "status"}, "analysis_meta", errors)
     if isinstance(meta, dict):
-        if meta.get("core_version") != "0.8.1":
-            errors.append("analysis_meta.core_version 必须为 0.8.1")
+        if meta.get("core_version") != "0.9.0":
+            errors.append("analysis_meta.core_version 必须为 0.9.0")
         if meta.get("status") not in {"complete", "pass_with_flags"}:
             errors.append("analysis_meta.status 必须是 complete 或 pass_with_flags")
         try:
@@ -371,8 +375,8 @@ def validate(data: Any) -> list[str]:
     claims = data.get("report_claim_ledger")
     claim_ids: set[str] = set()
     claim_by_id: dict[str, dict[str, Any]] = {}
-    if not isinstance(claims, list) or len(claims) < 24:
-        errors.append("report_claim_ledger 至少包含24条报告级判断")
+    if not isinstance(claims, list) or len(claims) < 48:
+        errors.append("report_claim_ledger 至少包含48条报告级候选判断")
     else:
         for index, claim in enumerate(claims):
             path = f"report_claim_ledger[{index}]"
@@ -411,9 +415,9 @@ def validate(data: Any) -> list[str]:
             if any(term in str(claim.get("claim", "")) for term in ("必然离婚", "一定离婚", "必然发财", "保证发财", "牢狱之灾", "必得重病", "短寿", "死亡年份")):
                 errors.append(f"{path}.claim 含有禁止的确定性高风险断语")
         domain_counts = {domain: sum(1 for claim in claims if isinstance(claim, dict) and claim.get("domain") == domain) for domain in REPORT_DOMAINS}
-        thin = sorted(domain for domain, count in domain_counts.items() if count < 4)
+        thin = sorted(domain for domain, count in domain_counts.items() if count < 8)
         if thin:
-            errors.append(f"report_claim_ledger 六个报告领域各至少4条判断，当前不足：{thin}")
+            errors.append(f"report_claim_ledger 六个报告领域各至少8条候选判断，当前不足：{thin}")
         for domain in REPORT_DOMAINS:
             domain_claims = [item for item in claims if isinstance(item, dict) and item.get("domain") == domain]
             if len({item.get("claim_family") for item in domain_claims}) < 3:
@@ -484,27 +488,31 @@ def validate(data: Any) -> list[str]:
             sources.update({f"dimensions.{key}": value for key, value in dimensions.items()})
         for name, source in sources.items():
             path = f"report_source_bundle.{name}"
-            require_keys(source, {"summary_materials", "claim_ids", "domain_specific_claim_ids", "mainline_claim_ids", "mandatory_claim_ids", "emphasis_claim_ids", "domain_mechanisms", "survives_without_mainline", "formation_chain_ids", "linkage_chain_ids", "concrete_candidates", "coverage", "evidence_gaps"}, path, errors)
+            require_keys(source, {"summary_materials", "claim_ids", "claim_priority", "domain_specific_claim_ids", "mainline_claim_ids", "mandatory_candidate_ids", "emphasis_candidate_ids", "domain_mechanisms", "survives_without_mainline", "formation_chain_ids", "linkage_chain_ids", "concrete_candidates", "coverage", "coverage_claim_map", "evidence_gaps"}, path, errors)
             if not isinstance(source, dict):
                 continue
-            if len(source.get("summary_materials") or []) < 6 or len(source.get("claim_ids") or []) < 6:
-                errors.append(f"{path} 至少包含6条素材和6个判断来源")
+            if len(source.get("summary_materials") or []) < 8 or len(source.get("claim_ids") or []) < 8:
+                errors.append(f"{path} 至少包含8条素材和8个候选判断，以便校准后确定性替换")
             if set(source.get("claim_ids") or []) - claim_ids:
                 errors.append(f"{path}.claim_ids 存在无效引用")
             source_ids = set(source.get("claim_ids") or [])
+            priority = source.get("claim_priority") or []
             specific_ids = set(source.get("domain_specific_claim_ids") or [])
             mainline_ids = set(source.get("mainline_claim_ids") or [])
-            emphasis_ids = set(source.get("emphasis_claim_ids") or [])
-            mandatory_ids = set(source.get("mandatory_claim_ids") or [])
-            if len(specific_ids) < 4 or not specific_ids.issubset(source_ids):
-                errors.append(f"{path}.domain_specific_claim_ids 至少包含4个本节判断且必须属于claim_ids")
+            emphasis_ids = set(source.get("emphasis_candidate_ids") or [])
+            mandatory_ids = set(source.get("mandatory_candidate_ids") or [])
+            if len(priority) != len(source_ids) or set(priority) != source_ids:
+                errors.append(f"{path}.claim_priority 必须无重复地排列全部候选判断")
+            minimum_specific = 6 if name.startswith("dimensions.") else 4
+            if len(specific_ids) < minimum_specific or not specific_ids.issubset(source_ids):
+                errors.append(f"{path}.domain_specific_claim_ids 至少包含{minimum_specific}个本节判断且必须属于claim_ids")
             if len(mainline_ids) > 2 or not mainline_ids.issubset(source_ids) or len(mainline_ids) / max(len(source_ids), 1) > 0.30:
                 errors.append(f"{path} 的共享人生主线判断不得超过本节判断的30%")
-            if not 1 <= len(mandatory_ids) <= 2 or not mandatory_ids.issubset(source_ids):
-                errors.append(f"{path}.mandatory_claim_ids 必须锁定1—2条本节判断")
-            emphasis_range = (0, 2) if name == "life_narrative_source" else (0, 1)
+            if not 2 <= len(mandatory_ids) <= 4 or not mandatory_ids.issubset(source_ids):
+                errors.append(f"{path}.mandatory_candidate_ids 必须提供2—4条按优先级排列的必进候选")
+            emphasis_range = (0, 4) if name == "life_narrative_source" else (0, 3)
             if not emphasis_range[0] <= len(emphasis_ids) <= emphasis_range[1] or not emphasis_ids.issubset(source_ids):
-                errors.append(f"{path}.emphasis_claim_ids 最多包含{emphasis_range[1]}个可独立成立的重点判断；没有合适句子时允许为空")
+                errors.append(f"{path}.emphasis_candidate_ids 最多包含{emphasis_range[1]}个可独立成立的重点候选；没有合适句子时允许为空")
             if len(set(source.get("domain_mechanisms") or [])) < 2:
                 errors.append(f"{path}.domain_mechanisms 至少包含两个领域自身机制")
             if source.get("survives_without_mainline") is not True:
@@ -514,6 +522,22 @@ def validate(data: Any) -> list[str]:
                 wrong = [item for item in specific_ids if item in claim_by_id and claim_by_id[item].get("domain") != domain]
                 if wrong:
                     errors.append(f"{path}.domain_specific_claim_ids 含其他领域判断：{sorted(wrong)}")
+                required_tags = set(required_coverage(domain))
+            else:
+                required_tags = set(BASE_COVERAGE)
+            coverage = set(source.get("coverage") or [])
+            if not required_tags.issubset(coverage):
+                errors.append(f"{path}.coverage 缺少统一人物覆盖项：{sorted(required_tags - coverage)}")
+            coverage_map = source.get("coverage_claim_map")
+            if not isinstance(coverage_map, dict) or not required_tags.issubset(set(coverage_map)):
+                errors.append(f"{path}.coverage_claim_map 必须为每个规定覆盖项提供备用判断")
+            else:
+                for tag in required_tags:
+                    mapped = coverage_map.get(tag)
+                    if not isinstance(mapped, list) or len(set(mapped)) < 2 or set(mapped) - source_ids:
+                        errors.append(f"{path}.coverage_claim_map.{tag} 必须绑定至少两个不同的本节候选判断")
+                    elif name.startswith("dimensions.") and not (set(mapped) & specific_ids):
+                        errors.append(f"{path}.coverage_claim_map.{tag} 至少包含一个领域专属判断")
             if set(source.get("formation_chain_ids") or []) - formation_ids:
                 errors.append(f"{path}.formation_chain_ids 存在无效引用")
             if set(source.get("linkage_chain_ids") or []) - linkage_ids:
@@ -726,27 +750,30 @@ def self_test_fixture() -> dict[str, Any]:
     domain_labels = {"self_growth": "决策与成长", "love_partner": "关系互动", "career": "工作职能", "finance_resources": "收入与留存", "body_emotion": "压力与恢复", "family_growth": "家庭边界"}
 
     def domain_source(index: int, coverage: list[str]) -> dict[str, Any]:
-        own = [f"claim_self_{index * 5 + offset}" for offset in range(1, 6)]
+        own = [f"claim_self_{index * 8 + offset}" for offset in range(1, 9)]
         neighbor = (index + 1) % len(report_domains)
-        shared = [f"claim_self_{neighbor * 5 + 1}"]
+        shared = [f"claim_self_{neighbor * 8 + 1}"]
+        claim_ids_for_source = own + shared
         return {
             "summary_materials": [f"{domain_labels[report_domains[index]]}素材{offset}" for offset in range(1, 9)],
-            "claim_ids": own + shared,
+            "claim_ids": claim_ids_for_source,
+            "claim_priority": claim_ids_for_source,
             "domain_specific_claim_ids": own,
             "mainline_claim_ids": shared,
-            "mandatory_claim_ids": own[:2],
-            "emphasis_claim_ids": own[:1],
+            "mandatory_candidate_ids": own[:4],
+            "emphasis_candidate_ids": own[:3],
             "domain_mechanisms": [f"{domain_labels[report_domains[index]]}的形成机制", f"{domain_labels[report_domains[index]]}的阶段变化机制"],
             "survives_without_mainline": True,
             "formation_chain_ids": ["formation_1"],
             "linkage_chain_ids": ["linkage_1"],
             "concrete_candidates": [],
             "coverage": coverage,
+            "coverage_claim_map": {tag: [own[offset % len(own)], own[(offset + 1) % len(own)]] for offset, tag in enumerate(coverage)},
             "evidence_gaps": [],
         }
 
     data = {
-        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.8.1", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
+        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.9.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
         "chart_facts": {"day_master": "甲", "pillars": {"year": pillar, "month": pillar, "day": {**pillar, "stem_ten_god": "日主"}, "hour": pillar}, "luck_cycles": [{}], "annual_cycles": [{}]},
         "chart_audit": {"status": "pass", "checks": [], "boundary_dependencies": [], "versions": []},
         "social_context_model": empty_section(),
@@ -796,8 +823,8 @@ def self_test_fixture() -> dict[str, Any]:
         "life_stages": [],
         "turning_points": [],
         "report_claim_ledger": [
-            {"claim_id": f"claim_self_{i}", "domain": report_domains[(i - 1) // 5], "reality_dimension": f"axis_{(i - 1) % 5 + 1}", "claim_family": f"family_{(i - 1) % 5 + 1}", "mechanism_family": f"mechanism_{(i - 1) % 2 + 1}", "claim": f"{domain_labels[report_domains[(i - 1) // 5]]}的第{(i - 1) % 5 + 1}项内部自检判断", "plain_claim": f"你在{domain_labels[report_domains[(i - 1) // 5]]}方面可能呈现第{(i - 1) % 5 + 1}种可核对的独立表现。", "new_information": f"{domain_labels[report_domains[(i - 1) // 5]]}新增信息{(i - 1) % 5 + 1}", "mechanism_chain": ["识别本领域的结构条件", "形成与该领域对应的现实表现"], "evidence_ids": [f"evidence_{(i - 1) % 24 + 1}", f"evidence_{i % 24 + 1}"], "supporting_methods": ["格局调候", "根苗花果"], "allowed_examples": ["可观察行为"], "counterevidence": [], "confidence": "to_verify", "unsupported_extensions": ["不能据此断定唯一现实结果"], "calibration_status": "unverified", "origin": "chart_baseline"}
-            for i in range(1, 31)
+            {"claim_id": f"claim_self_{i}", "domain": report_domains[(i - 1) // 8], "reality_dimension": f"axis_{(i - 1) % 8 + 1}", "claim_family": f"family_{(i - 1) % 4 + 1}", "mechanism_family": f"mechanism_{(i - 1) % 3 + 1}", "claim": f"{domain_labels[report_domains[(i - 1) // 8]]}的第{(i - 1) % 8 + 1}项内部自检判断", "plain_claim": f"你在{domain_labels[report_domains[(i - 1) // 8]]}方面可能呈现第{(i - 1) % 8 + 1}种可核对的独立表现。", "new_information": f"{domain_labels[report_domains[(i - 1) // 8]]}新增信息{(i - 1) % 8 + 1}", "mechanism_chain": ["识别本领域的结构条件", "形成与该领域对应的现实表现"], "evidence_ids": [f"evidence_{(i - 1) % 24 + 1}", f"evidence_{i % 24 + 1}"], "supporting_methods": ["格局调候", "根苗花果"], "allowed_examples": ["可观察行为"], "counterevidence": [], "confidence": "to_verify", "unsupported_extensions": ["不能据此断定唯一现实结果"], "calibration_status": "unverified", "origin": "chart_baseline"}
+            for i in range(1, 49)
         ],
         "formation_chains": [
             {"chain_id": f"formation_{i}", "starting_condition": "早期规则较明确", "adaptation_need": "需要减少出错", "learned_response": "先观察再行动", "ability_formed": "能够整理复杂信息", "constraint": "进入新环境较慢", "adult_pattern": "先确认要求再执行", "linked_domains": ["self_growth", "career"], "current_change": "开始增加主动表达", "claim_ids": ["claim_self_1", "claim_self_2"], "confidence": "to_verify"}
@@ -809,7 +836,7 @@ def self_test_fixture() -> dict[str, Any]:
             for i in range(1, 4)
         ],
         "report_source_bundle": {
-            "life_narrative_source": {**domain_source(0, ["性格", "家庭", "事业", "关系"]), "emphasis_claim_ids": ["claim_self_1", "claim_self_2"]},
+            "life_narrative_source": domain_source(0, list(BASE_COVERAGE)),
             "dimensions": {
                 "self_growth": domain_source(0, ["feature", "behavior", "formation", "challenge", "current_change", "response"]),
                 "career": domain_source(2, ["feature", "behavior", "formation", "challenge", "current_change", "response"]),
@@ -818,7 +845,7 @@ def self_test_fixture() -> dict[str, Any]:
                 "family_growth": domain_source(5, ["feature", "behavior", "formation", "challenge", "current_change", "response", "parent_kin_interaction", "support_and_constraint", "independence_and_reciprocity"]),
                 "body_emotion": domain_source(4, ["feature", "behavior", "formation", "challenge", "current_change", "response", "baseline_signals", "stress_sequence", "recovery_pattern"])
             },
-            "current_stage_source": {**domain_source(5, ["当前", "问题", "条件", "应对"]), "formation_chain_ids": []}
+            "current_stage_source": {**domain_source(5, list(BASE_COVERAGE)), "formation_chain_ids": []}
         },
         "reality_candidate_pool": [candidate(i) for i in range(1, 19)],
         "candidate_relation_map": [

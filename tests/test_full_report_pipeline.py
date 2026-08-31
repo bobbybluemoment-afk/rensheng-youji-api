@@ -444,7 +444,7 @@ class FullReportPipelineTest(unittest.TestCase):
                 self.assertEqual(image.size, (1242, 1660))
             rendered = markdown.read_text(encoding="utf-8")
             self.assertIn("# 人生有迹｜完整报告", rendered)
-            self.assertIn("这份报告根据你的出生信息、完整命盘和现实校准生成", rendered)
+            self.assertIn("这份报告根据你的出生信息、整体分析和现实校准生成", rendered)
             self.assertIn("## 完整人生主线", rendered)
             self.assertNotIn("初始角色", rendered)
             self.assertNotIn("主线任务", rendered)

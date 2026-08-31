@@ -64,8 +64,8 @@ def freeze(source: Path, baseline: Path, lock_path: Path) -> dict[str, Any]:
     validate_core(source)
     data = json.loads(source.read_text(encoding="utf-8"))
     meta = data.get("analysis_meta", {})
-    if meta.get("core_version") != "0.8.1":
-        raise ValueError("Only core_version=0.8.1 can be frozen by this workflow")
+    if meta.get("core_version") != "0.9.0":
+        raise ValueError("Only core_version=0.9.0 can be frozen by this workflow")
     if any(item.get("source_layer") == "user_fact" for item in data.get("evidence_registry", [])):
         raise ValueError("Baseline Core must be frozen before calibration user facts are added")
     if any(item.get("status") != "unverified" for item in data.get("reality_candidate_pool", [])):

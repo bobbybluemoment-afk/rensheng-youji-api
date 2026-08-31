@@ -37,6 +37,7 @@ def main() -> int:
     parser.add_argument("--analysis-baseline", type=Path, help="analysis-baseline.json，v2.12.0正式报告必填")
     parser.add_argument("--baseline-lock", type=Path, help="analysis-baseline-lock.json，v2.12.0正式报告必填")
     parser.add_argument("--calibration-delta", type=Path, help="calibration-delta.json，v2.12.0正式报告必填")
+    parser.add_argument("--resolved-sources", type=Path, help="resolved-report-sources.json，v2.13.0正式报告必填")
     parser.add_argument("--free-card", type=Path, required=True, help="free-card-output.json")
     parser.add_argument("--calibration-questions", type=Path, required=True, help="已通过2.2.0校验的calibration-questions.json")
     parser.add_argument("--out-dir", type=Path, required=True)
@@ -47,7 +48,7 @@ def main() -> int:
         report = json.loads(args.report.read_text(encoding="utf-8"))
         free_card = json.loads(args.free_card.read_text(encoding="utf-8"))
         calibration_questions = json.loads(args.calibration_questions.read_text(encoding="utf-8"))
-        is_traceable = report.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0"}
+        is_traceable = report.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0"}
         if is_traceable:
             required_artifacts = {
                 "--content-brief": args.content_brief,
@@ -70,7 +71,7 @@ def main() -> int:
             ]
             if temporary_patches:
                 raise ValueError("正式交付目录含临时报告修补脚本，禁止据此修改正文或哈希：" + "、".join(sorted(set(temporary_patches))))
-            if report.get("schema_version") == "2.12.0":
+            if report.get("schema_version") in {"2.12.0", "2.13.0"}:
                 protected = {
                     "--analysis-baseline": args.analysis_baseline,
                     "--baseline-lock": args.baseline_lock,
@@ -78,7 +79,7 @@ def main() -> int:
                 }
                 missing_protected = [name for name, value in protected.items() if value is None]
                 if missing_protected:
-                    raise ValueError("2.12.0正式报告缺少冻结Core来源：" + "、".join(missing_protected))
+                    raise ValueError("2.12.0及以上正式报告缺少冻结Core来源：" + "、".join(missing_protected))
                 with tempfile.TemporaryDirectory(prefix="rensheng-youji-calibration-") as temp_dir:
                     applied = Path(temp_dir) / "analysis-calibrated.json"
                     run([
@@ -94,11 +95,28 @@ def main() -> int:
                     "--calibrated", str(args.analysis),
                 ])
                 run([sys.executable, str(REPO_ROOT / "scripts/audit_claim_diversity.py"), str(args.analysis)])
-            run([
+            if report.get("schema_version") == "2.13.0":
+                if args.resolved_sources is None:
+                    raise ValueError("2.13.0正式报告缺少--resolved-sources")
+                with tempfile.TemporaryDirectory(prefix="rensheng-youji-resolved-") as temp_dir:
+                    recomputed = Path(temp_dir) / "resolved-report-sources.json"
+                    run([
+                        sys.executable, str(REPO_ROOT / "scripts/resolve_report_sources.py"),
+                        str(args.analysis), "--output", str(recomputed),
+                    ])
+                    if json.loads(recomputed.read_text(encoding="utf-8")) != json.loads(args.resolved_sources.read_text(encoding="utf-8")):
+                        raise ValueError("校准后报告选材不是由冻结Core和校准状态确定性生成")
+                resolved_data = json.loads(args.resolved_sources.read_text(encoding="utf-8"))
+                if report.get("source_artifacts", {}).get("resolved_source_sha256") != resolved_data.get("resolved_sha256"):
+                    raise ValueError("正式报告没有记录实际使用的校准后选材哈希")
+            brief_validation = [
                 sys.executable,
                 str(REPO_ROOT / "internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py"),
                 str(args.content_brief), "--analysis", str(args.analysis),
-            ])
+            ]
+            if report.get("schema_version") == "2.13.0":
+                brief_validation.extend(["--resolved-sources", str(args.resolved_sources)])
+            run(brief_validation)
             run([
                 sys.executable,
                 str(REPO_ROOT / "internal/rensheng-youji-report-writer/scripts/validate_report_draft.py"),
@@ -109,7 +127,7 @@ def main() -> int:
                 str(REPO_ROOT / "internal/rensheng-youji-chinese-editor/scripts/validate_editorial_review.py"),
                 str(args.editorial_review), "--draft", str(args.report_draft), "--report", str(args.report),
             ])
-            if report.get("schema_version") == "2.12.0":
+            if report.get("schema_version") in {"2.12.0", "2.13.0"}:
                 run([
                     sys.executable, str(REPO_ROOT / "scripts/audit_report_claim_coverage.py"),
                     "--analysis", str(args.analysis), "--brief", str(args.content_brief),
@@ -169,12 +187,18 @@ def main() -> int:
                 "traceable_editorial_review_valid": True,
                 "calibration_hidden_from_visible_report": True,
             })
-        if report.get("schema_version") == "2.12.0":
+        if report.get("schema_version") in {"2.12.0", "2.13.0"}:
             checks.update({
                 "baseline_core_locked": True,
                 "calibration_delta_only": True,
                 "claim_diversity_valid": True,
                 "mandatory_core_claims_realized": True,
+            })
+        if report.get("schema_version") == "2.13.0":
+            checks.update({
+                "post_calibration_sources_resolved": True,
+                "rejected_claims_removed": True,
+                "section_degradation_supported": True,
             })
         if report.get("document_mode") == "full_calibrated":
             command = [sys.executable, str(SKILL_ROOT / "scripts/render_report_pdf.py"), str(args.report), "--card", str(card), "--out", str(pdf)]

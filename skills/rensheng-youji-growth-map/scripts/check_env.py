@@ -21,6 +21,8 @@ def main() -> int:
         REPO_ROOT / "internal/rensheng-youji-report-writer/SKILL.md",
         REPO_ROOT / "internal/rensheng-youji-chinese-editor/SKILL.md",
         REPO_ROOT / "scripts/prepare_core_input.py",
+        REPO_ROOT / "scripts/resolve_report_sources.py",
+        REPO_ROOT / "scripts/report_source_contract.py",
         SKILL_ROOT / "references/report-schema.md",
         SKILL_ROOT / "references/calibration-question-templates.json",
         SKILL_ROOT / "scripts/render_report.py",

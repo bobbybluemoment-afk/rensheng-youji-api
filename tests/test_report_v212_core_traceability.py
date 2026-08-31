@@ -15,10 +15,14 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from apply_calibration_delta import apply_patch
 from audit_claim_diversity import audit as audit_diversity
 from audit_report_claim_coverage import audit as audit_coverage
+from audit_skill_references import audit as audit_skill_references
 from core_baseline import digest, protected_projection
 
 
 class ReportV212CoreTraceabilityTest(unittest.TestCase):
+    def test_every_declared_skill_reference_exists(self) -> None:
+        self.assertEqual(audit_skill_references(ROOT), [])
+
     def test_calibration_patch_cannot_rewrite_core_claim(self) -> None:
         baseline = {
             "analysis_meta": {"analysis_id": "a-1", "core_version": "0.8.1"},
