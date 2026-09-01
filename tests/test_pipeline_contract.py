@@ -43,6 +43,11 @@ class PipelineContractTest(unittest.TestCase):
         )
         self.assertIn("visual_series", stages["free_card_output"]["inputs"])
 
+    def test_runtime_launcher_is_required(self) -> None:
+        contract = copy.deepcopy(self.contract)
+        contract.pop("runtime")
+        self.assertTrue(any("runtime" in item for item in audit(ROOT, contract)))
+
 
 if __name__ == "__main__":
     unittest.main()

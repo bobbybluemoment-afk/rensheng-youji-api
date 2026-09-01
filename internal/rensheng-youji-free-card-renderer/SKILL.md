@@ -15,7 +15,7 @@ description: 人生有迹 API 仓库内部免费卡片绘图层。接收已经�
 2. 从仓库根目录运行：
 
 ```bash
-python scripts/generate_card.py --input free-card-output.json --output rensheng-youji-card.png
+python scripts/run_in_env.py scripts/generate_card.py --input free-card-output.json --output rensheng-youji-card.png
 ```
 
 3. 检查PNG存在且尺寸为1242×1660。

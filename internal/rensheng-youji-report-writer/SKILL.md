@@ -18,7 +18,7 @@ description: 人生有迹内部人物写作层。接收已校验的report-conten
 11. 生成 `schema_version=1.5.0` 的 `report-draft.json` 后运行：
 
 ```bash
-python internal/rensheng-youji-report-writer/scripts/validate_report_draft.py \
+python scripts/run_in_env.py internal/rensheng-youji-report-writer/scripts/validate_report_draft.py \
   work/report-draft.json --brief work/report-content-brief.json
 ```
 

@@ -19,13 +19,13 @@ description: 人生有迹内部免费卡片提取层。接收已经通过校验�
 4. 校验视觉信号：
 
 ```bash
-python3 scripts/validate_visual_signals.py visual-signals.json
+python scripts/run_in_env.py internal/rensheng-youji-free-card-output/scripts/validate_visual_signals.py visual-signals.json
 ```
 
 5. 运行确定性趋势映射：
 
 ```bash
-python3 scripts/build_visual_series.py visual-signals.json \
+python scripts/run_in_env.py internal/rensheng-youji-free-card-output/scripts/build_visual_series.py visual-signals.json \
   --output visual-series.json
 ```
 
@@ -33,7 +33,7 @@ python3 scripts/build_visual_series.py visual-signals.json \
 7. 从仓库根目录运行确定性组装器。不得由模型手工拼接 `free-card-output.json`：
 
 ```bash
-python3 scripts/assemble_free_card.py \
+python scripts/run_in_env.py scripts/assemble_free_card.py \
   --analysis analysis-output-calibrated.json \
   --content card-content.json \
   --series visual-series.json \
@@ -43,7 +43,7 @@ python3 scripts/assemble_free_card.py \
 8. 运行最终校验：
 
 ```bash
-python3 internal/rensheng-youji-free-card-output/scripts/validate_free_card_output.py \
+python scripts/run_in_env.py internal/rensheng-youji-free-card-output/scripts/validate_free_card_output.py \
   free-card-output.json
 ```
 

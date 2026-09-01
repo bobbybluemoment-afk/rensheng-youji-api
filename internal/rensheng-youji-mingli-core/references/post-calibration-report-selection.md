@@ -11,7 +11,7 @@ Core负责冻结完整判断候选池，不在校准前决定最终报告名单�
 校准只改变候选与判断状态。完成校准后，运行：
 
 ```bash
-python scripts/resolve_report_sources.py \
+python scripts/run_in_env.py scripts/resolve_report_sources.py \
   work/analysis-output-calibrated.json \
   --output work/resolved-report-sources.json
 ```

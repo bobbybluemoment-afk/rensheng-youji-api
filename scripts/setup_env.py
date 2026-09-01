@@ -35,6 +35,7 @@ def main() -> int:
     )
     subprocess.run([str(python), str(ROOT / "scripts/check_env.py")], check=True)
     print(f"READY: {python}")
+    print("NEXT: python scripts/run_in_env.py scripts/check_env.py")
     return 0
 
 

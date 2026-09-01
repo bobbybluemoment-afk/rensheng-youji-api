@@ -16,7 +16,7 @@ description: 人生有迹内部中文编辑层。接收已校验的人物初稿�
 9. 运行：
 
 ```bash
-python internal/rensheng-youji-chinese-editor/scripts/validate_editorial_review.py \
+python scripts/run_in_env.py internal/rensheng-youji-chinese-editor/scripts/validate_editorial_review.py \
   work/editorial-review.json --draft work/report-draft.json --report work/report.json
 ```
 

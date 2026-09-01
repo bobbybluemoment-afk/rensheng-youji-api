@@ -29,6 +29,14 @@ def main() -> int:
         print("FAILED: production pipeline contains an unproduced input or missing stage contract")
         print(pipeline_test.stdout or pipeline_test.stderr)
         return 1
+    runtime_test = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/audit_runtime_entry.py"), str(ROOT)],
+        cwd=ROOT, text=True, capture_output=True, check=False,
+    )
+    if runtime_test.returncode:
+        print("FAILED: production instructions bypass the repository Python runtime")
+        print(runtime_test.stdout or runtime_test.stderr)
+        return 1
     try:
         import lunar_python  # noqa: F401
         from PIL import Image  # noqa: F401
@@ -60,6 +68,8 @@ def main() -> int:
         ROOT / "internal/pipeline-contract.json",
         ROOT / "scripts/audit_pipeline_contract.py",
         ROOT / "scripts/core_synthesis_contract.py",
+        ROOT / "scripts/run_in_env.py",
+        ROOT / "scripts/audit_runtime_entry.py",
         ROOT / "scripts/method_input_contract.py",
         ROOT / "scripts/prepare_method_input.py",
         ROOT / "scripts/prepare_core_synthesis.py",

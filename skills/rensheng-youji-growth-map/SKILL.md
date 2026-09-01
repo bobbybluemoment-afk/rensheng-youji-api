@@ -16,7 +16,7 @@ description: 根据姓名（可选）、出生年月日时、性别、出生地�
 
 ## 运行前预检与生产边界
 
-在向用户收集出生资料前，先从当前目录向上定位仓库根目录并运行 `python scripts/check_env.py`。预检必须确认排盘、正式Core、事实提纲、写作、编辑、新版重点判断渲染、稳定渲染、字体、Logo和二维码均可用；预检失败时先修复环境，不让用户先完成校准再发现无法交付。
+在向用户收集出生资料前，先从当前目录向上定位仓库根目录。若仓库 `venv` 不存在，使用系统Python运行且只运行 `python scripts/setup_env.py`；安装完成后，当前会话所有Python命令都必须通过 `python scripts/run_in_env.py ...` 进入同一个仓库虚拟环境，不得再直接运行 `python <业务脚本>` 或 `python -m ...`。首先运行 `python scripts/run_in_env.py scripts/check_env.py`。预检必须确认排盘、正式Core、事实提纲、写作、编辑、新版重点判断渲染、稳定渲染、字体、Logo和二维码均可用；预检失败时先修复环境，不让用户先完成校准再发现无法交付。
 
 - `self_test_fixture`、`--self-test` 和 `tests/fixtures` 只允许由仓库测试命令使用，严禁作为真实用户Core、事实提纲或报告的数据来源。
 - 不得现场创建 `fix_report_v*.py`、`rewrite_report*.py`、`patch_report*.py` 等临时脚本修改正式正文、来源编号或哈希；不得用全局字符串替换清除命理术语。
@@ -53,12 +53,12 @@ description: 根据姓名（可选）、出生年月日时、性别、出生地�
 ## 统一 Core 工作流
 
 1. 从当前目录向上定位包含 `internal/core-manifest.json` 的仓库根目录。
-2. 确认本次会话已经通过根目录 `scripts/check_env.py`；缺少依赖时由当前AI运行根目录 `scripts/setup_env.py` 后重新预检。
+2. 确认本次会话已经通过 `python scripts/run_in_env.py scripts/check_env.py`；缺少仓库虚拟环境时，由当前AI先运行一次 `python scripts/setup_env.py`，然后通过统一入口重新预检。`setup_env.py` 输出的 `READY` 解释器与 `run_in_env.py` 必须指向同一仓库 `venv`。
 3. 创建临时工作目录，不覆盖仓库文件。
 4. 运行根目录确定性排盘并生成 Core 输入：
 
 ```bash
-python scripts/prepare_core_input.py \
+python scripts/run_in_env.py scripts/prepare_core_input.py \
   --birth "1990-05-04 13:49" \
   --gender female \
   --city "北京" \
@@ -73,7 +73,7 @@ python scripts/prepare_core_input.py \
 6. 在生成分析前运行边界预检：
 
 ```bash
-python skills/rensheng-youji-growth-map/scripts/preflight_report.py \
+python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/preflight_report.py \
   work/core-input.json --focus "事业发展" --output work/report-preflight.json
 ```
 
@@ -82,13 +82,13 @@ python skills/rensheng-youji-growth-map/scripts/preflight_report.py \
 7. 运行 Core 输入校验：
 
 ```bash
-python internal/rensheng-youji-mingli-core/scripts/validate_analysis_input.py work/core-input.json
+python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_analysis_input.py work/core-input.json
 ```
 
 8. 生成九方法唯一允许读取的主题隔离输入：
 
 ```bash
-python scripts/prepare_method_input.py work/core-input.json \
+python scripts/run_in_env.py scripts/prepare_method_input.py work/core-input.json \
   --output work/method-input.json
 ```
 
@@ -97,7 +97,7 @@ python scripts/prepare_method_input.py work/core-input.json \
 9. 完整读取 `internal/rensheng-youji-mingli-core/SKILL.md` 及其要求的全部参考文件。只读取 `work/method-input.json`，依次生成九个独立方法包，保存到 `work/method-packets/<method_id>.json`。每个完整方法必须逐项检查 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`、`learning`、`mobility`，分别登记 `supported`、`insufficient_evidence` 或 `not_applicable`；不能为了覆盖而硬造候选。每个方法包生成后立即运行：
 
 ```bash
-python internal/rensheng-youji-mingli-core/scripts/validate_method_packet.py \
+python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_method_packet.py \
   work/method-packets/<method_id>.json --expected-method <method_id>
 ```
 
@@ -106,7 +106,7 @@ python internal/rensheng-youji-mingli-core/scripts/validate_method_packet.py \
 10. 九个方法包全部完成或被合法归类后，运行确定性汇总：
 
 ```bash
-python scripts/prepare_core_synthesis.py work/core-input.json \
+python scripts/run_in_env.py scripts/prepare_core_synthesis.py work/core-input.json \
   --method-packet-dir work/method-packets \
   --output work/core-synthesis-input.json
 ```
@@ -118,7 +118,7 @@ python scripts/prepare_core_synthesis.py work/core-input.json \
 12. 运行语义综合校验：
 
 ```bash
-python scripts/validate_core_synthesis.py \
+python scripts/run_in_env.py scripts/validate_core_synthesis.py \
   work/core-synthesis-input.json work/core-semantic-analysis.json
 ```
 
@@ -127,7 +127,7 @@ python scripts/validate_core_synthesis.py \
 13. 校验通过后，由程序确定性组装完整Core并自动生成报告来源：
 
 ```bash
-python scripts/finalize_core_analysis.py \
+python scripts/run_in_env.py scripts/finalize_core_analysis.py \
   work/core-synthesis-input.json work/core-semantic-analysis.json \
   --output work/analysis-output-initial.json
 ```
@@ -135,7 +135,7 @@ python scripts/finalize_core_analysis.py \
 该命令成功后再运行一次独立完整校验：
 
 ```bash
-python internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py \
+python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py \
   work/analysis-output-initial.json
 ```
 
@@ -144,10 +144,10 @@ python internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py \
 14. 在生成校准题之前冻结初始Core。此后不得重新生成或改写完整母稿：
 
 ```bash
-python scripts/core_baseline.py freeze work/analysis-output-initial.json \
+python scripts/run_in_env.py scripts/core_baseline.py freeze work/analysis-output-initial.json \
   --baseline work/analysis-baseline.json \
   --lock work/analysis-baseline-lock.json
-python scripts/audit_claim_diversity.py work/analysis-baseline.json
+python scripts/run_in_env.py scripts/audit_claim_diversity.py work/analysis-baseline.json
 ```
 
 冻结失败、判断家族不足或六领域语义重复时，只重新分析缺失领域一次；不得进入五题校准，更不得用测试样例或宽泛套话补齐数量。
@@ -161,7 +161,7 @@ python scripts/audit_claim_diversity.py work/analysis-baseline.json
 3. 运行构建器，把题型、Core候选关系和影响范围转换为 `schema_version=2.2.0` 的正式问题：
 
 ```bash
-python skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py \
+python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py \
   --plan work/calibration-plan.json \
   --analysis work/analysis-output-initial.json \
   --output work/calibration-questions.json
@@ -170,7 +170,7 @@ python skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py \
 4. 运行 `validate_calibration_questions.py`，再次回查候选是否真实存在、领域是否一致、时间题是否绑定时运候选，并且只把生成的 `work/calibration-visible.md` 发给用户：
 
 ```bash
-python skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py \
+python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py \
   work/calibration-questions.json \
   --analysis work/analysis-output-initial.json \
   --visible-out work/calibration-visible.md
@@ -183,12 +183,12 @@ python skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.p
 8. 使用确定性程序合成校准后Core并验证冻结字段：
 
 ```bash
-python scripts/apply_calibration_delta.py \
+python scripts/run_in_env.py scripts/apply_calibration_delta.py \
   --baseline work/analysis-baseline.json \
   --lock work/analysis-baseline-lock.json \
   --delta work/calibration-delta.json \
   --output work/analysis-output-calibrated.json
-python scripts/core_baseline.py verify \
+python scripts/run_in_env.py scripts/core_baseline.py verify \
   --baseline work/analysis-baseline.json \
   --lock work/analysis-baseline-lock.json \
   --calibrated work/analysis-output-calibrated.json
@@ -218,7 +218,7 @@ python scripts/core_baseline.py verify \
 9. 运行统一交付命令：
 
 ```bash
-python skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
+python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
   --report work/report.json \
   --content-brief work/report-content-brief.json \
   --report-draft work/report-draft.json \

@@ -29,12 +29,12 @@ description: 在用户本地，根据姓名（可选）、出生年月日时、�
 
 ## 本地工作流
 
-1. 定位本 Skill 根目录，运行 `scripts/check_env.py`。缺少依赖时由当前AI运行 `scripts/setup_env.py`，不要把安装命令交给普通用户。
+1. 定位本 Skill 根目录。仓库 `venv` 不存在时，由当前AI使用系统Python运行一次 `python scripts/setup_env.py`；此后所有Python命令都通过 `python scripts/run_in_env.py ...` 执行，禁止直接调用系统Python运行业务脚本。先运行 `python scripts/run_in_env.py scripts/check_env.py`。
 2. 创建本次临时工作目录，不覆盖仓库文件。
 3. 运行确定性排盘并生成 Core 输入：
 
 ```bash
-python scripts/prepare_core_input.py \
+python scripts/run_in_env.py scripts/prepare_core_input.py \
   --birth "1990-05-04 13:49" \
   --gender male \
   --city "北京" \
@@ -49,7 +49,7 @@ python scripts/prepare_core_input.py \
 5. 运行 Core 输出校验：
 
 ```bash
-python internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py work/analysis-output.json
+python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py work/analysis-output.json
 ```
 
 6. 完整读取 `internal/rensheng-youji-free-card-output/SKILL.md`、`references/content-selection.md` 和 `references/visual-algorithm.md`。根据 Core 母稿生成：
@@ -58,15 +58,15 @@ python internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py w
 7. 运行确定性趋势计算：
 
 ```bash
-python internal/rensheng-youji-free-card-output/scripts/validate_visual_signals.py work/visual-signals.json
-python internal/rensheng-youji-free-card-output/scripts/build_visual_series.py \
+python scripts/run_in_env.py internal/rensheng-youji-free-card-output/scripts/validate_visual_signals.py work/visual-signals.json
+python scripts/run_in_env.py internal/rensheng-youji-free-card-output/scripts/build_visual_series.py \
   work/visual-signals.json --output work/visual-series.json
 ```
 
 8. 组合并校验标准卡片数据：
 
 ```bash
-python scripts/assemble_free_card.py \
+python scripts/run_in_env.py scripts/assemble_free_card.py \
   --analysis work/analysis-output.json \
   --content work/card-content.json \
   --series work/visual-series.json \
@@ -76,7 +76,7 @@ python scripts/assemble_free_card.py \
 9. 生成PNG：
 
 ```bash
-python scripts/generate_card.py \
+python scripts/run_in_env.py scripts/generate_card.py \
   --input work/free-card-output.json \
   --output work/rensheng-youji-card.png
 ```

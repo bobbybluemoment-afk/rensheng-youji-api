@@ -1,5 +1,10 @@
 {
   "schema_version": "1.0.0",
+  "runtime": {
+    "bootstrap": "scripts/setup_env.py",
+    "launcher": "scripts/run_in_env.py",
+    "environment": "venv"
+  },
   "external_artifacts": ["birth_input", "user_focus", "user_calibration_answers"],
   "stages": [
     {

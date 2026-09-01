@@ -142,21 +142,23 @@ AI 只需询问出生年月日时、出生城市和性别；姓名可以不填�
 
 本项目采用“人生有迹有限个人使用许可 1.0”：允许个人非商业使用，禁止未经授权的商业使用、公开镜像、搬运和重新发布。第三方组件仍适用其各自的许可证。
 
-版本：2.18.0
+版本：2.18.1
 
 ## 维护验收
 
 修改新版趋势算法、输出字段或绘图程序后，运行以下命令，重复检查“视觉信号 → 20年序列 → 卡片组装 → PNG渲染”的确定性链路：
 
 ```bash
-python -m unittest tests/test_free_card_v2_pipeline.py
-python -m unittest tests/test_full_report_pipeline.py
-python -m unittest tests/test_report_v28_traceability.py
-python -m unittest tests/test_report_v213_post_calibration_selection.py
-python -m unittest tests/test_core_v010_method_independence.py
-python -m unittest tests/test_core_v012_production_bridge.py
-python -m unittest tests/test_pipeline_contract.py
-python scripts/check_env.py
+python scripts/setup_env.py
+python scripts/run_in_env.py -m unittest tests/test_free_card_v2_pipeline.py
+python scripts/run_in_env.py -m unittest tests/test_full_report_pipeline.py
+python scripts/run_in_env.py -m unittest tests/test_report_v28_traceability.py
+python scripts/run_in_env.py -m unittest tests/test_report_v213_post_calibration_selection.py
+python scripts/run_in_env.py -m unittest tests/test_core_v010_method_independence.py
+python scripts/run_in_env.py -m unittest tests/test_core_v012_production_bridge.py
+python scripts/run_in_env.py -m unittest tests/test_pipeline_contract.py
+python scripts/run_in_env.py -m unittest tests/test_runtime_entry.py
+python scripts/run_in_env.py scripts/check_env.py
 ```
 
 测试会使用固定脱敏样例生成临时PNG，并检查1242×1660尺寸、20年连续性、当前年位置、元宝尺度、桃花颜色、九方法生产桥、完整Core确定性组装、全链路生产者、校准后判断替换、六领域覆盖和单章降级。AI生成的语义内容仍需通过真实用户端到端调用单独检查。

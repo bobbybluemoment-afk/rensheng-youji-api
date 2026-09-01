@@ -13,6 +13,16 @@ def audit(root: Path, contract: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     if contract.get("schema_version") != "1.0.0":
         errors.append("pipeline contract schema_version 必须为1.0.0")
+    runtime = contract.get("runtime")
+    if not isinstance(runtime, dict):
+        errors.append("pipeline contract 缺少runtime运行入口")
+    else:
+        if runtime.get("environment") != "venv":
+            errors.append("pipeline contract runtime.environment 必须为venv")
+        for key in ("bootstrap", "launcher"):
+            value = runtime.get(key)
+            if not isinstance(value, str) or not (root / value).is_file():
+                errors.append(f"pipeline contract runtime.{key}引用文件不存在")
     available = set(contract.get("external_artifacts") or [])
     produced_by: dict[str, str] = {}
     stage_ids: set[str] = set()

@@ -34,7 +34,7 @@ description: 人生有迹内部八字分析核心。仅供人生有迹卡片、�
 输入的机器可读契约见 [analysis-input.schema.json](schemas/analysis-input.schema.json)。开始分析前运行：
 
 ```bash
-python3 scripts/validate_analysis_input.py <analysis-input.json>
+python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_analysis_input.py <analysis-input.json>
 ```
 
 校验失败时返回错误字段并停止推理。
@@ -42,7 +42,7 @@ python3 scripts/validate_analysis_input.py <analysis-input.json>
 若上游来自现有 `rensheng-youji-api` 的 `build_profile()`，先运行适配器补齐藏干层级、大运与流年的十神数据：
 
 ```bash
-python3 scripts/adapter_from_api_profile.py <profile.json> \
+python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/adapter_from_api_profile.py <profile.json> \
   --analysis-as-of YYYY-MM-DD \
   --output analysis-input.json
 ```
@@ -312,30 +312,30 @@ validation: []
 完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.14.0`。生成方法包前先运行：
 
 ```bash
-python3 ../../scripts/prepare_method_input.py analysis-input.json \
+python scripts/run_in_env.py scripts/prepare_method_input.py analysis-input.json \
   --output method-input.json
 ```
 
 九个方法只读取 `method-input.json`。每个方法生成后运行：
 
 ```bash
-python3 scripts/validate_method_packet.py method-analysis-pattern-structure.json \
+python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_method_packet.py method-analysis-pattern-structure.json \
   --expected-method pattern_structure
 ```
 
 九个方法完成或被合法归类后，按生产桥生成受约束综合输入。AI只生成规定的语义综合区块，随后由程序组装完整Core并自动生成报告来源：
 
 ```bash
-python3 ../../scripts/prepare_core_synthesis.py analysis-input.json \
+python scripts/run_in_env.py scripts/prepare_core_synthesis.py analysis-input.json \
   --method-packet-dir method-packets \
   --output core-synthesis-input.json
-python3 ../../scripts/validate_core_synthesis.py \
+python scripts/run_in_env.py scripts/validate_core_synthesis.py \
   core-synthesis-input.json core-semantic-analysis.json
-python3 ../../scripts/finalize_core_analysis.py \
+python scripts/run_in_env.py scripts/finalize_core_analysis.py \
   core-synthesis-input.json core-semantic-analysis.json \
   --output analysis-output-initial.json
-python3 scripts/validate_analysis_output.py analysis-output-initial.json
-python3 ../../scripts/audit_claim_diversity.py analysis-output-initial.json
+python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py analysis-output-initial.json
+python scripts/run_in_env.py scripts/audit_claim_diversity.py analysis-output-initial.json
 ```
 
 只有输出校验通过后，才把 `analysis_bundle` 交给下游卡片、报告或网页流程。

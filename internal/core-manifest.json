@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.18.0",
+  "version": "2.18.1",
   "visibility": "internal",
   "stages": [
     {
@@ -48,5 +48,5 @@
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "Core 0.14.0新增九方法主题隔离输入与八领域逐项检查。每个完整方法必须登记八领域supported、insufficient_evidence或not_applicable；十神动力、宫位六亲、干支动力、盲派和岁运连续性必须实际检查love_partner。prepare_method_input.py从方法输入中移除用户事实、当前问题和校准资料，各方法登记同一输入哈希；用户关注主题只在完整Core、Baseline与校准完成后参与报告选材。来源缺口继续降级而不补造、不停止其他可靠内容。正式报告继续使用schema 2.13.0，事实提纲和初稿使用1.5.0，中文编辑使用2.4.0。"
+  "notes": "2.18.1新增仓库虚拟环境统一运行入口run_in_env.py：系统Python只负责首次执行setup_env.py，后续预检、Core、校准、报告与渲染命令全部由仓库venv解释器执行，避免依赖安装环境与实际运行环境不一致。Core仍为0.14.0，继续使用九方法主题隔离输入、八领域逐项检查、来源缺口降级和校准后确定性选材。正式报告继续使用schema 2.13.0，事实提纲和初稿使用1.5.0，中文编辑使用2.4.0。"
 }

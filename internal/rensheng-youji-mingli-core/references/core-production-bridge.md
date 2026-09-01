@@ -11,13 +11,13 @@
 生成方法包之前，先从完整输入生成主题隔离输入：
 
 ```bash
-python3 scripts/prepare_method_input.py analysis-input.json --output method-input.json
+python scripts/run_in_env.py scripts/prepare_method_input.py analysis-input.json --output method-input.json
 ```
 
 九个方法只能读取 `method-input.json`，并在方法包登记其哈希。九个规定方法包全部通过单方法校验或被合法记录为失败状态后，运行：
 
 ```bash
-python3 scripts/prepare_core_synthesis.py analysis-input.json \
+python scripts/run_in_env.py scripts/prepare_core_synthesis.py analysis-input.json \
   --method-packet-dir method-packets \
   --output core-synthesis-input.json
 ```
@@ -58,7 +58,7 @@ python3 scripts/prepare_core_synthesis.py analysis-input.json \
 先运行：
 
 ```bash
-python3 scripts/validate_core_synthesis.py \
+python scripts/run_in_env.py scripts/validate_core_synthesis.py \
   core-synthesis-input.json core-semantic-analysis.json
 ```
 
@@ -73,7 +73,7 @@ python3 scripts/validate_core_synthesis.py \
 校验通过后运行：
 
 ```bash
-python3 scripts/finalize_core_analysis.py \
+python scripts/run_in_env.py scripts/finalize_core_analysis.py \
   core-synthesis-input.json core-semantic-analysis.json \
   --output analysis-output-initial.json
 ```

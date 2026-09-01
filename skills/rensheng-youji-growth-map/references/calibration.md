@@ -62,12 +62,12 @@
 先构建，再校验并生成唯一可发给用户的Markdown：
 
 ```bash
-python skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py \
+python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py \
   --plan work/calibration-plan.json \
   --analysis work/analysis-output-initial.json \
   --output work/calibration-questions.json
 
-python skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py \
+python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py \
   work/calibration-questions.json \
   --analysis work/analysis-output-initial.json \
   --visible-out work/calibration-visible.md

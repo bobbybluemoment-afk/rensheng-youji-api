@@ -15,7 +15,7 @@ description: 人生有迹内部报告事实整理层。接收已冻结并以校�
 6. 先运行校准后确定性选材程序。不得由模型手工删除、补充或替换判断：
 
 ```bash
-python scripts/resolve_report_sources.py \
+python scripts/run_in_env.py scripts/resolve_report_sources.py \
   work/analysis-output-calibrated.json \
   --output work/resolved-report-sources.json
 ```
@@ -24,7 +24,7 @@ python scripts/resolve_report_sources.py \
 8. 用确定性脚本把每条判断、实体证据、人物形成链、领域联动链、盲派现实取象、根苗花果领域生命周期、候选关系、校准变化和哈希写入事实提纲：
 
 ```bash
-python internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py \
+python scripts/run_in_env.py internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py \
   work/report-content-selection.json \
   --analysis work/analysis-output-calibrated.json \
   --resolved-sources work/resolved-report-sources.json \
@@ -34,7 +34,7 @@ python internal/rensheng-youji-report-content-brief/scripts/materialize_content_
 9. 运行：
 
 ```bash
-python internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py \
+python scripts/run_in_env.py internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py \
   work/report-content-brief.json \
   --analysis work/analysis-output-calibrated.json \
   --resolved-sources work/resolved-report-sources.json
