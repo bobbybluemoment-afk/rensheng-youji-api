@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.19.0",
+  "version": "2.19.1",
   "visibility": "internal",
   "stages": [
     {
@@ -48,5 +48,5 @@
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "2.19.0将正式运行目录固定在仓库work/runs并新增可恢复运行状态，禁止把仓库、venv和正式中间文件放入系统/tmp。方法包Schema从完整Core Schema确定性导出为唯一公开入口，九方法先由程序生成带方法身份、独立家族、输入哈希和八领域的草稿骨架；AI阶段契约审计确保每个AI产物都有明确输出契约和校验入口。失败策略区分正式生产失败与AI探索性读文件错误，不再因猜测文件不存在而停止。Core仍为0.14.0，正式报告继续使用schema 2.13.0，事实提纲和初稿使用1.5.0，中文编辑使用2.4.0。"
+  "notes": "2.19.1将报告来源必进候选统一为唯一机器契约：有可用判断时1—2条，无判断时0条，当前阶段等稀疏来源允许1条。判断多样性与来源审计移到Baseline冻结之前，生成绑定Core哈希的质量凭证；冻结脚本强制验证该凭证，避免冻结后又要求返修Core的死锁。新增上下游报告来源契约审计，同时检查生成器、Schema、校验器、审计器、参考文档和阶段顺序。Core仍为0.14.0，报告Schema仍为2.13.0。"
 }

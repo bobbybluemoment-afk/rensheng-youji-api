@@ -60,8 +60,21 @@ def validate_core(path: Path) -> None:
         raise ValueError(result.stdout.strip() or result.stderr.strip() or "Core validation failed")
 
 
-def freeze(source: Path, baseline: Path, lock_path: Path) -> dict[str, Any]:
+def validate_quality_audit(source: Path, audit_path: Path) -> dict[str, Any]:
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    source_sha256 = hashlib.sha256(source.read_bytes()).hexdigest()
+    if audit.get("schema_version") != "1.0.0" or audit.get("errors") != []:
+        raise ValueError("Core quality audit receipt is malformed or contains errors")
+    if audit.get("status") != "ok":
+        raise ValueError("Core quality audit did not pass")
+    if audit.get("analysis_sha256") != source_sha256:
+        raise ValueError("Core quality audit does not match the Core being frozen")
+    return audit
+
+
+def freeze(source: Path, baseline: Path, lock_path: Path, quality_audit_path: Path) -> dict[str, Any]:
     validate_core(source)
+    quality_audit = validate_quality_audit(source, quality_audit_path)
     data = json.loads(source.read_text(encoding="utf-8"))
     meta = data.get("analysis_meta", {})
     if meta.get("core_version") != "0.14.0":
@@ -80,6 +93,7 @@ def freeze(source: Path, baseline: Path, lock_path: Path) -> dict[str, Any]:
         "core_version": meta.get("core_version"),
         "baseline_sha256": digest(data),
         "protected_sha256": digest(protected_projection(data)),
+        "quality_audit_sha256": digest(quality_audit),
     }
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     lock_path.write_text(json.dumps(lock, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -120,6 +134,7 @@ def main() -> int:
     freeze_parser.add_argument("source", type=Path)
     freeze_parser.add_argument("--baseline", type=Path, required=True)
     freeze_parser.add_argument("--lock", type=Path, required=True)
+    freeze_parser.add_argument("--quality-audit", type=Path, required=True)
     verify_parser = sub.add_parser("verify")
     verify_parser.add_argument("--baseline", type=Path, required=True)
     verify_parser.add_argument("--lock", type=Path, required=True)
@@ -127,7 +142,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         result = (
-            freeze(args.source, args.baseline, args.lock)
+            freeze(args.source, args.baseline, args.lock, args.quality_audit)
             if args.command == "freeze"
             else verify(args.baseline, args.lock, args.calibrated)
         )

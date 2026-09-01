@@ -14,7 +14,7 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
-from report_source_contract import BASE_COVERAGE, delivery_rule, required_coverage  # noqa: E402
+from report_source_contract import BASE_COVERAGE, delivery_rule, report_total_cjk_bounds, required_coverage  # noqa: E402
 
 DIMENSION_IDS = ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]
 DIMENSION_PARAGRAPHS = {
@@ -455,8 +455,20 @@ def _validate_v26(data: dict[str, Any]) -> None:
     if found_mingli or pattern_hits:
         raise ValueError("用户可见正文不得直接出现内部命理术语：" + "、".join(found_mingli + pattern_hits))
     total_cjk = cjk_count(visible)
-    if mode == "full_calibrated" and not 4300 <= total_cjk <= 6500:
-        raise ValueError(f"正式报告正文应为4300—6500个汉字，当前{total_cjk}")
+    if mode == "full_calibrated":
+        narrative_sections = [
+            data.get("executive_summary", {}).get("life_overview", {}),
+            data.get("current_question_narrative", {}),
+            *(data.get("dimensions") or []),
+        ]
+        modes = [str(section.get("delivery_mode")) for section in narrative_sections if isinstance(section, dict)]
+        allowed_modes = {"normal", "shortened", "minimal", "evidence_gap"}
+        if len(modes) == 8 and all(item in allowed_modes for item in modes):
+            minimum_total, maximum_total = report_total_cjk_bounds(modes)
+        else:
+            minimum_total, maximum_total = 4300, 6500
+        if not minimum_total <= total_cjk <= maximum_total:
+            raise ValueError(f"正式报告正文应为{minimum_total}—{maximum_total}个汉字，当前{total_cjk}")
 
 
 def _validate_narrative(section: Any, minimum: int, maximum: int, where: str, errors: list[str], require_map: bool = False, use_delivery_mode: bool = False) -> None:

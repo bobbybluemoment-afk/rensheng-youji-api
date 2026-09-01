@@ -16,7 +16,13 @@ from _jsonschema_subset import validate_schema_instance
 ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = ROOT.parents[1]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
-from report_source_contract import BASE_COVERAGE, DIMENSIONS, required_coverage  # noqa: E402
+from report_source_contract import (  # noqa: E402
+    BASE_COVERAGE,
+    DIMENSIONS,
+    claim_diversity_gaps,
+    mandatory_candidate_bounds,
+    required_coverage,
+)
 from core_synthesis_contract import LOVE_PARTNER_ANCHORS, build_source_coverage_audit  # noqa: E402
 
 SCHEMA_PATH = ROOT / "schemas" / "analysis-output.schema.json"
@@ -788,13 +794,14 @@ def validate(data: Any) -> list[str]:
             domain_claims = [item for item in claims if isinstance(item, dict) and item.get("domain") == domain]
             if domain in uncovered_source_domains and domain_claims:
                 errors.append(f"report_claim_ledger.{domain} 没有方法现实候选来源，不得补造报告判断")
-            if len(domain_claims) >= 4 and len({item.get("claim_family") for item in domain_claims}) < 3:
+            diversity_gaps = claim_diversity_gaps(domain_claims)
+            if "claim_family:3" in diversity_gaps:
                 errors.append(f"report_claim_ledger.{domain} 至少包含三个不同判断家族")
-            if len(domain_claims) >= 4 and len({item.get("mechanism_family") for item in domain_claims}) < 2:
+            if "mechanism_family:2" in diversity_gaps:
                 errors.append(f"report_claim_ledger.{domain} 至少包含两条不同命理机制路径")
-            if len(domain_claims) >= 4 and len({item.get("reality_dimension") for item in domain_claims}) < 3:
+            if "reality_dimension:3" in diversity_gaps:
                 errors.append(f"report_claim_ledger.{domain} 至少覆盖三个现实问题轴")
-            if 1 < len(domain_claims) < 4 and len({item.get("reality_dimension") for item in domain_claims}) < 2:
+            if "reality_dimension:2" in diversity_gaps:
                 errors.append(f"report_claim_ledger.{domain} 在精简模式下仍需覆盖至少两个现实问题轴")
         normalized_claims = [str(claim.get("claim", "")).replace(" ", "") for claim in claims if isinstance(claim, dict)]
         if len(normalized_claims) != len(set(normalized_claims)):
@@ -881,7 +888,7 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"{path}.domain_specific_claim_ids 必须保留当前证据允许的本节判断且属于claim_ids")
             if len(mainline_ids) > 2 or not mainline_ids.issubset(source_ids) or len(mainline_ids) / max(len(source_ids), 1) > 0.30:
                 errors.append(f"{path} 的共享人生主线判断不得超过本节判断的30%")
-            expected_mandatory_range = (1, 2) if source_ids else (0, 0)
+            expected_mandatory_range = mandatory_candidate_bounds(source_ids)
             if not expected_mandatory_range[0] <= len(mandatory_ids) <= expected_mandatory_range[1] or not mandatory_ids.issubset(source_ids):
                 errors.append(f"{path}.mandatory_candidate_ids 必须随实际可用判断提供0—2条候选")
             emphasis_range = (0, 2) if name == "life_narrative_source" else (0, 1)

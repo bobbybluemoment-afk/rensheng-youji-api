@@ -44,7 +44,7 @@ python scripts/run_in_env.py internal/rensheng-youji-report-content-brief/script
 
 - 事实提纲不写用户可见散文。
 - 所有结论必须引用Core的 `claim_id`，写作时直接读取实体化的判断、证据、形成链、联动链、现实取象、候选关系和限制，不得只凭编号或允许例子自由补写。
-- 每个内容区必须原样携带1—2条 `mandatory_claims`，包括 `claim_id`、`plain_claim`、判断家族、机制家族和新增信息。后续写作必须逐字兑现 `plain_claim`；事实提纲不能自行概括。
+- 每个内容区必须按 `delivery_mode` 原样携带0—2条 `mandatory_claims`：正常模式1—2条，缩短或最小模式1条，证据缺口模式0条。每项包括 `claim_id`、`plain_claim`、判断家族、机制家族和新增信息。后续写作必须逐字兑现 `plain_claim`；事实提纲不能自行概括。
 - 写作层只能读取实体化提纲，不重新读取原始四柱自行推命。具体行业、岗位、家庭状态、收入来源、关系特征和年份必须来自实体化材料。
 - 完整人生主线和六个领域至少八成判断来自 `chart_baseline` 或 `timing_baseline`；每个内容区最多使用一条 `user_fact_refinement`。当前问题可以更多使用校准结果，但不得制造新命理结论。
 - 具体组织、行业、岗位、收入或伴侣特征只能来自 Core 允许例子或开放候选。

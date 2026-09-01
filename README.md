@@ -142,7 +142,7 @@ AI 只需询问出生年月日时、出生城市和性别；姓名可以不填�
 
 本项目采用“人生有迹有限个人使用许可 1.0”：允许个人非商业使用，禁止未经授权的商业使用、公开镜像、搬运和重新发布。第三方组件仍适用其各自的许可证。
 
-版本：2.19.0
+版本：2.19.1
 
 ## 维护验收
 
@@ -157,6 +157,7 @@ python scripts/run_in_env.py -m unittest tests/test_report_v213_post_calibration
 python scripts/run_in_env.py -m unittest tests/test_core_v010_method_independence.py
 python scripts/run_in_env.py -m unittest tests/test_core_v012_production_bridge.py
 python scripts/run_in_env.py -m unittest tests/test_pipeline_contract.py
+python scripts/run_in_env.py -m unittest tests/test_report_source_contract.py
 python scripts/run_in_env.py -m unittest tests/test_runtime_entry.py
 python scripts/run_in_env.py -m unittest tests/test_persistent_run_workflow.py
 python scripts/run_in_env.py -m unittest tests/test_ai_stage_contracts.py

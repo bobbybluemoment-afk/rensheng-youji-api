@@ -65,9 +65,16 @@
       "validator": "internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py"
     },
     {
-      "id": "baseline_freeze",
+      "id": "core_quality_audit",
       "producer": "deterministic",
       "inputs": ["analysis_initial"],
+      "outputs": ["core_quality_audit"],
+      "script": "scripts/audit_claim_diversity.py"
+    },
+    {
+      "id": "baseline_freeze",
+      "producer": "deterministic",
+      "inputs": ["analysis_initial", "core_quality_audit"],
       "outputs": ["analysis_baseline", "baseline_lock"],
       "script": "scripts/core_baseline.py"
     },

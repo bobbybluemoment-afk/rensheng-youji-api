@@ -162,16 +162,26 @@ python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validat
 
 不得要求模型自行创建 `analysis-output-before-sources.json`；不得手工拼装 `report_source_bundle`。
 
-14. 在生成校准题之前冻结初始Core。此后不得重新生成或改写完整母稿：
+14. 在冻结初始Core之前运行判断多样性与报告来源审计，并生成绑定当前Core哈希的通过凭证：
+
+```bash
+python scripts/run_in_env.py scripts/audit_claim_diversity.py \
+  work/analysis-output-initial.json \
+  --output work/core-quality-audit.json
+```
+
+审计失败、判断家族不足或六领域语义重复时，允许只返修 `core-semantic-analysis.json` 中被点名的语义区块一次，再重新执行语义校验、完整Core组装和本审计；方法包与确定性输入仍保持冻结。第二次仍失败才停止，不得用测试样例或宽泛套话补齐数量。
+
+审计通过后才冻结初始Core。此后不得重新生成或改写完整母稿：
 
 ```bash
 python scripts/run_in_env.py scripts/core_baseline.py freeze work/analysis-output-initial.json \
   --baseline work/analysis-baseline.json \
-  --lock work/analysis-baseline-lock.json
-python scripts/run_in_env.py scripts/audit_claim_diversity.py work/analysis-baseline.json
+  --lock work/analysis-baseline-lock.json \
+  --quality-audit work/core-quality-audit.json
 ```
 
-冻结失败、判断家族不足或六领域语义重复时，只重新分析缺失领域一次；不得进入五题校准，更不得用测试样例或宽泛套话补齐数量。
+没有与当前 `analysis-output-initial.json` 哈希一致的 `core-quality-audit.json` 时不得冻结，也不得进入五题校准。
 
 不得再读取本目录旧版 `core-method.md` 重新推命；该文件仅说明统一 Core 的使用边界。
 

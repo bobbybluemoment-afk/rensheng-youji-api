@@ -40,6 +40,31 @@ DELIVERY_RULES = {
     "minimal": {"minimum_claims": 2, "minimum_specific": 1, "paragraphs": (1, 2), "cjk": (180, 320)},
     "evidence_gap": {"minimum_claims": 0, "minimum_specific": 0, "paragraphs": (1, 1), "cjk": (60, 180)},
 }
+MANDATORY_CANDIDATE_MAX = 2
+
+
+def mandatory_candidate_bounds(claim_ids: list[str] | set[str] | tuple[str, ...]) -> tuple[int, int]:
+    """Return the canonical pre-calibration candidate bounds for one source.
+
+    A source with usable claims must nominate at least one candidate. Sparse sources,
+    including the current-stage source, are valid with exactly one candidate.
+    """
+    return (1, MANDATORY_CANDIDATE_MAX) if claim_ids else (0, 0)
+
+
+def claim_diversity_gaps(claims: list[dict[str, Any]]) -> list[str]:
+    """Return unmet diversity axes without imposing an artificial claim count."""
+    gaps: list[str] = []
+    if len(claims) >= 4:
+        if len({item.get("claim_family") for item in claims}) < 3:
+            gaps.append("claim_family:3")
+        if len({item.get("mechanism_family") for item in claims}) < 2:
+            gaps.append("mechanism_family:2")
+        if len({item.get("reality_dimension") for item in claims}) < 3:
+            gaps.append("reality_dimension:3")
+    elif len(claims) >= 2 and len({item.get("reality_dimension") for item in claims}) < 2:
+        gaps.append("reality_dimension:2")
+    return gaps
 
 
 def required_coverage(domain: str | None) -> tuple[str, ...]:
@@ -63,3 +88,12 @@ def delivery_rule(mode: str) -> dict[str, Any]:
         raise ValueError(f"Unsupported delivery_mode: {mode}")
     return DELIVERY_RULES[mode]
 
+
+def report_total_cjk_bounds(modes: list[str]) -> tuple[int, int]:
+    """Return full-report bounds adjusted for evidence-driven section degradation."""
+    normal_section_minimum = DELIVERY_RULES["normal"]["cjk"][0]
+    reduction = 0
+    for mode in modes:
+        rule = delivery_rule(mode)
+        reduction += max(0, normal_section_minimum - rule["cjk"][0])
+    return max(1500, 4300 - reduction), 6500

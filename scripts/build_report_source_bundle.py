@@ -8,7 +8,12 @@ import json
 from pathlib import Path
 from typing import Any
 
-from report_source_contract import BASE_COVERAGE, DIMENSIONS, required_coverage
+from report_source_contract import (
+    BASE_COVERAGE,
+    DIMENSIONS,
+    MANDATORY_CANDIDATE_MAX,
+    required_coverage,
+)
 
 
 def _ordered_unique(values: list[str]) -> list[str]:
@@ -88,7 +93,7 @@ def _source(
         "claim_priority": claim_ids,
         "domain_specific_claim_ids": claim_ids,
         "mainline_claim_ids": [],
-        "mandatory_candidate_ids": mandatory_pool[:2],
+        "mandatory_candidate_ids": mandatory_pool[:MANDATORY_CANDIDATE_MAX],
         "emphasis_candidate_ids": emphasis,
         "domain_mechanisms": mechanisms[: max(0, 2 if len(claim_ids) >= 4 else 1 if claim_ids else 0)],
         "survives_without_mainline": bool(claim_ids),

@@ -12,8 +12,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CORE_SCRIPTS = ROOT / "internal/rensheng-youji-mingli-core/scripts"
 sys.path.insert(0, str(CORE_SCRIPTS))
+sys.path.insert(0, str(ROOT / "scripts"))
 
 from validate_method_packet import validate as validate_method_packet  # noqa: E402
+from core_baseline import validate_quality_audit  # noqa: E402
 STAGES = [
     ("core_input", "deterministic", ("core-input.json", "profile.json"), "scripts/prepare_core_input.py"),
     ("time_preflight", "deterministic", ("report-preflight.json",), "skills/rensheng-youji-growth-map/scripts/preflight_report.py"),
@@ -23,6 +25,7 @@ STAGES = [
     ("synthesis_input", "deterministic", ("core-synthesis-input.json",), "scripts/prepare_core_synthesis.py"),
     ("semantic_synthesis", "ai_constrained", ("core-semantic-analysis.json",), "internal/rensheng-youji-mingli-core/references/core-production-bridge.md"),
     ("initial_core", "deterministic", ("analysis-output-initial.json",), "scripts/finalize_core_analysis.py"),
+    ("core_quality_audit", "deterministic", ("core-quality-audit.json",), "scripts/audit_claim_diversity.py"),
     ("baseline_freeze", "deterministic", ("analysis-baseline.json", "analysis-baseline-lock.json"), "scripts/core_baseline.py"),
     ("calibration_plan", "ai_constrained", ("calibration-plan.json",), "skills/rensheng-youji-growth-map/references/calibration.md"),
     ("calibration_questions", "deterministic", ("calibration-questions.json", "calibration-visible.md"), "skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py"),
@@ -76,6 +79,19 @@ def status(run_dir: Path) -> dict[str, object]:
                         "contract_or_script": contract,
                         "validation_errors": packet_errors,
                     }
+        elif stage_id == "core_quality_audit" and complete:
+            try:
+                validate_quality_audit(run_dir / "analysis-output-initial.json", path)
+            except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
+                return {
+                    "status": "in_progress",
+                    "run_id": state["run_id"],
+                    "next_stage": stage_id,
+                    "producer": producer,
+                    "required_artifacts": [str(item) for item in paths],
+                    "contract_or_script": contract,
+                    "validation_errors": [str(exc)],
+                }
         if not complete:
             return {
                 "status": "in_progress",

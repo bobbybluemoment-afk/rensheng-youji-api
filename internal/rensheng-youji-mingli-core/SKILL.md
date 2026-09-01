@@ -172,7 +172,7 @@ python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/adapter
 - `new_information`：相对同领域其他判断新增了什么；
 - `plain_claim`：不含命理术语、可以原句进入报告的完整判断句。
 
-判断充足的领域优先覆盖三个判断家族、两个机制家族和三个现实问题轴；判断较少时按证据缩短。不同编号但语义高度相似的句子视为重复，不得用换词满足数量。`report_source_bundle` 必须由脚本根据判断台账生成稳定优先级、0—2条必进候选和实际覆盖映射；不得让模型手工复制ID，也不得在校准前锁定最终 `mandatory_claim_ids`。校准后由确定性程序从仍有效的候选中选出1—2条必进判断。
+判断充足的领域优先覆盖三个判断家族、两个机制家族和三个现实问题轴；判断较少时按证据缩短。不同编号但语义高度相似的句子视为重复，不得用换词满足数量。`report_source_bundle` 必须由脚本根据判断台账生成稳定优先级、0—2条必进候选和实际覆盖映射；有可用判断时至少提供1条，稀疏的当前阶段来源允许只有1条。不得让模型手工复制ID，也不得在校准前锁定最终 `mandatory_claim_ids`。校准后由确定性程序按交付模式从仍有效的候选中选出0—2条必进判断；证据缺口模式允许0条。
 
 六个领域优先覆盖 `feature`、`behavior`、`formation`、`challenge`、`current_change`、`response`，家庭和身体情绪还要覆盖各自专属项目。每个实际覆盖项至少绑定一个真实判断；缺少项目时写入 `evidence_gaps` 并降级章节，不得制造备用判断。
 
@@ -335,10 +335,11 @@ python scripts/run_in_env.py scripts/finalize_core_analysis.py \
   core-synthesis-input.json core-semantic-analysis.json \
   --output analysis-output-initial.json
 python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py analysis-output-initial.json
-python scripts/run_in_env.py scripts/audit_claim_diversity.py analysis-output-initial.json
+python scripts/run_in_env.py scripts/audit_claim_diversity.py analysis-output-initial.json \
+  --output core-quality-audit.json
 ```
 
-只有输出校验通过后，才把 `analysis_bundle` 交给下游卡片、报告或网页流程。
+只有输出校验和质量审计都通过后，才冻结Core并把 `analysis_bundle` 交给下游卡片、报告或网页流程。
 
 ## 输出语言
 

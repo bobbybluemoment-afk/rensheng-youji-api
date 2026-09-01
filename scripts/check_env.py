@@ -53,6 +53,14 @@ def main() -> int:
         print("FAILED: standalone method packet schema differs from canonical Core definitions")
         print(method_schema_test.stdout or method_schema_test.stderr)
         return 1
+    report_source_contract_test = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/audit_report_source_contract.py"), str(ROOT)],
+        cwd=ROOT, text=True, capture_output=True, check=False,
+    )
+    if report_source_contract_test.returncode:
+        print("FAILED: report-source producer, schema, validator, audit or stage order disagree")
+        print(report_source_contract_test.stdout or report_source_contract_test.stderr)
+        return 1
     try:
         import lunar_python  # noqa: F401
         from PIL import Image  # noqa: F401
@@ -102,6 +110,7 @@ def main() -> int:
         ROOT / "scripts/apply_calibration_delta.py",
         ROOT / "scripts/resolve_report_sources.py",
         ROOT / "scripts/report_source_contract.py",
+        ROOT / "scripts/audit_report_source_contract.py",
         ROOT / "scripts/audit_claim_diversity.py",
         ROOT / "scripts/audit_report_claim_coverage.py",
         ROOT / "scripts/audit_skill_references.py",
@@ -144,6 +153,7 @@ def main() -> int:
             "tests.test_core_v011_method_recovery.CoreV011MethodRecoveryTest",
             "tests.test_core_v012_production_bridge.CoreV012ProductionBridgeTest",
             "tests.test_pipeline_contract.PipelineContractTest",
+            "tests.test_report_source_contract.ReportSourceContractTest",
         ],
         cwd=ROOT,
         text=True,
