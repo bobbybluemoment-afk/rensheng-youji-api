@@ -18,6 +18,8 @@ description: 根据姓名（可选）、出生年月日时、性别、出生地�
 
 在向用户收集出生资料前，先从当前目录向上定位仓库根目录。若仓库 `venv` 不存在，使用系统Python运行且只运行 `python scripts/setup_env.py`；安装完成后，当前会话所有Python命令都必须通过 `python scripts/run_in_env.py ...` 进入同一个仓库虚拟环境，不得再直接运行 `python <业务脚本>` 或 `python -m ...`。首先运行 `python scripts/run_in_env.py scripts/check_env.py`。预检必须确认排盘、正式Core、事实提纲、写作、编辑、新版重点判断渲染、稳定渲染、字体、Logo和二维码均可用；预检失败时先修复环境，不让用户先完成校准再发现无法交付。
 
+完整读取 [production-failure-policy.md](references/production-failure-policy.md)。仓库本身必须位于当前会话持久工作区，不得克隆到 `/tmp`、`/var/tmp` 或 `/private/tmp`。探索性读文件错误不属于正式生产失败，只有该规范列出的正式阶段错误才能触发停止。
+
 - `self_test_fixture`、`--self-test` 和 `tests/fixtures` 只允许由仓库测试命令使用，严禁作为真实用户Core、事实提纲或报告的数据来源。
 - 不得现场创建 `fix_report_v*.py`、`rewrite_report*.py`、`patch_report*.py` 等临时脚本修改正式正文、来源编号或哈希；不得用全局字符串替换清除命理术语。
 - Core单方法和语义综合分别遵循各自最多三轮的局部修复规则；其他正式阶段校验失败时只允许重新运行出错阶段一次。仍失败则按“交付容错”降级，不得伪造字段让校验器放行。
@@ -54,7 +56,17 @@ description: 根据姓名（可选）、出生年月日时、性别、出生地�
 
 1. 从当前目录向上定位包含 `internal/core-manifest.json` 的仓库根目录。
 2. 确认本次会话已经通过 `python scripts/run_in_env.py scripts/check_env.py`；缺少仓库虚拟环境时，由当前AI先运行一次 `python scripts/setup_env.py`，然后通过统一入口重新预检。`setup_env.py` 输出的 `READY` 解释器与 `run_in_env.py` 必须指向同一仓库 `venv`。
-3. 创建临时工作目录，不覆盖仓库文件。
+3. 创建仓库内持久运行目录，不使用系统临时目录：
+
+```bash
+python scripts/run_in_env.py scripts/create_report_run.py
+```
+
+保存命令返回的绝对 `work_dir`。下文命令中的 `work/` 是该绝对目录的简写，实际执行时必须替换为返回的 `work_dir/`；不得创建仓库根目录下另一套散落文件。每次跨轮继续前运行：
+
+```bash
+python scripts/run_in_env.py scripts/report_pipeline.py status --run-dir <work_dir>
+```
 4. 运行根目录确定性排盘并生成 Core 输入：
 
 ```bash
@@ -94,7 +106,16 @@ python scripts/run_in_env.py scripts/prepare_method_input.py work/core-input.jso
 
 该脚本保留排盘、原局、大运和流年，清空现实资料、当前问题与校准信息。九个方法不得读取 `work/core-input.json`、`work/report-preflight.json`、用户关注方向或对话中的现实答案；每个方法包必须登记命令返回的 `method_input_sha256` 和 `input_scope=chart_only_topic_isolated`。
 
-9. 完整读取 `internal/rensheng-youji-mingli-core/SKILL.md` 及其要求的全部参考文件。只读取 `work/method-input.json`，依次生成九个独立方法包，保存到 `work/method-packets/<method_id>.json`。每个完整方法必须逐项检查 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`、`learning`、`mobility`，分别登记 `supported`、`insufficient_evidence` 或 `not_applicable`；不能为了覆盖而硬造候选。每个方法包生成后立即运行：
+随后确定性生成九个方法包草稿：
+
+```bash
+python scripts/run_in_env.py scripts/initialize_method_packets.py \
+  work/method-input.json --output-dir work/method-packet-drafts
+```
+
+方法包唯一正式结构入口为 `internal/rensheng-youji-mingli-core/schemas/method-packet.schema.json`。不得寻找或假设存在其他方法Schema。草稿只负责固定方法身份、独立家族、输入范围、输入哈希和八领域；AI完成独立分析后必须删除 `_draft_notice`、替换全部 `__AI_FILL__`，并另存到 `work/method-packets/<method_id>.json`。
+
+9. 完整读取 `internal/rensheng-youji-mingli-core/SKILL.md` 及其要求的全部参考文件。只读取 `work/method-input.json`、当前方法草稿和正式 `method-packet.schema.json`，依次生成九个独立方法包，保存到 `work/method-packets/<method_id>.json`。不得读取其他方法的草稿或成品。每个完整方法必须逐项检查 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`、`learning`、`mobility`，分别登记 `supported`、`insufficient_evidence` 或 `not_applicable`；不能为了覆盖而硬造候选。每个方法包生成后立即运行：
 
 ```bash
 python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_method_packet.py \

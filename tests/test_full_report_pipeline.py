@@ -351,7 +351,7 @@ class FullReportPipelineTest(unittest.TestCase):
             output = work / "built-questions.json"
             _run(str(CALIBRATION_BUILDER), "--plan", str(plan), "--analysis", str(analysis), "--output", str(output))
             data = json.loads(output.read_text(encoding="utf-8"))
-            self.assertEqual(data["schema_version"], "2.1.0")
+            self.assertEqual(data["schema_version"], "2.2.0")
             self.assertEqual(data["questions"][3]["display"]["prompt"], "过去一年，你实际到账的收入主要来自哪一类？")
 
     def test_visible_evidence_leak_is_rejected(self) -> None:

@@ -37,6 +37,22 @@ def main() -> int:
         print("FAILED: production instructions bypass the repository Python runtime")
         print(runtime_test.stdout or runtime_test.stderr)
         return 1
+    ai_contract_test = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/audit_ai_stage_contracts.py"), str(ROOT)],
+        cwd=ROOT, text=True, capture_output=True, check=False,
+    )
+    if ai_contract_test.returncode:
+        print("FAILED: an AI-authored production stage lacks a discoverable output contract")
+        print(ai_contract_test.stdout or ai_contract_test.stderr)
+        return 1
+    method_schema_test = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/export_method_packet_schema.py"), "--check"],
+        cwd=ROOT, text=True, capture_output=True, check=False,
+    )
+    if method_schema_test.returncode:
+        print("FAILED: standalone method packet schema differs from canonical Core definitions")
+        print(method_schema_test.stdout or method_schema_test.stderr)
+        return 1
     try:
         import lunar_python  # noqa: F401
         from PIL import Image  # noqa: F401
@@ -52,6 +68,7 @@ def main() -> int:
         ROOT / "internal/rensheng-youji-mingli-core/references/method-failure-and-recovery.md",
         ROOT / "internal/rensheng-youji-mingli-core/references/core-production-bridge.md",
         ROOT / "internal/rensheng-youji-mingli-core/scripts/validate_method_packet.py",
+        ROOT / "internal/rensheng-youji-mingli-core/schemas/method-packet.schema.json",
         ROOT / "internal/rensheng-youji-report-content-brief/SKILL.md",
         ROOT / "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py",
         ROOT / "internal/rensheng-youji-report-writer/SKILL.md",
@@ -59,6 +76,7 @@ def main() -> int:
         ROOT / "internal/rensheng-youji-free-card-output/SKILL.md",
         ROOT / "internal/rensheng-youji-free-card-renderer/SKILL.md",
         ROOT / "skills/rensheng-youji-growth-map/SKILL.md",
+        ROOT / "skills/rensheng-youji-growth-map/references/production-failure-policy.md",
         ROOT / "skills/rensheng-youji-growth-map/references/calibration-question-templates.json",
         ROOT / "skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py",
         ROOT / "skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py",
@@ -70,6 +88,11 @@ def main() -> int:
         ROOT / "scripts/core_synthesis_contract.py",
         ROOT / "scripts/run_in_env.py",
         ROOT / "scripts/audit_runtime_entry.py",
+        ROOT / "scripts/audit_ai_stage_contracts.py",
+        ROOT / "scripts/create_report_run.py",
+        ROOT / "scripts/report_pipeline.py",
+        ROOT / "scripts/export_method_packet_schema.py",
+        ROOT / "scripts/initialize_method_packets.py",
         ROOT / "scripts/method_input_contract.py",
         ROOT / "scripts/prepare_method_input.py",
         ROOT / "scripts/prepare_core_synthesis.py",

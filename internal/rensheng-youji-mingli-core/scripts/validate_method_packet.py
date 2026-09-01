@@ -56,6 +56,8 @@ def validate(packet: Any, expected_method: str | None = None) -> list[str]:
     errors: list[str] = []
     if not isinstance(packet, dict):
         return ["方法包必须是JSON对象"]
+    if "__AI_FILL__" in json.dumps(packet, ensure_ascii=False):
+        errors.append("方法包仍含草稿占位符__AI_FILL__")
     if set(packet) != {"method_analysis", "evidence_registry"}:
         errors.append("方法包只能包含method_analysis和evidence_registry")
     method = packet.get("method_analysis")

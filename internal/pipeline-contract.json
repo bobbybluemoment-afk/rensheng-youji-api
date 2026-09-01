@@ -36,6 +36,8 @@
       "inputs": ["method_input"],
       "outputs": ["method_packets"],
       "contract": "internal/rensheng-youji-mingli-core/SKILL.md",
+      "output_contract": "internal/rensheng-youji-mingli-core/schemas/method-packet.schema.json",
+      "scaffold": "scripts/initialize_method_packets.py",
       "validator": "internal/rensheng-youji-mingli-core/scripts/validate_method_packet.py"
     },
     {
@@ -51,6 +53,7 @@
       "inputs": ["core_synthesis_input"],
       "outputs": ["core_semantic_analysis"],
       "contract": "internal/rensheng-youji-mingli-core/references/core-production-bridge.md",
+      "output_contract": "dynamic:core-synthesis-input.json#semantic_output_contract",
       "validator": "scripts/validate_core_synthesis.py"
     },
     {
@@ -73,7 +76,9 @@
       "producer": "ai_constrained",
       "inputs": ["analysis_baseline", "user_focus"],
       "outputs": ["calibration_plan"],
-      "contract": "skills/rensheng-youji-growth-map/references/calibration.md"
+      "contract": "skills/rensheng-youji-growth-map/references/calibration.md",
+      "output_contract": "skills/rensheng-youji-growth-map/references/calibration.md",
+      "validator": "skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py"
     },
     {
       "id": "calibration_questions",
@@ -88,7 +93,9 @@
       "producer": "ai_constrained",
       "inputs": ["analysis_baseline", "baseline_lock", "calibration_questions", "user_calibration_answers"],
       "outputs": ["calibration_delta"],
-      "contract": "skills/rensheng-youji-growth-map/SKILL.md"
+      "contract": "skills/rensheng-youji-growth-map/SKILL.md",
+      "output_contract": "internal/rensheng-youji-mingli-core/references/candidate-relations-and-calibrated-synthesis.md",
+      "validator": "scripts/apply_calibration_delta.py"
     },
     {
       "id": "calibrated_core",
@@ -110,7 +117,9 @@
       "producer": "ai_constrained",
       "inputs": ["analysis_calibrated", "resolved_report_sources", "user_focus"],
       "outputs": ["report_content_selection"],
-      "contract": "internal/rensheng-youji-report-content-brief/SKILL.md"
+      "contract": "internal/rensheng-youji-report-content-brief/SKILL.md",
+      "output_contract": "internal/rensheng-youji-report-content-brief/references/content-brief.md",
+      "validator": "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py"
     },
     {
       "id": "content_brief",
@@ -126,6 +135,7 @@
       "inputs": ["report_content_brief"],
       "outputs": ["report_draft"],
       "contract": "internal/rensheng-youji-report-writer/SKILL.md",
+      "output_contract": "internal/rensheng-youji-report-writer/scripts/validate_report_draft.py",
       "validator": "internal/rensheng-youji-report-writer/scripts/validate_report_draft.py"
     },
     {
@@ -134,6 +144,7 @@
       "inputs": ["report_draft", "report_content_brief"],
       "outputs": ["report", "editorial_review"],
       "contract": "internal/rensheng-youji-chinese-editor/SKILL.md",
+      "output_contract": "skills/rensheng-youji-growth-map/references/report-schema.md",
       "validator": "internal/rensheng-youji-chinese-editor/scripts/validate_editorial_review.py"
     },
     {
@@ -142,6 +153,7 @@
       "inputs": ["analysis_calibrated"],
       "outputs": ["card_content", "visual_signals"],
       "contract": "internal/rensheng-youji-free-card-output/SKILL.md",
+      "output_contract": "internal/rensheng-youji-free-card-output/schemas/visual-signals.schema.json",
       "validator": "internal/rensheng-youji-free-card-output/scripts/validate_visual_signals.py"
     },
     {

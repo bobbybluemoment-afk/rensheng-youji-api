@@ -309,7 +309,7 @@ validation: []
 
 不要省略没有明显结论的栏目。使用空数组、`null` 或“证据不足”保留结构，不得补造内容。
 
-完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.14.0`。生成方法包前先运行：
+完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.14.0`。独立方法包的唯一正式结构入口是 [method-packet.schema.json](schemas/method-packet.schema.json)，它由完整Core Schema确定性导出；不得猜测或查找其他方法包Schema文件。生成方法包前先运行：
 
 ```bash
 python scripts/run_in_env.py scripts/prepare_method_input.py analysis-input.json \

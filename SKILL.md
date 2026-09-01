@@ -30,7 +30,7 @@ description: 在用户本地，根据姓名（可选）、出生年月日时、�
 ## 本地工作流
 
 1. 定位本 Skill 根目录。仓库 `venv` 不存在时，由当前AI使用系统Python运行一次 `python scripts/setup_env.py`；此后所有Python命令都通过 `python scripts/run_in_env.py ...` 执行，禁止直接调用系统Python运行业务脚本。先运行 `python scripts/run_in_env.py scripts/check_env.py`。
-2. 创建本次临时工作目录，不覆盖仓库文件。
+2. 运行 `python scripts/run_in_env.py scripts/create_report_run.py` 创建仓库内持久运行目录；不得使用系统 `/tmp`。保存返回的绝对 `work_dir`，跨轮继续前通过 `report_pipeline.py status` 核对。
 3. 运行确定性排盘并生成 Core 输入：
 
 ```bash

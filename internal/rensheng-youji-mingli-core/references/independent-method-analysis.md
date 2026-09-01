@@ -41,6 +41,8 @@
 
 ## 每种方法的两层输出
 
+正式方法包只能使用 `schemas/method-packet.schema.json`。先由根目录 `scripts/initialize_method_packets.py` 为九个方法生成彼此分离的草稿；每种方法只读取主题隔离输入、自己的草稿、本Schema和本方法所需参考资料。完成后删除 `_draft_notice`，替换全部 `__AI_FILL__`，另存正式方法包并立即校验。不存在其他方法包Schema，不得根据文件名习惯自行猜测。
+
 ### 技术结论
 
 每条 `technical_conclusion` 必须包含：

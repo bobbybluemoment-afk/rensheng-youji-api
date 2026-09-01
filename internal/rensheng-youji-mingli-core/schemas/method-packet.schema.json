@@ -1,0 +1,444 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rensheng-youji.local/schemas/method-packet.schema.json",
+  "title": "人生有迹独立方法包",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "method_analysis",
+    "evidence_registry"
+  ],
+  "properties": {
+    "method_analysis": {
+      "$ref": "#/$defs/independentMethodAnalysis"
+    },
+    "evidence_registry": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/registeredEvidence"
+      }
+    }
+  },
+  "$defs": {
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "to_verify"
+      ]
+    },
+    "independentMethodAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method_id",
+        "tier",
+        "independence_group",
+        "status",
+        "attempt_count",
+        "failure_reasons",
+        "degradation_effects",
+        "input_scope",
+        "method_input_sha256",
+        "input_fact_refs",
+        "source_method_ids_read",
+        "technical_conclusions",
+        "reality_hypotheses",
+        "domain_assessments",
+        "limitations"
+      ],
+      "properties": {
+        "method_id": {
+          "type": "string",
+          "enum": [
+            "pattern_structure",
+            "momentum_configuration",
+            "climate_adjustment",
+            "ten_god_dynamics",
+            "root_seed_flower_fruit",
+            "blind_school",
+            "timing_continuity",
+            "position_relationship",
+            "stem_branch_dynamics"
+          ]
+        },
+        "tier": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "partial"
+          ]
+        },
+        "independence_group": {
+          "type": "string",
+          "minLength": 3
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "insufficient_evidence",
+            "blocked_input",
+            "generation_failed"
+          ]
+        },
+        "attempt_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "failure_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 4
+          }
+        },
+        "degradation_effects": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 4
+          }
+        },
+        "input_scope": {
+          "type": "string",
+          "const": "chart_only_topic_isolated"
+        },
+        "method_input_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "input_fact_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "source_method_ids_read": {
+          "type": "array",
+          "maxItems": 0,
+          "items": {
+            "type": "string"
+          }
+        },
+        "technical_conclusions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/methodTechnicalConclusion"
+          }
+        },
+        "reality_hypotheses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/methodRealityHypothesis"
+          }
+        },
+        "domain_assessments": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/methodDomainAssessment"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "methodDomainAssessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domain",
+        "status",
+        "hypothesis_ids",
+        "reasoning"
+      ],
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "self_growth",
+            "love_partner",
+            "career",
+            "finance_resources",
+            "body_emotion",
+            "family_growth",
+            "learning",
+            "mobility"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "supported",
+            "insufficient_evidence",
+            "not_applicable"
+          ]
+        },
+        "hypothesis_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^mh_[a-z0-9_]+$"
+          }
+        },
+        "reasoning": {
+          "type": "string",
+          "minLength": 8
+        }
+      }
+    },
+    "methodRealityHypothesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hypothesis_id",
+        "derived_from_conclusion_ids",
+        "domain",
+        "normalized_direction",
+        "statement",
+        "observable_indicators",
+        "conditions",
+        "counterevidence",
+        "unsupported_extensions",
+        "added_information",
+        "time_scope",
+        "reality_confirmation"
+      ],
+      "properties": {
+        "hypothesis_id": {
+          "type": "string",
+          "pattern": "^mh_[a-z0-9_]+$"
+        },
+        "derived_from_conclusion_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "domain": {
+          "type": "string",
+          "enum": [
+            "self_growth",
+            "love_partner",
+            "career",
+            "finance_resources",
+            "body_emotion",
+            "family_growth",
+            "learning",
+            "mobility"
+          ]
+        },
+        "normalized_direction": {
+          "type": "string",
+          "minLength": 4
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 12
+        },
+        "observable_indicators": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "conditions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "counterevidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "unsupported_extensions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "added_information": {
+          "type": "string",
+          "minLength": 4
+        },
+        "time_scope": {
+          "type": "string",
+          "minLength": 2
+        },
+        "reality_confirmation": {
+          "type": "string",
+          "enum": [
+            "unverified",
+            "supported",
+            "confirmed",
+            "contradicted"
+          ]
+        }
+      }
+    },
+    "methodTechnicalConclusion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "conclusion_id",
+        "statement",
+        "mechanism_chain",
+        "chart_refs",
+        "evidence_ids",
+        "conditions",
+        "counterconditions",
+        "time_scope",
+        "confidence"
+      ],
+      "properties": {
+        "conclusion_id": {
+          "type": "string",
+          "pattern": "^mc_[a-z0-9_]+$"
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 8
+        },
+        "mechanism_chain": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string",
+            "minLength": 2
+          }
+        },
+        "chart_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "conditions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "counterconditions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "time_scope": {
+          "type": "string",
+          "minLength": 2
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        }
+      }
+    },
+    "registeredEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "source_layer",
+        "method",
+        "method_id",
+        "independence_group",
+        "chart_refs",
+        "observation",
+        "interpretation",
+        "limitations",
+        "confidence"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^evidence_[a-z0-9_]+$"
+        },
+        "source_layer": {
+          "type": "string",
+          "enum": [
+            "natal",
+            "root_seed_flower_fruit",
+            "resource_relationship",
+            "cross_method",
+            "blind_shared",
+            "blind_duan",
+            "blind_yang",
+            "luck_cycle",
+            "annual",
+            "user_fact",
+            "social_prior"
+          ]
+        },
+        "method": {
+          "type": "string",
+          "minLength": 2
+        },
+        "method_id": {
+          "type": "string",
+          "minLength": 3
+        },
+        "independence_group": {
+          "type": "string",
+          "minLength": 3
+        },
+        "chart_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "observation": {
+          "type": "string",
+          "minLength": 4
+        },
+        "interpretation": {
+          "type": "string",
+          "minLength": 6
+        },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        }
+      }
+    }
+  }
+}

@@ -73,7 +73,7 @@ python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/validate_c
   --visible-out work/calibration-visible.md
 ```
 
-`calibration-questions.json` 使用 `schema_version=2.1.0`。构建器从模板原样填充 `display`，校验器逐字比对；任何模型自行改写的题干或选项都会失败。内部候选编号、命理证据、置信度和替代解释永远不进入 `calibration-visible.md`。
+`calibration-questions.json` 使用 `schema_version=2.2.0`。构建器从模板原样填充 `display`，校验器逐字比对；任何模型自行改写的题干或选项都会失败。内部候选编号、命理证据、置信度和替代解释永远不进入 `calibration-visible.md`。
 
 ## 回写规则
 

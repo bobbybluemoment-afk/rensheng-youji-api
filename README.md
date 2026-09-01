@@ -142,7 +142,7 @@ AI 只需询问出生年月日时、出生城市和性别；姓名可以不填�
 
 本项目采用“人生有迹有限个人使用许可 1.0”：允许个人非商业使用，禁止未经授权的商业使用、公开镜像、搬运和重新发布。第三方组件仍适用其各自的许可证。
 
-版本：2.18.1
+版本：2.19.0
 
 ## 维护验收
 
@@ -158,7 +158,11 @@ python scripts/run_in_env.py -m unittest tests/test_core_v010_method_independenc
 python scripts/run_in_env.py -m unittest tests/test_core_v012_production_bridge.py
 python scripts/run_in_env.py -m unittest tests/test_pipeline_contract.py
 python scripts/run_in_env.py -m unittest tests/test_runtime_entry.py
+python scripts/run_in_env.py -m unittest tests/test_persistent_run_workflow.py
+python scripts/run_in_env.py -m unittest tests/test_ai_stage_contracts.py
+python scripts/run_in_env.py scripts/audit_ai_stage_contracts.py .
+python scripts/run_in_env.py scripts/export_method_packet_schema.py --check
 python scripts/run_in_env.py scripts/check_env.py
 ```
 
-测试会使用固定脱敏样例生成临时PNG，并检查1242×1660尺寸、20年连续性、当前年位置、元宝尺度、桃花颜色、九方法生产桥、完整Core确定性组装、全链路生产者、校准后判断替换、六领域覆盖和单章降级。AI生成的语义内容仍需通过真实用户端到端调用单独检查。
+测试会使用固定脱敏样例生成临时PNG，并检查1242×1660尺寸、20年连续性、当前年位置、元宝尺度、桃花颜色、持久运行目录、跨轮恢复、九方法Schema与草稿、AI阶段输出契约、完整Core确定性组装、全链路生产者、校准后判断替换、六领域覆盖和单章降级。AI生成的语义内容仍需通过真实用户端到端调用单独检查。

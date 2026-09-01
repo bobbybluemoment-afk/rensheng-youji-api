@@ -70,8 +70,8 @@ def validate(data: Any, analysis: Any) -> list[str]:
     errors: list[str] = []
     if not isinstance(data, dict):
         return ["根节点必须是对象"]
-    if data.get("schema_version") != "2.1.0":
-        errors.append("schema_version 必须为 2.1.0")
+    if data.get("schema_version") != "2.2.0":
+        errors.append("schema_version 必须为 2.2.0")
     try:
         templates = load_templates()
         candidates = candidate_index(analysis)

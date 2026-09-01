@@ -55,7 +55,7 @@ def build(plan: Any, analysis: Any) -> dict[str, Any]:
                 "confidence": item.get("confidence"),
             },
         })
-    output = {"schema_version": "2.1.0", "template_version": "1.0.0", "questions": questions}
+    output = {"schema_version": "2.2.0", "template_version": "1.0.0", "questions": questions}
     errors = validate(output, analysis)
     if errors:
         raise ValueError("；".join(errors))

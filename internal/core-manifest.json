@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.18.1",
+  "version": "2.19.0",
   "visibility": "internal",
   "stages": [
     {
@@ -48,5 +48,5 @@
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "2.18.1新增仓库虚拟环境统一运行入口run_in_env.py：系统Python只负责首次执行setup_env.py，后续预检、Core、校准、报告与渲染命令全部由仓库venv解释器执行，避免依赖安装环境与实际运行环境不一致。Core仍为0.14.0，继续使用九方法主题隔离输入、八领域逐项检查、来源缺口降级和校准后确定性选材。正式报告继续使用schema 2.13.0，事实提纲和初稿使用1.5.0，中文编辑使用2.4.0。"
+  "notes": "2.19.0将正式运行目录固定在仓库work/runs并新增可恢复运行状态，禁止把仓库、venv和正式中间文件放入系统/tmp。方法包Schema从完整Core Schema确定性导出为唯一公开入口，九方法先由程序生成带方法身份、独立家族、输入哈希和八领域的草稿骨架；AI阶段契约审计确保每个AI产物都有明确输出契约和校验入口。失败策略区分正式生产失败与AI探索性读文件错误，不再因猜测文件不存在而停止。Core仍为0.14.0，正式报告继续使用schema 2.13.0，事实提纲和初稿使用1.5.0，中文编辑使用2.4.0。"
 }

@@ -48,6 +48,14 @@ class PipelineContractTest(unittest.TestCase):
         contract.pop("runtime")
         self.assertTrue(any("runtime" in item for item in audit(ROOT, contract)))
 
+    def test_method_packet_schema_and_scaffold_are_declared(self) -> None:
+        stage = next(item for item in self.contract["stages"] if item["id"] == "independent_methods")
+        self.assertEqual(
+            stage["output_contract"],
+            "internal/rensheng-youji-mingli-core/schemas/method-packet.schema.json",
+        )
+        self.assertEqual(stage["scaffold"], "scripts/initialize_method_packets.py")
+
 
 if __name__ == "__main__":
     unittest.main()

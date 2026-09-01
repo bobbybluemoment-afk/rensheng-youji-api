@@ -57,9 +57,9 @@ def audit(root: Path, contract: dict[str, Any]) -> list[str]:
             errors.append(f"{stage_id}是确定性阶段但没有生产脚本")
         if producer == "ai_constrained" and not stage.get("contract"):
             errors.append(f"{stage_id}是AI阶段但没有Skill或参考契约")
-        for key in ("script", "contract", "validator"):
+        for key in ("script", "contract", "validator", "output_contract", "scaffold"):
             value = stage.get(key)
-            if value and not (root / value).is_file():
+            if value and not str(value).startswith("dynamic:") and not (root / value).is_file():
                 errors.append(f"{stage_id}.{key}引用文件不存在：{value}")
     required_delivery = {"delivery_manifest", "card_png", "report_markdown", "report_pdf"}
     if not required_delivery.issubset(available):
