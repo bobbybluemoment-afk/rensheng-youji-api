@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "internal/rensheng-youji-mingli-core/scripts"))
 
 from validate_analysis_output import self_test_fixture, validate  # noqa: E402
+from core_synthesis_contract import build_source_coverage_audit  # noqa: E402
 
 
 class CoreV010MethodIndependenceTest(unittest.TestCase):
@@ -30,6 +31,12 @@ class CoreV010MethodIndependenceTest(unittest.TestCase):
         analysis["independent_method_analyses"][0]["source_method_ids_read"] = ["ten_god_dynamics"]
         errors = validate(analysis)
         self.assertTrue(any("独立方法不得读取其他方法结论" in item for item in errors))
+
+    def test_all_methods_must_share_one_topic_isolated_input_hash(self) -> None:
+        analysis = self_test_fixture()
+        analysis["independent_method_analyses"][0]["method_input_sha256"] = "b" * 64
+        errors = validate(analysis)
+        self.assertTrue(any("同一份主题隔离输入哈希" in item for item in errors))
 
     def test_independence_group_cannot_be_renamed_to_inflate_votes(self) -> None:
         analysis = self_test_fixture()
@@ -61,12 +68,21 @@ class CoreV010MethodIndependenceTest(unittest.TestCase):
         errors = validate(analysis)
         self.assertTrue(any("primary判断至少需要两个主要方法家族独立同向" in item for item in errors))
 
-    def test_same_direction_cluster_requires_the_same_normalized_direction(self) -> None:
+    def test_same_direction_cluster_can_normalize_different_source_wording(self) -> None:
         analysis = self_test_fixture()
         hypothesis = analysis["independent_method_analyses"][0]["reality_hypotheses"][0]
-        hypothesis["normalized_direction"] = "被人为改写的不同方向"
+        hypothesis["normalized_direction"] = "先确认条件再主动推进"
+        self.assertEqual(validate(analysis), [])
+
+    def test_same_direction_cluster_must_stay_in_one_domain(self) -> None:
+        analysis = self_test_fixture()
+        hypothesis = analysis["independent_method_analyses"][0]["reality_hypotheses"][0]
+        hypothesis["domain"] = "career"
+        analysis["source_coverage_audit"] = build_source_coverage_audit(
+            analysis["independent_method_analyses"]
+        )
         errors = validate(analysis)
-        self.assertTrue(any("same_direction成员必须使用相同标准化现实方向" in item for item in errors))
+        self.assertTrue(any("same_direction成员必须属于同一现实领域" in item for item in errors))
 
     def test_removed_auxiliary_role_is_rejected(self) -> None:
         analysis = self_test_fixture()

@@ -41,7 +41,7 @@
 
 证据必须先进入 `evidence_registry`，再由判断台账引用。每条证据写明来源层、方法、命盘位置或时运位置、观察、现实解释、限制和置信度。两个只换名称、实际来自同一结构的证据仍算一个视角。高置信判断若使用盲派交叉层，必须同时取得格局调候、根苗花果、资源关系或岁运连续性中的至少一种支持。
 
-Core 0.12.0 中，每条证据还必须登记稳定 `method_id` 和 `independence_group`。报告判断必须引用 `method_synthesis` 与对应的独立方法现实候选，不能仅凭 `supporting_methods` 中列出几个方法名称。高结构置信度必须来自至少两个不同主要方法家族；同一方法内部的旺衰、扶抑、病药、通关、根透或刑冲合害不得拆成多票。
+Core 0.14.0 中，每条证据还必须登记稳定 `method_id` 和 `independence_group`。报告判断必须引用 `method_synthesis` 与对应的独立方法现实候选，不能仅凭 `supporting_methods` 中列出几个方法名称。高结构置信度必须来自至少两个不同主要方法家族；同一方法内部的旺衰、扶抑、病药、通关、根透或刑冲合害不得拆成多票。`source_coverage_audit` 标记为缺口的领域不得补造判断，只能在来源映射中记录证据不足并降级章节。
 
 只有一个主要方法支持的现实方向，如果确实新增信息、成立条件明确、可观察且没有事实冲突，可以作为 `supplemental` 进入候选台账。完整规则见 [independent-method-analysis.md](independent-method-analysis.md)。
 

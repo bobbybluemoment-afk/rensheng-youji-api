@@ -63,6 +63,12 @@ def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any]) -> tuple
     source = synthesis_input.get("analysis_input")
     if not isinstance(source, dict) or synthesis_input.get("analysis_input_sha256") != canonical_digest(source):
         errors.append("analysis_input_sha256 无效，确定性输入可能被改写")
+    method_packet_digest = canonical_digest({
+        "methods": synthesis_input.get("independent_method_analyses"),
+        "evidence": synthesis_input.get("evidence_registry"),
+    })
+    if synthesis_input.get("method_packets_sha256") != method_packet_digest:
+        errors.append("method_packets_sha256 无效，已校验方法包或证据可能被改写")
     if not isinstance(semantic, dict):
         return {}, errors + ["Core语义综合输出必须是JSON对象"]
     missing = sorted(SEMANTIC_SECTIONS - set(semantic))
@@ -92,6 +98,7 @@ def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any]) -> tuple
         "chart_audit": _chart_audit(source),
         "independent_method_analyses": synthesis_input["independent_method_analyses"],
         "method_execution_audit": audit,
+        "source_coverage_audit": synthesis_input["source_coverage_audit"],
         "evidence_registry": synthesis_input["evidence_registry"],
         **semantic,
         "calibration_state": {"confirmed": [], "partial": [], "rejected": [], "uncertain": [], "updates": []},

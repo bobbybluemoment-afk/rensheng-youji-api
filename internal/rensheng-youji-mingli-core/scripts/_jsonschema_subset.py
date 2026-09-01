@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime
 from typing import Any
 
@@ -117,6 +118,8 @@ def validate_schema_instance(
     if isinstance(value, str):
         if "minLength" in schema and len(value) < schema["minLength"]:
             errors.append(f"{path} 长度不能小于 {schema['minLength']}")
+        if "pattern" in schema and re.search(schema["pattern"], value) is None:
+            errors.append(f"{path} 不符合 pattern {schema['pattern']!r}")
         if "format" in schema and not _format_valid(value, schema["format"]):
             errors.append(f"{path} 不符合 {schema['format']} 格式")
 
@@ -127,4 +130,3 @@ def validate_schema_instance(
             errors.append(f"{path} 不能大于 {schema['maximum']}")
 
     return errors
-

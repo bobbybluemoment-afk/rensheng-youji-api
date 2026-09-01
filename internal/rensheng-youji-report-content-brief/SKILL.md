@@ -1,13 +1,13 @@
 ---
 name: rensheng-youji-report-content-brief
-description: 人生有迹内部报告事实整理层。接收已冻结并以校准增量合成的0.12.0 Core母稿和确定性校准后选材，从六领域独立判断、方法综合、人物形成链与领域联动链中实体化证据、必须兑现的白话判断和校准变化，生成不含用户文章的report-content-brief.json。用于完整报告写作前锁定事实与判断；不负责排盘、重新推命、自由选择报告结论、写正文或渲染PDF。
+description: 人生有迹内部报告事实整理层。接收已冻结并以校准增量合成的0.14.0 Core母稿和确定性校准后选材，从六领域独立判断、方法综合、人物形成链与领域联动链中实体化证据、必须兑现的白话判断和校准变化，生成不含用户文章的report-content-brief.json。用于完整报告写作前锁定事实与判断；不负责排盘、重新推命、自由选择报告结论、写正文或渲染PDF。
 ---
 
 # 报告事实整理层
 
 ## 工作顺序
 
-1. 读取校准后的 Core 母稿，确认 `core_version=0.12.0`、`method_execution_audit.delivery_decision` 不是 `preliminary_only`，并确认它已通过Baseline冻结校验。
+1. 读取校准后的 Core 母稿，确认 `core_version=0.14.0`、`method_execution_audit.delivery_decision` 不是 `preliminary_only`，并确认它已通过Baseline冻结校验。
 2. 读取 [content-brief.md](references/content-brief.md)。
 3. 优先选择 `match`，同时保留能够共存的 `supported_unselected`、明确场景的 `conditional`、降低优先的 `weakened`，以及确有多方法支持的 `unverified`；禁止使用 `reject`。
 4. 分别为完整人生主线、六个现实领域和当前问题准备材料。

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rensheng-youji.local/schemas/analysis-output.schema.json",
-  "title": "人生有迹完整命理分析母稿 v0.12.0",
+  "title": "人生有迹完整命理分析母稿 v0.14.0",
   "description": "内置分析核心返回的统一 analysis_bundle。包含各方法独立命理推演、独立现实候选、现实综合、完整人物画像、实体证据台账、开放现实候选、形成链、领域联动与校准审计。",
   "type": "object",
   "additionalProperties": false,
@@ -16,6 +16,7 @@
     "interaction_network",
     "independent_method_analyses",
     "method_execution_audit",
+    "source_coverage_audit",
     "method_synthesis",
     "cross_method_analysis",
     "blind_school_cross_analysis",
@@ -306,6 +307,9 @@
     },
     "method_execution_audit": {
       "$ref": "#/$defs/methodExecutionAudit"
+    },
+    "source_coverage_audit": {
+      "$ref": "#/$defs/sourceCoverageAudit"
     },
     "method_synthesis": {
       "type": "object",
@@ -1562,10 +1566,21 @@
         "reality_confirmation": {"type": "string", "enum": ["unverified", "supported", "confirmed", "contradicted"]}
       }
     },
+    "methodDomainAssessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain", "status", "hypothesis_ids", "reasoning"],
+      "properties": {
+        "domain": {"type": "string", "enum": ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth", "learning", "mobility"]},
+        "status": {"type": "string", "enum": ["supported", "insufficient_evidence", "not_applicable"]},
+        "hypothesis_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^mh_[a-z0-9_]+$"}},
+        "reasoning": {"type": "string", "minLength": 8}
+      }
+    },
     "independentMethodAnalysis": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["method_id", "tier", "independence_group", "status", "attempt_count", "failure_reasons", "degradation_effects", "input_fact_refs", "source_method_ids_read", "technical_conclusions", "reality_hypotheses", "limitations"],
+      "required": ["method_id", "tier", "independence_group", "status", "attempt_count", "failure_reasons", "degradation_effects", "input_scope", "method_input_sha256", "input_fact_refs", "source_method_ids_read", "technical_conclusions", "reality_hypotheses", "domain_assessments", "limitations"],
       "properties": {
         "method_id": {"type": "string", "enum": ["pattern_structure", "momentum_configuration", "climate_adjustment", "ten_god_dynamics", "root_seed_flower_fruit", "blind_school", "timing_continuity", "position_relationship", "stem_branch_dynamics"]},
         "tier": {"type": "string", "enum": ["primary", "partial"]},
@@ -1574,10 +1589,13 @@
         "attempt_count": {"type": "integer", "minimum": 1, "maximum": 3},
         "failure_reasons": {"type": "array", "items": {"type": "string", "minLength": 4}},
         "degradation_effects": {"type": "array", "items": {"type": "string", "minLength": 4}},
+        "input_scope": {"type": "string", "const": "chart_only_topic_isolated"},
+        "method_input_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
         "input_fact_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
         "source_method_ids_read": {"type": "array", "maxItems": 0, "items": {"type": "string"}},
         "technical_conclusions": {"type": "array", "items": {"$ref": "#/$defs/methodTechnicalConclusion"}},
         "reality_hypotheses": {"type": "array", "items": {"$ref": "#/$defs/methodRealityHypothesis"}},
+        "domain_assessments": {"type": "array", "maxItems": 8, "items": {"$ref": "#/$defs/methodDomainAssessment"}},
         "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}}
       }
     },
@@ -1597,6 +1615,36 @@
         "delivery_decision": {"type": "string", "enum": ["full", "degraded", "preliminary_only"]},
         "degradation_reasons": {"type": "array", "items": {"type": "string"}},
         "stage_validation_passed": {"type": "boolean"}
+      }
+    },
+    "sourceCoverageAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["report_domain_candidate_counts", "report_domain_primary_method_ids", "domain_review_counts", "love_partner_anchor_statuses", "love_partner_anchor_review_complete", "topic_isolation_required", "uncovered_report_domains", "single_primary_method_domains", "multi_primary_method_domains", "semantic_clustering_required", "status"],
+      "properties": {
+        "report_domain_candidate_counts": {
+          "type": "object",
+          "additionalProperties": {"type": "integer", "minimum": 0}
+        },
+        "report_domain_primary_method_ids": {
+          "type": "object",
+          "additionalProperties": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}
+        },
+        "domain_review_counts": {
+          "type": "object",
+          "additionalProperties": {"type": "integer", "minimum": 0}
+        },
+        "love_partner_anchor_statuses": {
+          "type": "object",
+          "additionalProperties": {"type": "string", "enum": ["supported", "insufficient_evidence", "not_applicable", "method_unavailable"]}
+        },
+        "love_partner_anchor_review_complete": {"type": "boolean"},
+        "topic_isolation_required": {"const": true},
+        "uncovered_report_domains": {"type": "array", "uniqueItems": true, "items": {"type": "string", "enum": ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]}},
+        "single_primary_method_domains": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "multi_primary_method_domains": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "semantic_clustering_required": {"const": true},
+        "status": {"type": "string", "enum": ["ready", "ready_with_gaps"]}
       }
     },
     "methodSynthesisCluster": {

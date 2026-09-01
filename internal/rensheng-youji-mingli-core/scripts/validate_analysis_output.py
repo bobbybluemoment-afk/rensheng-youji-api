@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = ROOT.parents[1]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 from report_source_contract import BASE_COVERAGE, DIMENSIONS, required_coverage  # noqa: E402
+from core_synthesis_contract import LOVE_PARTNER_ANCHORS, build_source_coverage_audit  # noqa: E402
 
 SCHEMA_PATH = ROOT / "schemas" / "analysis-output.schema.json"
 REQUIRED_SECTIONS = {
@@ -30,6 +31,7 @@ REQUIRED_SECTIONS = {
     "interaction_network",
     "independent_method_analyses",
     "method_execution_audit",
+    "source_coverage_audit",
     "method_synthesis",
     "cross_method_analysis",
     "blind_school_cross_analysis",
@@ -175,6 +177,14 @@ PREFERRED_CANDIDATE_LENSES = {
 BLIND_LAYERS = {"blind_shared", "blind_duan", "blind_yang"}
 NON_BLIND_LAYERS = {"natal", "root_seed_flower_fruit", "resource_relationship", "cross_method", "luck_cycle", "annual"}
 REPORT_DOMAINS = {"self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"}
+SOURCE_GAP_PORTRAIT_MAP = {
+    "self_growth": {"self"},
+    "love_partner": {"relationships", "partner", "interaction"},
+    "career": {"career"},
+    "finance_resources": {"resources", "wealth"},
+    "body_emotion": {"health"},
+    "family_growth": {"family"},
+}
 PRIMARY_METHODS = {
     "pattern_structure",
     "momentum_configuration",
@@ -271,8 +281,8 @@ def validate(data: Any) -> list[str]:
     meta = data.get("analysis_meta")
     require_keys(meta, {"analysis_id", "request_id", "core_version", "generated_at", "analysis_as_of", "target_range", "input_completeness", "status"}, "analysis_meta", errors)
     if isinstance(meta, dict):
-        if meta.get("core_version") != "0.12.0":
-            errors.append("analysis_meta.core_version 必须为 0.12.0")
+        if meta.get("core_version") != "0.14.0":
+            errors.append("analysis_meta.core_version 必须为 0.14.0")
         if meta.get("status") not in {"complete", "pass_with_flags"}:
             errors.append("analysis_meta.status 必须是 complete 或 pass_with_flags")
         try:
@@ -372,7 +382,7 @@ def validate(data: Any) -> list[str]:
     else:
         for index, method_item in enumerate(method_items):
             path = f"independent_method_analyses[{index}]"
-            require_keys(method_item, {"method_id", "tier", "independence_group", "status", "attempt_count", "failure_reasons", "degradation_effects", "input_fact_refs", "source_method_ids_read", "technical_conclusions", "reality_hypotheses", "limitations"}, path, errors)
+            require_keys(method_item, {"method_id", "tier", "independence_group", "status", "attempt_count", "failure_reasons", "degradation_effects", "input_scope", "method_input_sha256", "input_fact_refs", "source_method_ids_read", "technical_conclusions", "reality_hypotheses", "domain_assessments", "limitations"}, path, errors)
             if not isinstance(method_item, dict):
                 continue
             method_id = method_item.get("method_id")
@@ -389,6 +399,8 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"{path}.independence_group 必须为{METHOD_GROUPS[method_id]}")
             if method_item.get("source_method_ids_read") != []:
                 errors.append(f"{path}.source_method_ids_read 必须为空，独立方法不得读取其他方法结论")
+            if method_item.get("input_scope") != "chart_only_topic_isolated":
+                errors.append(f"{path}.input_scope 必须为chart_only_topic_isolated")
             status = method_item.get("status")
             attempt_count = method_item.get("attempt_count")
             if not isinstance(attempt_count, int) or not 1 <= attempt_count <= 3:
@@ -411,8 +423,8 @@ def validate(data: Any) -> list[str]:
             conclusions = method_item.get("technical_conclusions") or []
             hypotheses = method_item.get("reality_hypotheses") or []
             if status != "complete":
-                if conclusions or hypotheses:
-                    errors.append(f"{path} 未完成方法不得用半成品结论参与后续综合")
+                if conclusions or hypotheses or method_item.get("domain_assessments"):
+                    errors.append(f"{path} 未完成方法不得用半成品结论或领域检查参与后续综合")
             elif method_id in PRIMARY_METHODS and (len(conclusions) < 2 or len(hypotheses) < 2):
                 errors.append(f"{path} 完成的主要方法至少包含两条技术结论和两条现实候选")
             elif method_id in PARTIAL_METHODS and (len(conclusions) < 1 or len(hypotheses) < 1):
@@ -456,14 +468,46 @@ def validate(data: Any) -> list[str]:
                 derived = set(hypothesis.get("derived_from_conclusion_ids") or [])
                 if not derived or derived - local_conclusion_ids:
                     errors.append(f"{hypothesis_path} 只能引用本方法的技术结论")
+                if hypothesis.get("domain") not in REPORT_DOMAINS | {"learning", "mobility"}:
+                    errors.append(f"{hypothesis_path}.domain 不是允许的现实领域")
                 if len(set(hypothesis.get("observable_indicators") or [])) < 2:
                     errors.append(f"{hypothesis_path}.observable_indicators 至少包含两条可观察表现")
                 for key in ("conditions", "counterevidence", "unsupported_extensions"):
                     if not hypothesis.get(key):
                         errors.append(f"{hypothesis_path}.{key} 至少包含一项")
+            assessments = method_item.get("domain_assessments") or []
+            assessment_by_domain = {
+                item.get("domain"): item for item in assessments if isinstance(item, dict)
+            }
+            expected_domains = REPORT_DOMAINS | {"learning", "mobility"}
+            if status == "complete" and set(assessment_by_domain) != expected_domains:
+                errors.append(f"{path}.domain_assessments 必须逐项检查八个现实领域")
+            if status == "complete":
+                for domain, assessment in assessment_by_domain.items():
+                    expected_ids = {
+                        item.get("hypothesis_id") for item in hypotheses
+                        if isinstance(item, dict) and item.get("domain") == domain
+                    }
+                    actual_ids = set(assessment.get("hypothesis_ids") or [])
+                    if assessment.get("status") == "supported":
+                        if not expected_ids or actual_ids != expected_ids:
+                            errors.append(f"{path}.domain_assessments.{domain} supported映射无效")
+                    elif assessment.get("status") in {"insufficient_evidence", "not_applicable"}:
+                        if expected_ids or actual_ids:
+                            errors.append(f"{path}.domain_assessments.{domain} 无支持时不得保留候选")
+                love_assessment = assessment_by_domain.get("love_partner")
+                if method_id in LOVE_PARTNER_ANCHORS and isinstance(love_assessment, dict):
+                    if love_assessment.get("status") == "not_applicable":
+                        errors.append(f"{path} 是关系锚点方法，必须实际检查love_partner")
         missing_methods = sorted(ALL_METHODS - set(method_by_id))
         if missing_methods:
             errors.append(f"independent_method_analyses 缺少方法家族：{missing_methods}")
+        method_input_hashes = {
+            item.get("method_input_sha256") for item in method_by_id.values()
+            if isinstance(item.get("method_input_sha256"), str)
+        }
+        if len(method_input_hashes) != 1:
+            errors.append("九个方法必须来自同一份主题隔离输入哈希")
 
     completed_methods = {method_id for method_id, item in method_by_id.items() if item.get("status") == "complete"}
     excluded_methods = set(method_by_id) - completed_methods
@@ -505,6 +549,13 @@ def validate(data: Any) -> list[str]:
             errors.append("method_execution_audit 有方法未完成时必须说明degradation_reasons")
         if method_audit.get("stage_validation_passed") is not True:
             errors.append("method_execution_audit.stage_validation_passed 必须为true，表示每个方法已经单独校验或完成失败归类")
+
+    source_coverage = data.get("source_coverage_audit")
+    require_keys(source_coverage, {"report_domain_candidate_counts", "report_domain_primary_method_ids", "domain_review_counts", "love_partner_anchor_statuses", "love_partner_anchor_review_complete", "topic_isolation_required", "uncovered_report_domains", "single_primary_method_domains", "multi_primary_method_domains", "semantic_clustering_required", "status"}, "source_coverage_audit", errors)
+    expected_source_coverage = build_source_coverage_audit(list(method_by_id.values()))
+    if isinstance(source_coverage, dict) and source_coverage != expected_source_coverage:
+        errors.append("source_coverage_audit 必须由实际完成的方法现实候选确定性生成")
+    uncovered_source_domains = set(expected_source_coverage["uncovered_report_domains"])
     if isinstance(meta, dict):
         expected_meta_status = "complete" if expected_delivery == "full" else "pass_with_flags"
         if meta.get("status") != expected_meta_status:
@@ -549,9 +600,9 @@ def validate(data: Any) -> list[str]:
                 if role == "primary" and cluster.get("relationship_type") != "same_direction":
                     errors.append(f"{path} primary判断必须是不同主要方法独立得到的同向现实候选")
                 if cluster.get("relationship_type") == "same_direction":
-                    member_directions = {hypothesis_by_id[item].get("normalized_direction") for item in member_ids}
-                    if member_directions != {cluster.get("normalized_direction")}:
-                        errors.append(f"{path} same_direction成员必须使用相同标准化现实方向")
+                    member_domains = {hypothesis_by_id[item].get("domain") for item in member_ids}
+                    if member_domains != {cluster.get("domain")}:
+                        errors.append(f"{path} same_direction成员必须属于同一现实领域")
                 if role == "supplemental" and not primary_support:
                     errors.append(f"{path} supplemental判断至少需要一个主要方法支持")
                 if cluster.get("structural_confidence") == "high" and (len(primary_support) < 2 or len(actual_groups) < 2):
@@ -735,6 +786,8 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"{path}.claim 含有禁止的确定性高风险断语")
         for domain in REPORT_DOMAINS:
             domain_claims = [item for item in claims if isinstance(item, dict) and item.get("domain") == domain]
+            if domain in uncovered_source_domains and domain_claims:
+                errors.append(f"report_claim_ledger.{domain} 没有方法现实候选来源，不得补造报告判断")
             if len(domain_claims) >= 4 and len({item.get("claim_family") for item in domain_claims}) < 3:
                 errors.append(f"report_claim_ledger.{domain} 至少包含三个不同判断家族")
             if len(domain_claims) >= 4 and len({item.get("mechanism_family") for item in domain_claims}) < 2:
@@ -928,8 +981,11 @@ def validate(data: Any) -> list[str]:
         if len(ids) != len(set(ids)):
             errors.append("reality_candidate_pool.candidate_id 不能重复")
         missing_candidate_domains = sorted(REPORT_DOMAINS - domains)
-        if missing_candidate_domains:
-            errors.append(f"reality_candidate_pool 必须覆盖六个报告领域，当前缺少：{missing_candidate_domains}")
+        if set(missing_candidate_domains) != uncovered_source_domains:
+            errors.append(
+                "reality_candidate_pool 的领域缺口必须与source_coverage_audit一致："
+                f"候选池缺少={missing_candidate_domains}；来源缺口={sorted(uncovered_source_domains)}"
+            )
 
     candidate_ids = {item.get("candidate_id") for item in candidates or [] if isinstance(item, dict)}
     relations = data.get("candidate_relation_map")
@@ -999,9 +1055,15 @@ def validate(data: Any) -> list[str]:
         if not isinstance(covered, list):
             errors.append("portrait_balance_audit.covered_domains 必须是数组")
         else:
-            missing_domains = sorted(MANDATORY_PORTRAIT_DOMAINS - set(covered))
+            weak = set(audit.get("weak_domains") or [])
+            missing_domains = sorted(MANDATORY_PORTRAIT_DOMAINS - set(covered) - weak)
             if missing_domains:
-                errors.append(f"portrait_balance_audit 缺少领域：{missing_domains}")
+                errors.append(f"portrait_balance_audit 未覆盖或标弱的领域：{missing_domains}")
+            required_weak = set().union(*(SOURCE_GAP_PORTRAIT_MAP[domain] for domain in uncovered_source_domains)) if uncovered_source_domains else set()
+            if not required_weak.issubset(weak):
+                errors.append(f"portrait_balance_audit.weak_domains 必须标记来源缺口：{sorted(required_weak)}")
+            if required_weak & set(covered):
+                errors.append("portrait_balance_audit 来源缺口领域不得同时标记为covered")
         paths = audit.get("cross_domain_paths")
         if not isinstance(paths, list) or len(paths) < 3:
             errors.append("portrait_balance_audit.cross_domain_paths 至少包含 3 条")
@@ -1171,10 +1233,34 @@ def self_test_fixture() -> dict[str, Any]:
             "attempt_count": 1,
             "failure_reasons": [],
             "degradation_effects": [],
+            "input_scope": "chart_only_topic_isolated",
+            "method_input_sha256": "a" * 64,
             "input_fact_refs": ["chart_facts.pillars"],
             "source_method_ids_read": [],
             "technical_conclusions": conclusions,
             "reality_hypotheses": hypotheses,
+            "domain_assessments": [
+                {
+                    "domain": domain,
+                    "status": (
+                        "supported" if any(item["domain"] == domain for item in hypotheses)
+                        else "insufficient_evidence" if domain == "love_partner" and method_id in {
+                            "ten_god_dynamics", "position_relationship", "stem_branch_dynamics",
+                            "blind_school", "timing_continuity",
+                        }
+                        else "not_applicable"
+                    ),
+                    "hypothesis_ids": [
+                        item["hypothesis_id"] for item in hypotheses if item["domain"] == domain
+                    ],
+                    "reasoning": (
+                        "本方法形成了该领域的现实候选"
+                        if any(item["domain"] == domain for item in hypotheses)
+                        else "本方法已检查该领域但未形成足够证据"
+                    ),
+                }
+                for domain in sorted(REPORT_DOMAINS | {"learning", "mobility"})
+            ],
             "limitations": ["本方法不能单独保证具体事件"],
         })
 
@@ -1281,7 +1367,7 @@ def self_test_fixture() -> dict[str, Any]:
         }
 
     data = {
-        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.12.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
+        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.14.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
         "chart_facts": {"day_master": "甲", "pillars": {"year": pillar, "month": pillar, "day": {**pillar, "stem_ten_god": "日主"}, "hour": pillar}, "luck_cycles": [{}], "annual_cycles": [{}]},
         "chart_audit": {"status": "pass", "checks": [], "boundary_dependencies": [], "versions": []},
         "social_context_model": empty_section(),
@@ -1303,6 +1389,7 @@ def self_test_fixture() -> dict[str, Any]:
             "degradation_reasons": [],
             "stage_validation_passed": True,
         },
+        "source_coverage_audit": build_source_coverage_audit(independent_methods),
         "method_synthesis": {
             "summary": "各方法独立推演后按现实方向归并",
             "clusters": synthesis_clusters,

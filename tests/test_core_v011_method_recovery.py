@@ -37,6 +37,39 @@ class CoreV011MethodRecoveryTest(unittest.TestCase):
     def test_complete_primary_method_packet_passes(self) -> None:
         self.assertEqual(validate_packet(method_packet("pattern_structure"), "pattern_structure"), [])
 
+    def test_illegal_reality_domain_fails_inside_method_packet(self) -> None:
+        packet = method_packet("blind_school")
+        packet["method_analysis"]["reality_hypotheses"][0]["domain"] = "social_relationship"
+        errors = validate_packet(packet, "blind_school")
+        self.assertTrue(any("domain无效：social_relationship" in item for item in errors))
+
+    def test_method_packet_uses_formal_core_schema_constraints(self) -> None:
+        packet = method_packet("blind_school")
+        packet["method_analysis"]["technical_conclusions"][0]["conclusion_id"] = "bad-id"
+        errors = validate_packet(packet, "blind_school")
+        self.assertTrue(any("不符合正式Core Schema" in item and "pattern" in item for item in errors))
+
+    def test_complete_method_must_review_all_eight_domains(self) -> None:
+        packet = method_packet("pattern_structure")
+        packet["method_analysis"]["domain_assessments"] = packet["method_analysis"]["domain_assessments"][:-1]
+        errors = validate_packet(packet, "pattern_structure")
+        self.assertTrue(any("逐项检查八个现实领域" in item for item in errors))
+
+    def test_relationship_anchor_cannot_skip_love_partner_review(self) -> None:
+        packet = method_packet("blind_school")
+        assessment = next(
+            item for item in packet["method_analysis"]["domain_assessments"]
+            if item["domain"] == "love_partner"
+        )
+        assessment["status"] = "not_applicable"
+        assessment["hypothesis_ids"] = []
+        packet["method_analysis"]["reality_hypotheses"] = [
+            item for item in packet["method_analysis"]["reality_hypotheses"]
+            if item["domain"] != "love_partner"
+        ]
+        errors = validate_packet(packet, "blind_school")
+        self.assertTrue(any("关系锚点方法" in item for item in errors))
+
     def test_generation_failure_requires_three_attempts(self) -> None:
         packet = method_packet("pattern_structure")
         method = packet["method_analysis"]
@@ -47,6 +80,7 @@ class CoreV011MethodRecoveryTest(unittest.TestCase):
             "degradation_effects": ["格局法不参与综合计票"],
             "technical_conclusions": [],
             "reality_hypotheses": [],
+            "domain_assessments": [],
         })
         packet["evidence_registry"] = []
         errors = validate_packet(packet, "pattern_structure")
@@ -90,6 +124,7 @@ class CoreV011MethodRecoveryTest(unittest.TestCase):
             "degradation_effects": ["盲派不参与综合计票"],
             "technical_conclusions": [],
             "reality_hypotheses": [],
+            "domain_assessments": [],
         })
         blind = analysis["blind_school_cross_analysis"]
         for key in ("source_boundaries", "host_guest_map", "body_function_map", "work_paths", "image_hypotheses", "reality_image_candidates", "virtual_real_completeness", "timing_activation", "agreements", "conflicts", "prohibited_extensions"):
@@ -107,6 +142,7 @@ class CoreV011MethodRecoveryTest(unittest.TestCase):
             "degradation_effects": ["根苗花果不参与综合计票"],
             "technical_conclusions": [],
             "reality_hypotheses": [],
+            "domain_assessments": [],
         })
         root_map = analysis["root_seed_flower_fruit_map"]
         root_map["continuity"] = []

@@ -85,16 +85,25 @@ python skills/rensheng-youji-growth-map/scripts/preflight_report.py \
 python internal/rensheng-youji-mingli-core/scripts/validate_analysis_input.py work/core-input.json
 ```
 
-8. 完整读取 `internal/rensheng-youji-mingli-core/SKILL.md` 及其要求的全部参考文件。依次生成九个独立方法包，保存到 `work/method-packets/<method_id>.json`。每个方法包生成后立即运行：
+8. 生成九方法唯一允许读取的主题隔离输入：
+
+```bash
+python scripts/prepare_method_input.py work/core-input.json \
+  --output work/method-input.json
+```
+
+该脚本保留排盘、原局、大运和流年，清空现实资料、当前问题与校准信息。九个方法不得读取 `work/core-input.json`、`work/report-preflight.json`、用户关注方向或对话中的现实答案；每个方法包必须登记命令返回的 `method_input_sha256` 和 `input_scope=chart_only_topic_isolated`。
+
+9. 完整读取 `internal/rensheng-youji-mingli-core/SKILL.md` 及其要求的全部参考文件。只读取 `work/method-input.json`，依次生成九个独立方法包，保存到 `work/method-packets/<method_id>.json`。每个完整方法必须逐项检查 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`、`learning`、`mobility`，分别登记 `supported`、`insufficient_evidence` 或 `not_applicable`；不能为了覆盖而硬造候选。每个方法包生成后立即运行：
 
 ```bash
 python internal/rensheng-youji-mingli-core/scripts/validate_method_packet.py \
   work/method-packets/<method_id>.json --expected-method <method_id>
 ```
 
-单个方法失败只修复该方法，最多三轮；仍失败则清空半成品并记录失败状态。当前固定方法为七个主要方法与两个部分独立方法，不生成或分析神煞、纳音。
+单个方法失败只修复该方法，最多三轮；仍失败则清空半成品并记录失败状态。单方法通过只是暂时合格，方法集合要到步骤10汇总成功后才冻结。当前固定方法为七个主要方法与两个部分独立方法，不生成或分析神煞、纳音。
 
-9. 九个方法包全部完成或被合法归类后，运行确定性汇总：
+10. 九个方法包全部完成或被合法归类后，运行确定性汇总：
 
 ```bash
 python scripts/prepare_core_synthesis.py work/core-input.json \
@@ -102,20 +111,20 @@ python scripts/prepare_core_synthesis.py work/core-input.json \
   --output work/core-synthesis-input.json
 ```
 
-该脚本必须实际生成 `core-synthesis-input.json`；不得让模型手工复制方法、证据或方法执行审计。
+该脚本必须实际生成 `core-synthesis-input.json`；不得让模型手工复制方法、证据或方法执行审计。若汇总器报告非法领域、无效引用或跨方法重复编号，只返修错误点名的方法包并重新校验、汇总。若只报告 `source_coverage_audit.status=ready_with_gaps`，不得停止；没有来源的领域进入证据缺口并在报告中降级。
 
-10. AI只读取 `work/core-synthesis-input.json`，生成 `work/core-semantic-analysis.json`。只允许生成其中 `semantic_output_contract.required_sections` 列出的语义区块；不得输出或改写排盘事实、方法包、证据、方法状态、校准状态或报告来源。
+11. AI只读取 `work/core-synthesis-input.json`，生成 `work/core-semantic-analysis.json`。只允许生成其中 `semantic_output_contract.required_sections` 列出的语义区块；不得输出或改写排盘事实、方法包、证据、方法状态、校准状态或报告来源。
 
-11. 运行语义综合校验：
+12. 运行语义综合校验：
 
 ```bash
 python scripts/validate_core_synthesis.py \
   work/core-synthesis-input.json work/core-semantic-analysis.json
 ```
 
-失败时最多三轮局部修复：依次处理结构与引用、方法独立性与判断角色、人物覆盖与领域映射。不得重新运行已经通过的方法。第三轮仍失败才停止完整Core综合，并报告真实错误。
+失败时最多三轮局部修复：依次处理结构与引用、方法独立性与判断角色、人物覆盖与领域映射。此时方法集合已经冻结，不得重新运行方法包。第三轮仍失败才停止完整Core综合，并报告真实错误。
 
-12. 校验通过后，由程序确定性组装完整Core并自动生成报告来源：
+13. 校验通过后，由程序确定性组装完整Core并自动生成报告来源：
 
 ```bash
 python scripts/finalize_core_analysis.py \
@@ -132,7 +141,7 @@ python internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py \
 
 不得要求模型自行创建 `analysis-output-before-sources.json`；不得手工拼装 `report_source_bundle`。
 
-13. 在生成校准题之前冻结初始Core。此后不得重新生成或改写完整母稿：
+14. 在生成校准题之前冻结初始Core。此后不得重新生成或改写完整母稿：
 
 ```bash
 python scripts/core_baseline.py freeze work/analysis-output-initial.json \
@@ -203,7 +212,7 @@ python scripts/core_baseline.py verify \
 3. 完整读取 `internal/rensheng-youji-report-content-brief/SKILL.md`，从校准后Core、确定性选材和 `work/report-content-selection.json` 生成实体化 `work/report-content-brief.json`。事实提纲必须携带Core判断正文、机制、证据、限制、选材哈希和降级状态；不能只传判断编号。
 4. 完整读取 `internal/rensheng-youji-report-writer/SKILL.md`，从实体化事实提纲生成 `work/report-draft.json`。每个内容区必须把 `mandatory_claim_ids` 对应的 `plain_claim` 原句放入正文，并登记 `claim_realization_map`；写作层只补充形成过程、条件、例子和限制，不能重新概括锁定判断。正常章节写500—700个汉字；判断不足时按确定性选材给出的 `shortened`、`minimal` 或 `evidence_gap` 缩短，不得用重复内容凑字。
 5. 完整读取 `internal/rensheng-youji-chinese-editor/SKILL.md`，对初稿逐段执行第二遍中文编辑，生成 `work/editorial-review.json` 和正式 `work/report.json`。编辑记录必须保存初稿与终稿对应关系、降级状态和实际修改，不能再用几个布尔值代替编辑。
-6. 正式报告使用 `schema_version=2.13.0`、`document_mode=full_calibrated`。Core使用0.12.0、事实提纲和初稿使用1.5.0、中文编辑使用2.4.0。Core先让九种方法独立完成技术推演和现实候选，再通过生产桥完成受约束语义综合与确定性组装；单个方法最多独立重试3次，仍失败则退出综合投票。只有方法覆盖度达到完整或降级交付门槛时才能冻结Baseline并继续正式报告，`preliminary_only` 必须停止正式链路。完整人生主线先根据全盘材料生成，再在第4页单独回应用户问题。六个领域先写各自的人物侧面，再用人生主线串联；用户关注方向只在当前阶段、问题回应、相关年度和行动建议中加重。
+6. 正式报告使用 `schema_version=2.13.0`、`document_mode=full_calibrated`。Core使用0.14.0、事实提纲和初稿使用1.5.0、中文编辑使用2.4.0。Core先让九种方法读取主题隔离输入，独立完成技术推演、八领域检查和现实候选，再通过生产桥完成来源覆盖审计、受约束语义综合与确定性组装；单个方法最多独立重试3次，仍失败则退出综合投票。没有方法候选的领域只形成证据缺口并缩短章节，不停止其他可靠内容。只有方法覆盖度达到完整或降级交付门槛时才能冻结Baseline并继续正式报告，`preliminary_only` 必须停止正式链路。完整人生主线先根据全盘材料生成，再在第4页单独回应用户问题。六个领域先写各自的人物侧面，再用人生主线串联；用户关注方向只在当前阶段、问题回应、相关年度和行动建议中加重。
 7. 时间分析继续使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系，同时概括更长阶段。
 8. 从同一份校准后 Core 母稿依次运行 `rensheng-youji-free-card-output` 与 `rensheng-youji-free-card-renderer` 的现有新版流程，生成 `work/free-card-output.json`。报告与卡片的分析编号、Core版本和明显关系机会年份必须一致。
 9. 运行统一交付命令：

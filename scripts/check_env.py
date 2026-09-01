@@ -60,6 +60,8 @@ def main() -> int:
         ROOT / "internal/pipeline-contract.json",
         ROOT / "scripts/audit_pipeline_contract.py",
         ROOT / "scripts/core_synthesis_contract.py",
+        ROOT / "scripts/method_input_contract.py",
+        ROOT / "scripts/prepare_method_input.py",
         ROOT / "scripts/prepare_core_synthesis.py",
         ROOT / "scripts/validate_core_synthesis.py",
         ROOT / "scripts/finalize_core_analysis.py",
@@ -124,10 +126,10 @@ def main() -> int:
         cwd=ROOT, text=True, capture_output=True, check=False,
     )
     if core_test.returncode:
-        print("FAILED: v0.12.0 Core nine-method isolation, production bridge, synthesis validation or deterministic assembly")
+        print("FAILED: v0.14.0 Core topic isolation, domain review, source coverage, synthesis validation or deterministic assembly")
         print(core_test.stdout or core_test.stderr)
         return 7
-    print("READY: dependencies, chart, v2 card, Core v0.12.0 nine-method isolation, synthesis production bridge, deterministic assembly and report sources, calibration delta, post-calibration source resolution, sparse emphasis, stable fallback and fixed 10-page report pipeline passed")
+    print("READY: dependencies, chart, v2 card, Core v0.14.0 topic isolation, eight-domain method review, source coverage, semantic consensus, deterministic assembly and report sources, calibration delta, post-calibration source resolution, sparse emphasis, stable fallback and fixed 10-page report pipeline passed")
     return 0
 
 

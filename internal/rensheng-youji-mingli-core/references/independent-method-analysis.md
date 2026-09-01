@@ -29,7 +29,7 @@
 
 ## 方法隔离
 
-每个 `method_analysis` 只能读取：
+每个 `method_analysis` 只能读取 `prepare_method_input.py` 生成的主题隔离输入，并登记其 `method_input_sha256`。其中允许使用：
 
 - `chart_facts`；
 - `chart_audit`；
@@ -37,7 +37,7 @@
 - 与本方法直接有关的确定性大运流年数据；
 - `person` 与 `request` 中只用于限制现实范围的年龄、年代、城市等基础事实。
 
-它不得读取 `reality_context`、`social_context_model`、其他方法的技术结论、现实候选、综合判断、报告判断或用户校准答案。`source_method_ids_read` 必须为空数组。现实经历只能在全部方法完成后用于现实确认，不得进入独立命理推演。
+它不得读取原始 `core-input.json`、报告预检中的关注方向、`reality_context`、`social_context_model`、其他方法的技术结论、现实候选、综合判断、报告判断或用户校准答案。`source_method_ids_read` 必须为空数组。现实经历只能在全部方法完成后用于现实确认，不得进入独立命理推演。
 
 ## 每种方法的两层输出
 
@@ -68,18 +68,28 @@
 
 独立方法不得读取其他方法候选后故意改写成同一方向。不同方法自然得到相同现实方向时，由综合层识别，而不是由方法层预先协调。
 
+## 八领域检查
+
+每个 `complete` 方法都必须对 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`、`learning`、`mobility` 各登记一条 `domain_assessment`：
+
+- `supported`：本方法形成了该领域现实候选，必须列出本领域全部 `hypothesis_ids`；
+- `insufficient_evidence`：本方法实际检查过，但不足以形成现实候选；
+- `not_applicable`：该领域超出本方法在本盘中的合理推演范围。
+
+十神动力、宫位六亲、干支动力、盲派和岁运连续性是 `love_partner` 锚点方法，必须在 `supported` 与 `insufficient_evidence` 中二选一，不得用 `not_applicable` 跳过。领域检查用于证明“分析过”，不是要求每种方法硬写八条候选。
+
 ## 现实综合
 
 综合层只读取全部被冻结的 `reality_hypotheses`，按现实语义归并，不重新推命。必须区分：
 
-- `same_direction`：不同方法指向同一现实方向；
+- `same_direction`：不同方法在同一现实领域指向实质相同的表现或机制；成员原始 `normalized_direction` 可以措辞不同，由综合层统一命名并说明语义重合依据；
 - `complementary`：分别增加同一人物的不同侧面；
 - `conditional`：不同条件下表现不同；
 - `stage_specific`：长期结构与阶段变化不同；
 - `hierarchical`：总判断与具体表现；
 - `conflict`：相同时间、对象、条件和口径下不能同时成立。
 
-综合层必须记录每个现实簇中的候选、方法、独立家族、反证、现实确认状态和报告角色。不得把共享同一底层结构的多个术语机械计算为多票。
+综合层必须记录每个现实簇中的候选、方法、独立家族、反证、现实确认状态和报告角色。不得把共享同一底层结构的多个术语机械计算为多票，也不得因为独立生成的两个候选没有使用完全相同的字符串就否认真实的语义同向。
 
 ## 置信度与报告角色
 

@@ -124,8 +124,8 @@ def _resolve_section(source: dict[str, Any], ledger: dict[str, dict[str, Any]], 
 
 def resolve(analysis: dict[str, Any]) -> dict[str, Any]:
     meta = analysis.get("analysis_meta") or {}
-    if meta.get("core_version") != "0.12.0":
-        raise ValueError("Post-calibration source resolution requires core_version=0.12.0")
+    if meta.get("core_version") != "0.14.0":
+        raise ValueError("Post-calibration source resolution requires core_version=0.14.0")
     if analysis.get("method_execution_audit", {}).get("delivery_decision") == "preliminary_only":
         raise ValueError("preliminary_only Core cannot enter full report source resolution")
     ledger = {item.get("claim_id"): item for item in analysis.get("report_claim_ledger") or [] if isinstance(item, dict)}

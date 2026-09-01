@@ -95,11 +95,11 @@ python3 scripts/adapter_from_api_profile.py <profile.json> \
 
 ### 5. 强制每种方法独立推演
 
-格局成败、气势意向与形象方局、调候、十神网络、根苗花果、盲派和岁运连续性必须分别只读取冻结排盘事实，各自产生命理技术结论与现实候选；宫位六亲、干支根气另作部分独立分析。任何方法不得读取其他方法已经生成的结论后再改写成同一方向。全部方法冻结后，综合层才可以归并同向、互补、条件、阶段、上下位和真正冲突。
+格局成败、气势意向与形象方局、调候、十神网络、根苗花果、盲派和岁运连续性必须分别只读取由 `prepare_method_input.py` 生成的主题隔离输入，各自产生命理技术结论与现实候选；宫位六亲、干支根气另作部分独立分析。任何方法不得读取用户关注方向、现实答案或其他方法已经生成的结论后再改写成同一方向。全部方法冻结后，综合层才可以归并同向、互补、条件、阶段、上下位和真正冲突。
 
 多方法一致必须按不同主要方法家族计算，不能把扶抑、病药、通关、旺衰、根透、刑冲合害等同源术语拆成多票。只有至少两个不同主要方法家族独立同向时，结构置信度才可为高。单一主要方法若新增实质信息、条件明确、可观察且没有事实冲突，可以保留为补充判断。
 
-每个方法先单独保存方法包并校验。输出错误最多进行三轮局部修复；第三轮仍失败则按失败类型记录 `generation_failed`、`blocked_input` 或 `insufficient_evidence`，清空半成品并排除计票。七个主要方法全部完成时为 `full`；至少五个完成且结构、现实机制与岁运锚点齐全时为 `degraded`；其余为 `preliminary_only`。不得因单个辅助或部分独立方法失败停止全部可靠内容，也不得让 `preliminary_only` 进入完整报告。
+每个完整方法先逐项检查八个现实领域，再单独保存方法包并校验。现实候选的 `domain` 只允许 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`、`learning`、`mobility`；每项检查登记 `supported`、`insufficient_evidence` 或 `not_applicable`。十神动力、宫位六亲、干支动力、盲派和岁运连续性是关系锚点，必须实际检查 `love_partner`，不能标为 `not_applicable`。输出错误最多进行三轮局部修复；第三轮仍失败则按失败类型记录 `generation_failed`、`blocked_input` 或 `insufficient_evidence`，清空半成品并排除计票。单方法通过只是暂时合格，九方法集合经生产桥汇总成功并写入方法包哈希后才冻结。七个主要方法全部完成时为 `full`；至少五个完成且结构、现实机制与岁运锚点齐全时为 `degraded`；其余为 `preliminary_only`。不得因单个部分独立方法失败或某个报告领域缺少候选而停止全部可靠内容，也不得让 `preliminary_only` 进入完整报告。
 
 ### 6. 把命盘当作现实中的人
 
@@ -309,7 +309,14 @@ validation: []
 
 不要省略没有明显结论的栏目。使用空数组、`null` 或“证据不足”保留结构，不得补造内容。
 
-完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.12.0`。每个方法生成后先运行：
+完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.14.0`。生成方法包前先运行：
+
+```bash
+python3 ../../scripts/prepare_method_input.py analysis-input.json \
+  --output method-input.json
+```
+
+九个方法只读取 `method-input.json`。每个方法生成后运行：
 
 ```bash
 python3 scripts/validate_method_packet.py method-analysis-pattern-structure.json \

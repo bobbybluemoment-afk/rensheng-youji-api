@@ -8,7 +8,7 @@ import json
 from typing import Any
 
 
-CORE_VERSION = "0.12.0"
+CORE_VERSION = "0.14.0"
 SYNTHESIS_INPUT_SCHEMA_VERSION = "1.0.0"
 PRIMARY_METHODS = {
     "pattern_structure",
@@ -21,6 +21,19 @@ PRIMARY_METHODS = {
 }
 PARTIAL_METHODS = {"position_relationship", "stem_branch_dynamics"}
 ALL_METHODS = PRIMARY_METHODS | PARTIAL_METHODS
+REPORT_DOMAINS = {
+    "self_growth",
+    "love_partner",
+    "career",
+    "finance_resources",
+    "body_emotion",
+    "family_growth",
+}
+ALL_REALITY_DOMAINS = REPORT_DOMAINS | {"learning", "mobility"}
+LOVE_PARTNER_ANCHORS = {
+    "ten_god_dynamics", "position_relationship", "stem_branch_dynamics",
+    "blind_school", "timing_continuity",
+}
 
 DETERMINISTIC_CORE_SECTIONS = {
     "analysis_meta",
@@ -28,6 +41,7 @@ DETERMINISTIC_CORE_SECTIONS = {
     "chart_audit",
     "independent_method_analyses",
     "method_execution_audit",
+    "source_coverage_audit",
     "evidence_registry",
     "report_source_bundle",
     "calibration_state",
@@ -119,4 +133,70 @@ def build_method_audit(methods: list[dict[str, Any]]) -> dict[str, Any]:
         "delivery_decision": decision,
         "degradation_reasons": reasons,
         "stage_validation_passed": True,
+    }
+
+
+def build_source_coverage_audit(methods: list[dict[str, Any]]) -> dict[str, Any]:
+    """Describe what the frozen method packets can support without inventing content."""
+    candidates: dict[str, list[dict[str, Any]]] = {domain: [] for domain in REPORT_DOMAINS}
+    for method in methods:
+        if method.get("status") != "complete":
+            continue
+        method_id = str(method.get("method_id"))
+        for hypothesis in method.get("reality_hypotheses") or []:
+            domain = hypothesis.get("domain")
+            if domain in candidates:
+                candidates[str(domain)].append({
+                    "hypothesis_id": str(hypothesis.get("hypothesis_id")),
+                    "method_id": method_id,
+                    "normalized_direction": str(hypothesis.get("normalized_direction")),
+                })
+
+    counts = {domain: len(candidates[domain]) for domain in sorted(REPORT_DOMAINS)}
+    primary_methods = {
+        domain: sorted({
+            item["method_id"] for item in candidates[domain]
+            if item["method_id"] in PRIMARY_METHODS
+        })
+        for domain in sorted(REPORT_DOMAINS)
+    }
+    reviews = {
+        domain: sum(
+            1 for method in methods
+            if method.get("status") == "complete"
+            and any(item.get("domain") == domain for item in method.get("domain_assessments") or [])
+        )
+        for domain in sorted(ALL_REALITY_DOMAINS)
+    }
+    method_by_id = {str(method.get("method_id")): method for method in methods}
+    love_anchor_statuses: dict[str, str] = {}
+    for method_id in sorted(LOVE_PARTNER_ANCHORS):
+        method = method_by_id.get(method_id)
+        if not method or method.get("status") != "complete":
+            love_anchor_statuses[method_id] = "method_unavailable"
+            continue
+        assessment = next(
+            (item for item in method.get("domain_assessments") or [] if item.get("domain") == "love_partner"),
+            None,
+        )
+        love_anchor_statuses[method_id] = str(assessment.get("status")) if assessment else "method_unavailable"
+    uncovered = sorted(domain for domain, count in counts.items() if count == 0)
+    single = sorted(domain for domain, methods_for_domain in primary_methods.items() if len(methods_for_domain) == 1)
+    multiple = sorted(domain for domain, methods_for_domain in primary_methods.items() if len(methods_for_domain) >= 2)
+    love_anchor_complete = all(
+        status in {"supported", "insufficient_evidence"}
+        for status in love_anchor_statuses.values()
+    )
+    return {
+        "report_domain_candidate_counts": counts,
+        "report_domain_primary_method_ids": primary_methods,
+        "domain_review_counts": reviews,
+        "love_partner_anchor_statuses": love_anchor_statuses,
+        "love_partner_anchor_review_complete": love_anchor_complete,
+        "topic_isolation_required": True,
+        "uncovered_report_domains": uncovered,
+        "single_primary_method_domains": single,
+        "multi_primary_method_domains": multiple,
+        "semantic_clustering_required": True,
+        "status": "ready_with_gaps" if uncovered or not love_anchor_complete else "ready",
     }
