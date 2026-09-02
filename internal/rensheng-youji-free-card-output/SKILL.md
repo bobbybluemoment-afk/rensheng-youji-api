@@ -9,6 +9,8 @@ description: 人生有迹内部免费卡片提取层。接收已经通过校验�
 
 只消费已校验的 Core 完整分析母稿。不得绕过 Core 使用旧版日柱角色、固定文案或旧 K 线分数，不得重新排盘。
 
+卡片没有独立的五题校准流程。单独生成免费卡片时，读取已经完成并通过校验的初始或冻结Core；完整报告内的卡片读取 `analysis-output-calibrated.json`，继承报告已经确定的候选主次与排除状态，但不得改写校准前冻结的命理结构、人生K线语义和原始判断。两种入口都复用同一Core生产链，不为卡片另建Core。
+
 本层决定免费卡片展示什么，但不修改 Core 结论。输出必须符合 [free-card-output.schema.json](schemas/free-card-output.schema.json)，供后续 Python 或网页渲染器直接使用。
 
 ## 流程
@@ -34,11 +36,13 @@ python scripts/run_in_env.py internal/rensheng-youji-free-card-output/scripts/bu
 
 ```bash
 python scripts/run_in_env.py scripts/assemble_free_card.py \
-  --analysis analysis-output-calibrated.json \
+  --analysis analysis-output.json \
   --content card-content.json \
   --series visual-series.json \
   --output free-card-output.json
 ```
+
+其中 `analysis-output.json` 是入口占位名：单独卡片使用已校验的初始或冻结Core，完整报告内卡片使用由Baseline与校准增量确定性合成且已经通过冻结校验的 `analysis-output-calibrated.json`。
 
 8. 运行最终校验：
 

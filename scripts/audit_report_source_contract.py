@@ -15,11 +15,38 @@ from report_source_contract import (
     mandatory_candidate_bounds,
     report_total_cjk_bounds,
 )
+from report_pipeline import STAGES as STATUS_STAGES
 
 
 STALE_RULES = (
     "2—4条 `mandatory_candidate_ids`",
     "two to four ranked mandatory candidates",
+    "六个领域各至少包含三个判断家族",
+    "每个领域至少覆盖三个不同判断家族",
+    "完整人生主线写3—4个自然段、500—700个汉字；每个领域写3—4个自然段、500—700个汉字",
+    "完整人生主线与六领域各500—700字",
+    "每个自然段至少映射两个实体化Core判断，完整人生主线和六领域",
+    "`domain_mechanisms`：至少两个领域自身机制",
+    "证据缺口模式0条",
+    "写作前先为每段选择至少两个 `selected_claims`",
+    "六个领域保持相同篇幅范围",
+)
+
+MAINTAINED_TEXTS = (
+    "scripts/audit_claim_diversity.py",
+    "skills/rensheng-youji-growth-map/SKILL.md",
+    "skills/rensheng-youji-growth-map/references/full-report.md",
+    "skills/rensheng-youji-growth-map/references/report-schema.md",
+    "internal/rensheng-youji-mingli-core/SKILL.md",
+    "internal/rensheng-youji-mingli-core/references/analysis-workflow.md",
+    "internal/rensheng-youji-mingli-core/references/domain-independent-analysis.md",
+    "internal/rensheng-youji-mingli-core/references/method-failure-and-recovery.md",
+    "internal/rensheng-youji-mingli-core/references/post-calibration-report-selection.md",
+    "internal/rensheng-youji-mingli-core/references/report-grade-reality-mapping.md",
+    "internal/rensheng-youji-report-content-brief/SKILL.md",
+    "internal/rensheng-youji-report-content-brief/references/content-brief.md",
+    "internal/rensheng-youji-report-writer/SKILL.md",
+    "internal/rensheng-youji-report-writer/references/portrait-writing.md",
 )
 
 
@@ -75,16 +102,36 @@ def audit(root: Path) -> list[str]:
         if "core_quality_audit" not in (freeze_stage.get("inputs") or []):
             errors.append("Baseline freeze must consume the Core quality audit artifact")
 
-    maintained_texts = (
-        root / "scripts/audit_claim_diversity.py",
-        root / "internal/rensheng-youji-mingli-core/references/post-calibration-report-selection.md",
-        root / "internal/rensheng-youji-mingli-core/references/report-grade-reality-mapping.md",
-    )
-    for path in maintained_texts:
+    status_stage_ids = [stage_id for stage_id, *_ in STATUS_STAGES if stage_id != "method_packet_drafts"]
+    if status_stage_ids != stage_ids:
+        errors.append("pipeline-contract.json and report_pipeline.py disagree on production stage order")
+    raw_status_ids = [stage_id for stage_id, *_ in STATUS_STAGES]
+    try:
+        draft_index = raw_status_ids.index("method_packet_drafts")
+    except ValueError:
+        errors.append("report_pipeline.py must expose the deterministic method-packet draft substage")
+    else:
+        if raw_status_ids[draft_index - 1:draft_index + 2] != ["method_input", "method_packet_drafts", "independent_methods"]:
+            errors.append("method-packet drafts must stay between method input and independent method analysis")
+
+    for relative in MAINTAINED_TEXTS:
+        path = root / relative
         text = path.read_text(encoding="utf-8")
         for stale in STALE_RULES:
             if stale in text:
                 errors.append(f"Stale report-source rule remains in {path.relative_to(root)}: {stale}")
+
+    delivery_text = (root / "skills/rensheng-youji-growth-map/scripts/generate_full_report.py").read_text(encoding="utf-8")
+    renderer_text = (root / "skills/rensheng-youji-growth-map/scripts/render_report.py").read_text(encoding="utf-8")
+    if 'CURRENT_CALIBRATION_SCHEMA = "2.2.0"' not in delivery_text or 'CURRENT_CALIBRATION_SCHEMA = "2.2.0"' not in renderer_text:
+        errors.append("Current delivery and report validation must share calibration schema 2.2.0")
+
+    growth_skill_text = (root / "skills/rensheng-youji-growth-map/SKILL.md").read_text(encoding="utf-8")
+    card_skill_text = (root / "internal/rensheng-youji-free-card-output/SKILL.md").read_text(encoding="utf-8")
+    if "卡片没有独立校准流程" not in growth_skill_text or "命理结构、人生K线语义和原始判断仍来自校准前冻结的同一Core" not in growth_skill_text:
+        errors.append("Growth-map Skill must preserve the embedded-card calibration boundary")
+    if "卡片没有独立的五题校准流程" not in card_skill_text or "不得改写校准前冻结的命理结构、人生K线语义和原始判断" not in card_skill_text:
+        errors.append("Free-card output Skill must preserve the standalone and embedded-card calibration boundary")
     return errors
 
 

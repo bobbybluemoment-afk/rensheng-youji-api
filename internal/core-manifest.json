@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.19.1",
+  "version": "2.19.2",
   "visibility": "internal",
   "stages": [
     {
@@ -48,5 +48,5 @@
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "2.19.1将报告来源必进候选统一为唯一机器契约：有可用判断时1—2条，无判断时0条，当前阶段等稀疏来源允许1条。判断多样性与来源审计移到Baseline冻结之前，生成绑定Core哈希的质量凭证；冻结脚本强制验证该凭证，避免冻结后又要求返修Core的死锁。新增上下游报告来源契约审计，同时检查生成器、Schema、校验器、审计器、参考文档和阶段顺序。Core仍为0.14.0，报告Schema仍为2.13.0。"
+  "notes": "2.19.2在2.19.1机器契约基础上收口全部正式上下文：多样性、段数、篇幅、逐段来源、领域机制和必进判断均按delivery_mode动态执行；报告内卡片继续继承校准状态，但命理结构、人生K线和原始判断来自校准前冻结Core。报告来源审计扩展到主Skill、Core与写作必读参考，并核对流水线状态顺序；当前正式报告只接受2.2.0校准题。Core仍为0.14.0，报告Schema仍为2.13.0。"
 }

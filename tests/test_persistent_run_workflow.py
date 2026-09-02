@@ -19,7 +19,7 @@ class PersistentRunWorkflowTest(unittest.TestCase):
             fake_root = Path(temp_dir)
             (fake_root / "internal").mkdir()
             manifest = {
-                "version": "2.19.1",
+                "version": "2.19.2",
                 "report_pipeline": {"core_version": "0.14.0"},
             }
             manifest_path = fake_root / "internal/core-manifest.json"

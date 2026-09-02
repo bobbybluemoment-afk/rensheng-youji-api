@@ -17,6 +17,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 from report_source_contract import BASE_COVERAGE, delivery_rule, report_total_cjk_bounds, required_coverage  # noqa: E402
 
 DIMENSION_IDS = ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]
+CURRENT_CALIBRATION_SCHEMA = "2.2.0"
 DIMENSION_PARAGRAPHS = {
     "self_growth": ["behavior_and_decision", "formation_and_experience", "recurring_challenge_and_change", "response"],
     "love_partner": ["attraction_and_needs", "interaction_and_experience", "conflict_and_change", "response"],
@@ -605,6 +606,8 @@ def _validate_v27(data: dict[str, Any]) -> None:
         errors.append("关注方向只能进入当前问题、相关年度和行动建议")
     calibration = data.get("calibration", {})
     responses = calibration.get("responses")
+    if data.get("schema_version") == "2.13.0" and calibration.get("question_schema_version") != CURRENT_CALIBRATION_SCHEMA:
+        errors.append("2.13.0报告必须记录question_schema_version=2.2.0")
     if data.get("document_mode") == "full_calibrated" and (not isinstance(responses, list) or len(responses) != 5):
         errors.append("正式报告必须保留五道内部校准响应供交付核对")
     editorial = data.get("editorial_review", {})

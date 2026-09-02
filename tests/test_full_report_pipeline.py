@@ -182,7 +182,7 @@ def _report() -> dict:
         "cross_output_consistency": {"relationship_opportunity_years": [2026, 2032, 2037]},
         "chart": {"pillars": ["甲戌", "癸酉", "丁卯", "丁未"], "luck_start": "1998-01-01 00:00:00", "current_luck_cycle": "阶段示例（2024—2033）", "time_basis": "普通钟表时间输入，已进行真太阳时校正", "uncertainty": "不接近时辰边界", "formal_report_allowed": True},
         "calibration": {
-            "question_schema_version": "2.1.0",
+            "question_schema_version": "2.2.0",
             "template_version": "1.0.0",
             "summary": "五题均已作答，其中四题形成较清楚的现实路径，一题仍不确定。",
             "birth_time_status": "稳定",
@@ -318,6 +318,23 @@ class FullReportPipelineTest(unittest.TestCase):
         self.assertIn("用户可以只回复五个字母，忽略全部可选补充", skill_text)
         self.assertIn("不得再次追问、降低交付规格", skill_text)
         self.assertNotIn("不知道时明确写“不知道”", skill_text)
+
+    def test_current_report_rejects_legacy_calibration_schema(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rensheng-youji-calibration-version-") as temp_dir:
+            source = Path(temp_dir) / "report.json"
+            report = _report()
+            report["schema_version"] = "2.13.0"
+            report["calibration"]["question_schema_version"] = "2.1.0"
+            source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("question_schema_version=2.2.0", result.stdout)
 
     def test_boundary_preflight_blocks_formal_report(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-preflight-") as temp_dir:
@@ -652,7 +669,7 @@ class FullReportPipelineTest(unittest.TestCase):
             report["source"]["calibration_status"] = "skipped"
             report["title"] = "人生有迹｜初步分析"
             report["chart"]["formal_report_allowed"] = False
-            report["calibration"] = {"question_schema_version": "2.1.0", "template_version": "1.0.0", "summary": "用户跳过现实校准。", "birth_time_status": "待核对", "responses": [], "confirmed": [], "partial": [], "rejected": [], "uncertain": []}
+            report["calibration"] = {"question_schema_version": "2.2.0", "template_version": "1.0.0", "summary": "用户跳过现实校准。", "birth_time_status": "待核对", "responses": [], "confirmed": [], "partial": [], "rejected": [], "uncertain": []}
             report_json = work / "report.json"
             report_json.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
             free_card = _assemble_free_card(work)

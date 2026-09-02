@@ -104,7 +104,7 @@
 
 - `paragraphs`：按 `delivery_mode` 使用正常2—4段、缩短2—3段、最小1—2段或证据缺口1段的统一篇幅规则；
 - `source_claim_ids`：正常至少6个、缩短至少4个、最小至少2个；证据缺口允许0—1个；
-- `paragraph_claim_map`：每个自然段至少映射两个实体化Core判断；
+- `paragraph_claim_map`：正常和缩短模式每段至少映射两个实体化Core判断，最小模式每段至少一个，证据缺口模式允许为空；
 - `claim_realization_map`：逐条登记本区必须兑现判断的编号、段落编号和与Core完全一致的 `exact_span`；
 - `emphasis_spans`：0—2条完整重点判断的段落位置、精确文本与Core判断来源；
 - `coverage`：至少覆盖性格、形成、家庭教育、事业财富、关系和当前阶段。
@@ -129,11 +129,11 @@
 - `delivery_mode`：`normal`、`shortened`、`minimal` 或 `evidence_gap`；
 - `paragraphs`：正常模式2—4段、500—700字；缩短模式2—3段、320—500字；最小模式1—2段、180—320字；证据缺口模式1段、60—180字；
 - `source_claim_ids`：正常至少6个、缩短至少4个、最小至少2个；证据缺口允许0—1个；
-- `paragraph_claim_map`：与自然段逐项对应，每段至少两个判断；
+- `paragraph_claim_map`：与自然段逐项对应；正常和缩短模式每段至少两个判断，最小模式每段至少一个，证据缺口模式允许为空；
 - `claim_realization_map`：逐条证明 `mandatory_claim_ids` 对应的白话判断原句确实出现在正文；
 - `domain_specific_claim_ids`：正常至少4个，缩短至少3个，最小至少1个；
 - `mainline_claim_ids`：最多占本节判断的30%；
-- `domain_mechanisms`：至少两个领域自身机制；
+- `domain_mechanisms`：正常和缩短模式至少两个领域自身机制，最小模式至少一个，证据缺口模式允许为空；
 - `survives_without_mainline`：正常模式必须为 `true`，降级模式保留实际结果；
 - `emphasis_spans`：0—1条由Core重点判断支持的完整句子；没有合适重点时允许为空；
 - `coverage`：记录实际覆盖的特征、行为、形成、挑战、当前变化与应对；
@@ -191,7 +191,7 @@
 ## 10. 固定检查
 
 - 报告、卡片、Core、事实提纲和初稿来源一致；
-- 完整人生主线与六领域各500—700字；
+- 完整人生主线与六领域按 `delivery_mode` 使用动态篇幅：正常500—700字、缩短320—500字、最小180—320字、证据缺口60—180字；
 - 六个领域为自然段，不使用固定小标题；
 - 具体组织、行业、岗位、收入和对象特征来自Core开放候选或用户事实；
 - 不把候选库全部列进正文；

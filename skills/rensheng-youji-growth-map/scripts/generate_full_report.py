@@ -14,6 +14,7 @@ from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = SKILL_ROOT.parents[1]
+CURRENT_CALIBRATION_SCHEMA = "2.2.0"
 
 
 def run(command: list[str]) -> dict:
@@ -133,8 +134,12 @@ def main() -> int:
                     "--analysis", str(args.analysis), "--brief", str(args.content_brief),
                     "--draft", str(args.report_draft), "--report", str(args.report),
                 ])
-        if calibration_questions.get("schema_version") not in {"2.1.0", "2.2.0"} or calibration_questions.get("template_version") != "1.0.0":
-            raise ValueError("交付必须使用2.1.0或2.2.0固定题型校准结果")
+        question_schema = calibration_questions.get("schema_version")
+        if report.get("schema_version") == "2.13.0":
+            if question_schema != CURRENT_CALIBRATION_SCHEMA or calibration_questions.get("template_version") != "1.0.0":
+                raise ValueError("2.13.0正式交付必须使用2.2.0固定题型校准结果")
+        elif question_schema not in {"2.1.0", CURRENT_CALIBRATION_SCHEMA} or calibration_questions.get("template_version") != "1.0.0":
+            raise ValueError("旧版兼容交付必须使用2.1.0或2.2.0固定题型校准结果")
         questions = calibration_questions.get("questions")
         responses = report.get("calibration", {}).get("responses", [])
         if not isinstance(questions, list) or len(questions) != 5:

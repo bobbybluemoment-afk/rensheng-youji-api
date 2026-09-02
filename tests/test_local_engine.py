@@ -4,10 +4,11 @@ from collections import Counter
 from datetime import datetime, timedelta
 import random
 import sys
+import tempfile
+import unittest
 from pathlib import Path
 
 from PIL import Image
-import pytest
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -19,7 +20,7 @@ from rensheng_youji.solar_time import resolve_location  # noqa: E402
 from adapter_from_api_profile import boundary_flags  # noqa: E402
 
 
-def test_jiaxu_known_case(tmp_path):
+def _check_jiaxu_known_case(tmp_path):
     profile = build_profile(
         name="",
         birth="1999-01-22 17:45",
@@ -34,10 +35,11 @@ def test_jiaxu_known_case(tmp_path):
     assert timeline[5]["year"] == 2026
     assert all(item["high"] - item["low"] <= 22 for item in timeline)
     output = render_profile(profile, tmp_path / "card.png")
-    assert Image.open(output).size == (1242, 1660)
+    with Image.open(output) as image:
+        assert image.size == (1242, 1660)
 
 
-def test_jimao_beijing_case():
+def _check_jimao_beijing_case():
     profile = build_profile(
         name="",
         birth="1999-05-27 14:08",
@@ -52,17 +54,17 @@ def test_jimao_beijing_case():
     }
 
 
-def test_china_county_location_resolution():
+def _check_china_county_location_resolution(test_case):
     location = resolve_location("中国湖北宜昌夷陵区", None, None)
     assert location.timezone == "Asia/Shanghai"
     assert 111.2 < location.longitude < 111.5
     assert location.resolved_name == "湖北省·宜昌市·夷陵区"
 
-    with pytest.raises(ValueError, match="存在重名"):
+    with test_case.assertRaisesRegex(ValueError, "存在重名"):
         resolve_location("朝阳区", None, None)
 
 
-def test_report_boundary_flags_cover_adjacent_hour_day_and_solar_term():
+def _check_report_boundary_flags_cover_adjacent_hour_day_and_solar_term():
     near_next_hour = {"time": {"true_solar_time": "1994-10-02 12:59", "correction_minutes": 0}, "bazi": {"nearest_solar_terms": []}}
     assert "hour_branch_boundary" in boundary_flags(near_next_hour)
 
@@ -78,7 +80,7 @@ def test_report_boundary_flags_cover_adjacent_hour_day_and_solar_term():
     assert "solar_term_boundary" in boundary_flags(near_solar_term)
 
 
-def test_time_pillar_changes_core_landing_and_main_task():
+def _check_time_pillar_changes_core_landing_and_main_task():
     profiles = [
         build_profile(
             name="",
@@ -96,7 +98,7 @@ def test_time_pillar_changes_core_landing_and_main_task():
     assert len({item["life_kline"]["current_issue"]["headline"] for item in profiles}) >= 3
 
 
-def test_current_issue_batch_is_not_age_template():
+def _check_current_issue_batch_is_not_age_template():
     random.seed(20260811)
     start = datetime(1986, 1, 1)
     domains: Counter[str] = Counter()
@@ -122,3 +124,28 @@ def test_current_issue_batch_is_not_age_template():
     assert len(headlines) >= 24
     assert max(domains.values()) / 120 < 0.45
     assert max(headlines.values()) / 120 < 0.15
+
+
+class LocalEngineTest(unittest.TestCase):
+    def test_jiaxu_known_case(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _check_jiaxu_known_case(Path(temp_dir))
+
+    def test_jimao_beijing_case(self):
+        _check_jimao_beijing_case()
+
+    def test_china_county_location_resolution(self):
+        _check_china_county_location_resolution(self)
+
+    def test_report_boundary_flags_cover_adjacent_hour_day_and_solar_term(self):
+        _check_report_boundary_flags_cover_adjacent_hour_day_and_solar_term()
+
+    def test_time_pillar_changes_core_landing_and_main_task(self):
+        _check_time_pillar_changes_core_landing_and_main_task()
+
+    def test_current_issue_batch_is_not_age_template(self):
+        _check_current_issue_batch_is_not_age_template()
+
+
+if __name__ == "__main__":
+    unittest.main()
