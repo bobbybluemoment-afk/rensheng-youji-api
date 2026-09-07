@@ -8,7 +8,7 @@ import json
 from typing import Any
 
 
-CORE_VERSION = "0.14.0"
+CORE_VERSION = "0.15.0"
 SYNTHESIS_INPUT_SCHEMA_VERSION = "1.0.0"
 PRIMARY_METHODS = {
     "pattern_structure",
@@ -29,7 +29,7 @@ REPORT_DOMAINS = {
     "body_emotion",
     "family_growth",
 }
-ALL_REALITY_DOMAINS = REPORT_DOMAINS | {"learning", "mobility"}
+ALL_REALITY_DOMAINS = REPORT_DOMAINS
 LOVE_PARTNER_ANCHORS = {
     "ten_god_dynamics", "position_relationship", "stem_branch_dynamics",
     "blind_school", "timing_continuity",

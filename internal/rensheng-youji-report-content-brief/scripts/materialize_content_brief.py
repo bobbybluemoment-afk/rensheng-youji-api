@@ -17,7 +17,7 @@ def canonical_digest(value: Any) -> str:
 
 def snapshot(claim: dict[str, Any]) -> dict[str, Any]:
     base_keys = ("claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family", "claim", "plain_claim", "new_information", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin")
-    trace_keys = ("synthesis_ids", "method_hypothesis_ids", "report_role", "coverage_tags", "applicable_conditions", "reality_confirmation")
+    trace_keys = ("synthesis_ids", "method_hypothesis_ids", "claim_class", "report_role", "coverage_tags", "applicable_conditions", "reality_confirmation")
     keys = base_keys + tuple(key for key in trace_keys if key in claim)
     body = {key: claim[key] for key in keys}
     return {**body, "source_sha256": canonical_digest(body)}
@@ -26,6 +26,39 @@ def snapshot(claim: dict[str, Any]) -> dict[str, Any]:
 def exact_snapshot(value: dict[str, Any]) -> dict[str, Any]:
     body = json.loads(json.dumps(value, ensure_ascii=False))
     return {"value": body, "source_sha256": canonical_digest(body)}
+
+
+TITLES = {
+    "self_growth": "性格与内在成长", "love_partner": "恋爱与伴侣", "career": "事业发展",
+    "finance_resources": "财富与资源", "body_emotion": "身体与情绪", "family_growth": "家庭与成长环境",
+}
+
+
+def deterministic_selection(analysis: dict[str, Any], resolved: dict[str, Any], focus: str = "") -> dict[str, Any]:
+    """Create the factual writing plan without an AI content-selection stage."""
+    ledger = {item["claim_id"]: item for item in analysis.get("report_claim_ledger") or []}
+
+    def section(source: dict[str, Any], section_id: str, title: str) -> dict[str, Any]:
+        ids = source.get("claim_ids") or []
+        claims = [ledger[item] for item in ids if item in ledger]
+        return {
+            "id": section_id, "title": title,
+            "claim_ids": ids,
+            "allowed_examples": list(dict.fromkeys(example for item in claims for example in item.get("allowed_examples") or [])),
+            "prohibited_claims": list(dict.fromkeys(limit for item in claims for limit in item.get("unsupported_extensions") or [])),
+        }
+
+    dimensions = [section(resolved["dimensions"][domain], domain, title) for domain, title in TITLES.items()]
+    return {
+        "schema_version": "1.6.0",
+        "brief_id": "brief-" + canonical_digest({"analysis": analysis["analysis_meta"]["analysis_id"], "resolved": resolved["resolved_sha256"], "focus": focus})[:16],
+        "source": {},
+        "focus_scope": {"user_focus": focus, "protected_sections": ["life_overview", "dimensions"], "focused_sections": ["current_question"]},
+        "life_overview": section(resolved["life_overview"], "life_overview", "你带来的能力与走过的路"),
+        "dimensions": dimensions,
+        "current_question": section(resolved["current_question"], "current_question", "当前问题回应"),
+        "calibration_internal": {},
+    }
 
 
 def enrich_section(section: dict[str, Any], analysis: dict[str, Any], ledger: dict[str, dict[str, Any]]) -> None:
@@ -93,16 +126,16 @@ def enrich_section(section: dict[str, Any], analysis: dict[str, Any], ledger: di
 def materialize(selection: dict[str, Any], analysis: dict[str, Any], resolved: dict[str, Any] | None = None) -> dict[str, Any]:
     result = json.loads(json.dumps(selection, ensure_ascii=False))
     meta = analysis["analysis_meta"]
-    is_v09 = meta.get("core_version") in {"0.9.0", "0.10.0", "0.11.0", "0.12.0", "0.13.0", "0.14.0"}
+    is_v09 = meta.get("core_version") in {"0.9.0", "0.10.0", "0.11.0", "0.12.0", "0.13.0", "0.14.0", "0.15.0"}
     is_v081 = meta.get("core_version") == "0.8.1"
     is_v08 = meta.get("core_version") == "0.8.0"
-    result["schema_version"] = "1.5.0" if is_v09 else "1.4.0" if is_v081 else "1.3.0" if is_v08 else "1.2.0"
+    result["schema_version"] = "1.6.0" if meta.get("core_version") == "0.15.0" else "1.5.0" if is_v09 else "1.4.0" if is_v081 else "1.3.0" if is_v08 else "1.2.0"
     result.setdefault("source", {}).update({"analysis_id": meta["analysis_id"], "core_version": meta["core_version"], "analysis_sha256": canonical_digest(analysis)})
     ledger = {item["claim_id"]: item for item in analysis["report_claim_ledger"]}
     sections = [result["life_overview"], *result["dimensions"], result["current_question"]]
     if is_v09:
         if not isinstance(resolved, dict):
-            raise ValueError("core_version=0.9.0—0.14.0 必须先提供校准后确定性选材文件")
+            raise ValueError("core_version=0.9.0—0.15.0 必须先提供校准后确定性选材文件")
         resolved_source = resolved.get("source") or {}
         if resolved_source.get("analysis_id") != meta.get("analysis_id") or resolved_source.get("analysis_sha256") != canonical_digest(analysis):
             raise ValueError("校准后选材文件与当前Core不一致")
@@ -141,17 +174,22 @@ def materialize(selection: dict[str, Any], analysis: dict[str, Any], resolved: d
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("selection", type=Path)
+    parser.add_argument("selection", nargs="?", type=Path, help="旧版AI选材文件；0.15.0可省略")
     parser.add_argument("--analysis", type=Path, required=True)
     parser.add_argument("--resolved-sources", type=Path)
+    parser.add_argument("--focus", default="")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
-        result = materialize(
-            json.loads(args.selection.read_text(encoding="utf-8")),
-            json.loads(args.analysis.read_text(encoding="utf-8")),
-            json.loads(args.resolved_sources.read_text(encoding="utf-8")) if args.resolved_sources else None,
-        )
+        analysis = json.loads(args.analysis.read_text(encoding="utf-8"))
+        resolved = json.loads(args.resolved_sources.read_text(encoding="utf-8")) if args.resolved_sources else None
+        if args.selection:
+            selection = json.loads(args.selection.read_text(encoding="utf-8"))
+        elif analysis.get("analysis_meta", {}).get("core_version") == "0.15.0" and resolved:
+            selection = deterministic_selection(analysis, resolved, args.focus)
+        else:
+            raise ValueError("当前版本缺少可用的确定性选材来源")
+        result = materialize(selection, analysis, resolved)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:

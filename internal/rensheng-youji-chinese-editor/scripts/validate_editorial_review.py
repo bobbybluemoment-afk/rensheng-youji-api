@@ -43,11 +43,14 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
     is_v21 = review.get("version") == "2.1.0"
     is_v22 = review.get("version") == "2.2.0"
     is_v23 = review.get("version") == "2.3.0"
-    is_v24 = review.get("version") == "2.4.0"
-    if review.get("version") not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.4.0"}:
-        errors.append("编辑记录版本必须为2.0.0—2.4.0中的受支持版本")
+    is_v25 = review.get("version") == "2.5.0"
+    is_v24 = review.get("version") in {"2.4.0", "2.5.0"}
+    if review.get("version") not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.4.0", "2.5.0"}:
+        errors.append("编辑记录版本必须为2.0.0—2.5.0中的受支持版本")
     if review.get("draft_id") != draft.get("draft_id") or review.get("final_report_id") != report.get("report_id"):
         errors.append("编辑记录与初稿或终稿来源不一致")
+    if is_v25 and review.get("semantic_final_sha256") != report.get("source_artifacts", {}).get("report_semantic_sha256"):
+        errors.append("编辑记录与终稿使用的阶段、逐年和行动文字来源不一致")
     draft_map, final_map = draft_sections(draft), report_sections(report)
     records = review.get("sections")
     if not isinstance(records, list) or set(item.get("section_id") for item in records if isinstance(item, dict)) != set(draft_map):
@@ -99,7 +102,7 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
             changed += 1
         if not isinstance(record.get("changes"), list):
             errors.append(f"{section_id} 缺少具体编辑记录")
-    if changed < 3:
+    if changed < 3 and not is_v25:
         errors.append("独立中文编辑必须对至少三个内容区产生实际修改")
     visible = json.dumps([
         {"title": section.get("title"), "paragraphs": section.get("paragraphs")}
@@ -135,7 +138,7 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
     if (is_v21 or is_v22 or is_v23 or is_v24) and duplicates:
         errors.append("终稿跨章节重复完整句子，说明仍在套用模板")
     checks = review.get("checks", {})
-    required = {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked", "emphasis_preserved", "domain_independence_checked", "mandatory_claims_preserved", "degraded_sections_preserved"} if is_v24 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked", "emphasis_preserved", "domain_independence_checked", "mandatory_claims_preserved"} if is_v23 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked", "emphasis_preserved", "domain_independence_checked"} if is_v22 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked"} if is_v21 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden"}
+    required = {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked", "emphasis_preserved", "domain_independence_checked", "mandatory_claims_preserved", "degraded_sections_preserved", "only_flagged_paragraphs_changed"} if is_v25 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked", "emphasis_preserved", "domain_independence_checked", "mandatory_claims_preserved", "degraded_sections_preserved"} if is_v24 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked", "emphasis_preserved", "domain_independence_checked", "mandatory_claims_preserved"} if is_v23 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked", "emphasis_preserved", "domain_independence_checked"} if is_v22 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden", "term_context_checked", "cross_section_repetition_checked", "calibration_dominance_checked"} if is_v21 else {"facts_preserved", "no_new_claims", "natural_chinese", "no_template_repetition", "calibration_hidden"}
     if set(checks) != required or not all(checks.values()):
         errors.append("编辑记录必须完成对应版本的全部检查，并由实际文本与来源校验支持")
     return errors

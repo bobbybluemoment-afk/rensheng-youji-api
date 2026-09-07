@@ -1,13 +1,13 @@
 ---
 name: rensheng-youji-report-content-brief
-description: 人生有迹内部报告事实整理层。接收已冻结并以校准增量合成的0.14.0 Core母稿和确定性校准后选材，从六领域独立判断、方法综合、人物形成链与领域联动链中实体化证据、必须兑现的白话判断和校准变化，生成不含用户文章的report-content-brief.json。用于完整报告写作前锁定事实与判断；不负责排盘、重新推命、自由选择报告结论、写正文或渲染PDF。
+description: 人生有迹内部报告事实整理层。接收已冻结并以校准增量合成的0.15.0 Core母稿和确定性校准后选材，从六领域独立判断、方法综合、人物形成链与领域联动链中实体化证据、必须兑现的白话判断和校准变化，确定性生成不含用户文章的report-content-brief.json。用于完整报告写作前锁定事实与判断；不负责排盘、重新推命、AI选材、写正文或渲染PDF。
 ---
 
 # 报告事实整理层
 
 ## 工作顺序
 
-1. 读取校准后的 Core 母稿，确认 `core_version=0.14.0`、`method_execution_audit.delivery_decision` 不是 `preliminary_only`，并确认它已通过Baseline冻结校验。
+1. 读取校准后的 Core 母稿，确认 `core_version=0.15.0`、`method_execution_audit.delivery_decision` 不是 `preliminary_only`，并确认它已通过Baseline冻结校验。
 2. 读取 [content-brief.md](references/content-brief.md)。
 3. 优先选择 `match`，同时保留能够共存的 `supported_unselected`、明确场景的 `conditional`、降低优先的 `weakened`，以及确有多方法支持的 `unverified`；禁止使用 `reject`。
 4. 分别为完整人生主线、六个现实领域和当前问题准备材料。
@@ -20,18 +20,17 @@ python scripts/run_in_env.py scripts/resolve_report_sources.py \
   --output work/resolved-report-sources.json
 ```
 
-7. 生成 `report-content-selection.json`，只补充允许例子和禁止外推；正式判断名单、覆盖项、重点句、必进句和降级模式必须来自 `resolved-report-sources.json`。
-8. 用确定性脚本把每条判断、实体证据、人物形成链、领域联动链、盲派现实取象、根苗花果领域生命周期、候选关系、校准变化和哈希写入事实提纲：
+7. 直接用确定性脚本根据 `resolved-report-sources.json` 生成选材骨架，并把每条判断、实体证据、人物形成链、领域联动链、候选关系、校准变化和哈希写入事实提纲。不再生成或读取AI选材文件：
 
 ```bash
 python scripts/run_in_env.py internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py \
-  work/report-content-selection.json \
   --analysis work/analysis-output-calibrated.json \
   --resolved-sources work/resolved-report-sources.json \
+  --focus "事业发展" \
   --output work/report-content-brief.json
 ```
 
-9. 运行：
+8. 运行：
 
 ```bash
 python scripts/run_in_env.py internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py \

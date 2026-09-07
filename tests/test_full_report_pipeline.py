@@ -159,7 +159,7 @@ def _report() -> dict:
             "domain": display["domain"],
             "choice": choice,
             "selected_text": choice_text,
-            "selected_value": audit["choice_meanings"][choice],
+            "selected_value": choice.lower(),
             "candidate_updates": [] if choice == "D" else audit["candidate_effects"][choice],
             "user_note": "",
         })
@@ -182,8 +182,8 @@ def _report() -> dict:
         "cross_output_consistency": {"relationship_opportunity_years": [2026, 2032, 2037]},
         "chart": {"pillars": ["甲戌", "癸酉", "丁卯", "丁未"], "luck_start": "1998-01-01 00:00:00", "current_luck_cycle": "阶段示例（2024—2033）", "time_basis": "普通钟表时间输入，已进行真太阳时校正", "uncertainty": "不接近时辰边界", "formal_report_allowed": True},
         "calibration": {
-            "question_schema_version": "2.2.0",
-            "template_version": "1.0.0",
+            "question_schema_version": "3.0.0",
+            "template_version": "2.0.0",
             "summary": "五题均已作答，其中四题形成较清楚的现实路径，一题仍不确定。",
             "birth_time_status": "稳定",
             "responses": responses,
@@ -228,7 +228,7 @@ def _report() -> dict:
 
 
 def _calibration_questions() -> dict:
-    return build_calibration_questions(_calibration_plan(), _calibration_analysis())
+    return build_calibration_questions(_calibration_analysis(), "事业发展")
 
 
 def _calibration_analysis() -> dict:
@@ -238,19 +238,24 @@ def _calibration_analysis() -> dict:
         ("c2", "family_growth", "objective_state", "近几年", ["family_system.role_position"]),
         ("c3", "love_partner", "stable_pattern", "长期重复", ["partner_profiles.attraction"]),
         ("c4", "finance_resources", "objective_state", "过去一年", ["reality_domains.wealth"]),
-        ("c5", "mobility", "timed_event", "过去五年", ["annual_theme_activation"]),
+        ("c5", "body_emotion", "timed_event", "过去五年", ["annual_theme_activation"]),
     ]
-    for candidate_id, domain, kind, time_scope, targets in specs:
+    claims = []
+    for index, (candidate_id, domain, kind, time_scope, targets) in enumerate(specs, 1):
+        claim_id = f"claim_{candidate_id}"
+        claims.append({"claim_id": claim_id, "claim_class": "calibration_pending" if index <= 2 else "conditional_judgment"})
         candidates.append({
             "candidate_id": candidate_id, "domain": domain, "candidate_kind": kind,
+            "reality_dimension": f"axis_{index}", "label": f"现实核对点{index}",
             "time_scope": time_scope, "calibration_targets": targets,
-            "statement": "这是一个需要通过固定题型核对的现实候选。",
+            "statement": f"第{index}种具体表现更接近我的实际经历。",
             "observable_examples": ["现实中有明确行为可以核对", "能够说明候选是否符合"],
-            "alternative_statement": "也可能由另一种现实路径形成。",
+            "alternative_statement": f"第{index}种表现并不常见，我更接近相反做法。",
             "source_layers": ["annual", "annual_theme_activation"] if kind == "timed_event" else ["chart", "cross_method"],
-            "confidence": "to_verify", "validation_question": "哪一项更接近实际？", "status": "unverified",
+            "related_claim_ids": [claim_id],
+            "confidence": "to_verify", "validation_question": f"关于第{index}个现实侧面，哪一种描述更接近你？", "status": "unverified",
         })
-    return {"analysis_meta": {"core_version": "0.4.0"}, "reality_candidate_pool": candidates}
+    return {"analysis_meta": {"analysis_id": "fixture-calibration-v3", "core_version": "0.15.0"}, "reality_candidate_pool": candidates, "report_claim_ledger": claims}
 
 
 def _calibration_plan() -> dict:
@@ -280,7 +285,7 @@ def _calibration_plan() -> dict:
 
 
 def _write_calibration_files(work: Path) -> tuple[Path, Path, Path]:
-    analysis, plan, questions = work / "analysis-initial.json", work / "calibration-plan.json", work / "calibration-questions.json"
+    analysis, plan, questions = work / "analysis-initial.json", work / "unused-calibration-plan.json", work / "calibration-questions.json"
     analysis.write_text(json.dumps(_calibration_analysis(), ensure_ascii=False, indent=2), encoding="utf-8")
     plan.write_text(json.dumps(_calibration_plan(), ensure_ascii=False, indent=2), encoding="utf-8")
     questions.write_text(json.dumps(_calibration_questions(), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -323,8 +328,7 @@ class FullReportPipelineTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-calibration-version-") as temp_dir:
             source = Path(temp_dir) / "report.json"
             report = _report()
-            report["schema_version"] = "2.13.0"
-            report["calibration"]["question_schema_version"] = "2.1.0"
+            report["calibration"]["question_schema_version"] = "1.0.0"
             source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
             result = subprocess.run(
                 [sys.executable, str(REPORT_RENDERER), str(source), "--out", str(Path(temp_dir) / "report.md")],
@@ -334,7 +338,7 @@ class FullReportPipelineTest(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(result.returncode, 1)
-            self.assertIn("question_schema_version=2.2.0", result.stdout)
+            self.assertIn("受支持的确定性校准链路", result.stdout)
 
     def test_boundary_preflight_blocks_formal_report(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-preflight-") as temp_dir:
@@ -358,18 +362,19 @@ class FullReportPipelineTest(unittest.TestCase):
             self.assertNotIn("c01", text)
             self.assertNotIn("盘面", text)
             self.assertNotIn("root_seed", text)
-            self.assertIn("A. 先查资料、列条件和步骤", text)
-            self.assertIn("A. 固定工资、津贴以及单位发放的年度绩效", text)
+            self.assertIn("A. 第1种具体表现更接近我的实际经历。", text)
+            self.assertIn("D. 自己描述", text)
 
-    def test_calibration_builder_uses_fixed_templates(self) -> None:
+    def test_calibration_builder_is_deterministic_and_personal(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-calibration-builder-") as temp_dir:
             work = Path(temp_dir)
-            analysis, plan, _ = _write_calibration_files(work)
+            analysis, _, _ = _write_calibration_files(work)
             output = work / "built-questions.json"
-            _run(str(CALIBRATION_BUILDER), "--plan", str(plan), "--analysis", str(analysis), "--output", str(output))
+            _run(str(CALIBRATION_BUILDER), "--analysis", str(analysis), "--focus", "事业发展", "--output", str(output))
             data = json.loads(output.read_text(encoding="utf-8"))
-            self.assertEqual(data["schema_version"], "2.2.0")
-            self.assertEqual(data["questions"][3]["display"]["prompt"], "过去一年，你实际到账的收入主要来自哪一类？")
+            self.assertEqual(data["schema_version"], "3.0.0")
+            self.assertEqual(data["template_version"], "2.0.0")
+            self.assertEqual(len(data["questions"]), 5)
 
     def test_visible_evidence_leak_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-calibration-bad-") as temp_dir:
@@ -379,8 +384,8 @@ class FullReportPipelineTest(unittest.TestCase):
             data["questions"][0]["display"]["prompt"] = "日主身强且盘面证据明确时，你通常怎样处理重要工作？"
             source.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
             result = subprocess.run([sys.executable, str(CALIBRATION_VALIDATOR), str(source), "--analysis", str(analysis)], cwd=ROOT, text=True, capture_output=True, check=False)
-            self.assertEqual(result.returncode, 3)
-            self.assertIn("泄露内部术语", result.stdout)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("泄露内部信息", result.stdout)
 
     def test_mixed_axis_user_sample_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-mixed-axis-") as temp_dir:
@@ -401,36 +406,30 @@ class FullReportPipelineTest(unittest.TestCase):
                 }
             source.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
             result = subprocess.run([sys.executable, str(CALIBRATION_VALIDATOR), str(source), "--analysis", str(analysis)], cwd=ROOT, text=True, capture_output=True, check=False)
-            self.assertEqual(result.returncode, 3)
-            self.assertIn("禁止模型自行改写题干或选项", result.stdout)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("没有由冻结Core候选确定性生成", result.stdout)
 
-    def test_three_choices_must_change_candidate_differently(self) -> None:
+    def test_choice_effects_are_locked_by_validator(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-same-effects-") as temp_dir:
             work = Path(temp_dir)
-            analysis, plan, _ = _write_calibration_files(work)
-            data = _calibration_plan()
-            data["questions"][0]["candidate_effects"] = {
-                key: [{"candidate_id": "c1", "status": "match"}] for key in "ABC"
-            }
-            plan.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-            result = subprocess.run([sys.executable, str(CALIBRATION_BUILDER), "--plan", str(plan), "--analysis", str(analysis), "--output", str(work / "questions.json")], cwd=ROOT, text=True, capture_output=True, check=False)
-            self.assertEqual(result.returncode, 2)
-            self.assertIn("校准结果必须不同", result.stdout)
+            analysis, _, questions = _write_calibration_files(work)
+            data = _calibration_questions()
+            data["questions"][0]["audit"]["candidate_effects"]["B"] = [{"candidate_id": "c1", "status": "match"}]
+            questions.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run([sys.executable, str(CALIBRATION_VALIDATOR), str(questions), "--analysis", str(analysis)], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("答案影响不是确定性映射", result.stdout)
 
     def test_five_questions_require_timed_event(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-no-timed-") as temp_dir:
             work = Path(temp_dir)
             analysis_data = _calibration_analysis()
-            analysis_data["reality_candidate_pool"][-1]["domain"] = "body_emotion"
             analysis_data["reality_candidate_pool"][-1]["candidate_kind"] = "stable_pattern"
-            plan_data = _calibration_plan()
-            plan_data["questions"][-1]["template_id"] = "wellbeing.first_stress_response"
             analysis, plan, output = work / "analysis.json", work / "plan.json", work / "questions.json"
             analysis.write_text(json.dumps(analysis_data, ensure_ascii=False), encoding="utf-8")
-            plan.write_text(json.dumps(plan_data, ensure_ascii=False), encoding="utf-8")
-            result = subprocess.run([sys.executable, str(CALIBRATION_BUILDER), "--plan", str(plan), "--analysis", str(analysis), "--output", str(output)], cwd=ROOT, text=True, capture_output=True, check=False)
+            result = subprocess.run([sys.executable, str(CALIBRATION_BUILDER), "--analysis", str(analysis), "--output", str(output)], cwd=ROOT, text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 2)
-            self.assertIn("至少包含一道已发生事件", result.stdout)
+            self.assertIn("时间题覆盖", result.stdout)
 
     def test_new_card_and_fixed_ten_page_pdf(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-report-") as temp_dir:
@@ -540,8 +539,8 @@ class FullReportPipelineTest(unittest.TestCase):
                 data["questions"][index]["display"]["domain"] = domain
             source.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
             result = subprocess.run([sys.executable, str(CALIBRATION_VALIDATOR), str(source), "--analysis", str(analysis)], cwd=ROOT, text=True, capture_output=True, check=False)
-            self.assertEqual(result.returncode, 3)
-            self.assertIn("至少覆盖四个生活领域", result.stdout)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("没有由冻结Core候选确定性生成", result.stdout)
 
     def test_past_year_cannot_appear_in_current_actions(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-past-action-") as temp_dir:
@@ -669,7 +668,7 @@ class FullReportPipelineTest(unittest.TestCase):
             report["source"]["calibration_status"] = "skipped"
             report["title"] = "人生有迹｜初步分析"
             report["chart"]["formal_report_allowed"] = False
-            report["calibration"] = {"question_schema_version": "2.2.0", "template_version": "1.0.0", "summary": "用户跳过现实校准。", "birth_time_status": "待核对", "responses": [], "confirmed": [], "partial": [], "rejected": [], "uncertain": []}
+            report["calibration"] = {"question_schema_version": "3.0.0", "template_version": "2.0.0", "summary": "用户跳过现实校准。", "birth_time_status": "待核对", "responses": [], "confirmed": [], "partial": [], "rejected": [], "uncertain": []}
             report_json = work / "report.json"
             report_json.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
             free_card = _assemble_free_card(work)

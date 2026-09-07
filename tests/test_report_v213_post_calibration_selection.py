@@ -93,6 +93,48 @@ class ReportV213PostCalibrationSelectionTest(unittest.TestCase):
         self.assertTrue(resolved["dimensions"]["body_emotion"]["missing_coverage"])
         self.assertEqual(resolved["dimensions"]["career"]["delivery_mode"], "normal")
 
+    def test_confirmed_pending_claim_enters_only_its_domain_after_calibration(self) -> None:
+        analysis = self_test_fixture()
+        pending = copy.deepcopy(analysis["report_claim_ledger"][0])
+        pending.update({
+            "claim_id": "claim_pending_confirmed",
+            "domain": "career",
+            "reality_dimension": "career_choice_axis",
+            "claim_family": "career_choice",
+            "mechanism_family": "confirmed_branch",
+            "plain_claim": "现实确认后，这条原本有分歧的职业判断可以按条件进入事业章节。",
+            "claim_class": "calibration_pending",
+            "report_role": "to_verify",
+            "calibration_status": "match",
+            "coverage_tags": ["response"],
+        })
+        analysis["report_claim_ledger"].append(pending)
+
+        resolved = resolve(analysis)
+
+        self.assertIn("claim_pending_confirmed", resolved["dimensions"]["career"]["claim_ids"])
+        self.assertIn(
+            "claim_pending_confirmed",
+            resolved["dimensions"]["career"]["promoted_calibration_pending_claim_ids"],
+        )
+        self.assertNotIn("claim_pending_confirmed", resolved["dimensions"]["love_partner"]["claim_ids"])
+
+    def test_unverified_pending_claim_never_enters_report_sources(self) -> None:
+        analysis = self_test_fixture()
+        pending = copy.deepcopy(analysis["report_claim_ledger"][0])
+        pending.update({
+            "claim_id": "claim_pending_unverified",
+            "domain": "career",
+            "claim_class": "calibration_pending",
+            "report_role": "to_verify",
+            "calibration_status": "unverified",
+        })
+        analysis["report_claim_ledger"].append(pending)
+
+        resolved = resolve(analysis)
+
+        self.assertNotIn("claim_pending_unverified", resolved["dimensions"]["career"]["claim_ids"])
+
     def test_materialized_brief_uses_resolved_sources_and_excludes_rejected_claim(self) -> None:
         analysis = self_test_fixture()
         for claim in analysis["report_claim_ledger"]:

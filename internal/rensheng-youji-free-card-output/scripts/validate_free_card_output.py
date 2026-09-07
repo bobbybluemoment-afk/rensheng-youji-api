@@ -17,8 +17,13 @@ def validate(data: dict) -> list[str]:
     if errors:
         return errors
 
-    if data["schema_version"] != "1.1.0":
-        errors.append("schema_version 必须为1.1.0")
+    if data["schema_version"] != "1.2.0":
+        errors.append("schema_version 必须为1.2.0")
+    source = data.get("source", {})
+    if source.get("trend_source") != "frozen_baseline":
+        errors.append("人生K线来源必须是校准前冻结Core")
+    if source.get("visible_selection_source") not in {"frozen_baseline", "post_calibration"}:
+        errors.append("卡片可见选材来源无效")
 
     pillars = data["mingju_analysis"].get("pillars", [])
     if len(pillars) != 4 or any(not isinstance(value, str) or len(value) != 2 for value in pillars):

@@ -54,18 +54,22 @@ def _chart_audit(source: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any], compiler_source: dict[str, Any] | None = None) -> tuple[dict[str, Any], list[str]]:
     errors: list[str] = []
-    if synthesis_input.get("schema_version") != SYNTHESIS_INPUT_SCHEMA_VERSION:
-        errors.append("synthesis_input.schema_version 必须为1.0.0")
+    source_bundle = compiler_source or synthesis_input
+    if synthesis_input.get("schema_version") not in {SYNTHESIS_INPUT_SCHEMA_VERSION, "1.1.0"}:
+        errors.append("synthesis_input.schema_version 必须为1.0.0或1.1.0")
     if synthesis_input.get("core_version") != CORE_VERSION:
         errors.append(f"synthesis_input.core_version 必须为{CORE_VERSION}")
-    source = synthesis_input.get("analysis_input")
+    source = source_bundle.get("analysis_input")
+    visible_context = synthesis_input.get("analysis_context", source)
     if not isinstance(source, dict) or synthesis_input.get("analysis_input_sha256") != canonical_digest(source):
         errors.append("analysis_input_sha256 无效，确定性输入可能被改写")
+    if visible_context != source:
+        errors.append("紧凑综合输入的analysis_context与编译器锁定来源不一致")
     method_packet_digest = canonical_digest({
-        "methods": synthesis_input.get("independent_method_analyses"),
-        "evidence": synthesis_input.get("evidence_registry"),
+        "methods": source_bundle.get("independent_method_analyses"),
+        "evidence": source_bundle.get("evidence_registry"),
     })
     if synthesis_input.get("method_packets_sha256") != method_packet_digest:
         errors.append("method_packets_sha256 无效，已校验方法包或证据可能被改写")
@@ -79,13 +83,24 @@ def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any]) -> tuple
         errors.append(f"Core语义综合包含禁止或未知区块：{extra}")
     if errors:
         return {}, errors
-    audit = synthesis_input["method_execution_audit"]
+    audit = source_bundle["method_execution_audit"]
     request = source["request"]
     candidates = semantic.get("reality_candidate_pool") or []
+    role_by_class = {
+        "primary_judgment": "primary",
+        "independent_supplement": "supplemental",
+        "conditional_judgment": "supplemental",
+        "stage_judgment": "supplemental",
+        "calibration_pending": "to_verify",
+        "weak_candidate": "to_verify",
+    }
+    for claim in semantic.get("report_claim_ledger") or []:
+        if isinstance(claim, dict) and claim.get("claim_class") in role_by_class:
+            claim["report_role"] = role_by_class[claim["claim_class"]]
     candidate_ids = [str(item.get("candidate_id")) for item in candidates if isinstance(item, dict)]
     result: dict[str, Any] = {
         "analysis_meta": {
-            "analysis_id": "analysis-" + canonical_digest({"input": synthesis_input["analysis_input_sha256"], "methods": synthesis_input["independent_method_analyses"]})[:16],
+            "analysis_id": "analysis-" + canonical_digest({"input": synthesis_input["analysis_input_sha256"], "methods": source_bundle["independent_method_analyses"]})[:16],
             "request_id": request["request_id"],
             "core_version": CORE_VERSION,
             "generated_at": request["analysis_as_of"] + "T00:00:00+00:00",
@@ -96,10 +111,10 @@ def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any]) -> tuple
         },
         "chart_facts": _chart_facts(source),
         "chart_audit": _chart_audit(source),
-        "independent_method_analyses": synthesis_input["independent_method_analyses"],
+        "independent_method_analyses": source_bundle["independent_method_analyses"],
         "method_execution_audit": audit,
-        "source_coverage_audit": synthesis_input["source_coverage_audit"],
-        "evidence_registry": synthesis_input["evidence_registry"],
+        "source_coverage_audit": source_bundle["source_coverage_audit"],
+        "evidence_registry": source_bundle["evidence_registry"],
         **semantic,
         "calibration_state": {"confirmed": [], "partial": [], "rejected": [], "uncertain": [], "updates": []},
         "calibration_delta": {
@@ -125,12 +140,14 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("synthesis_input", type=Path)
     parser.add_argument("semantic_output", type=Path)
+    parser.add_argument("--compiler-source", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
         synthesis_input = json.loads(args.synthesis_input.read_text(encoding="utf-8"))
         semantic = json.loads(args.semantic_output.read_text(encoding="utf-8"))
-        result, errors = assemble(synthesis_input, semantic)
+        compiler_source = load_json(args.compiler_source) if args.compiler_source else None
+        result, errors = assemble(synthesis_input, semantic, compiler_source)
         if errors:
             print(json.dumps({"status": "validation_error", "errors": errors}, ensure_ascii=False, indent=2))
             return 2

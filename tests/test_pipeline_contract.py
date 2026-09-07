@@ -36,6 +36,9 @@ class PipelineContractTest(unittest.TestCase):
 
     def test_free_card_has_a_deterministic_assembler(self) -> None:
         stages = {item["id"]: item for item in self.contract["stages"]}
+        self.assertEqual(stages["free_card_content"]["producer"], "deterministic")
+        self.assertEqual(stages["free_card_visual_pack"]["producer"], "deterministic")
+        self.assertEqual(stages["free_card_semantics"]["inputs"], ["card_visual_pack"])
         self.assertEqual(stages["free_card_visual_series"]["producer"], "deterministic")
         self.assertEqual(
             stages["free_card_output"]["script"],
@@ -48,13 +51,16 @@ class PipelineContractTest(unittest.TestCase):
         contract.pop("runtime")
         self.assertTrue(any("runtime" in item for item in audit(ROOT, contract)))
 
-    def test_method_packet_schema_and_scaffold_are_declared(self) -> None:
-        stage = next(item for item in self.contract["stages"] if item["id"] == "independent_methods")
+    def test_method_semantics_and_deterministic_compiler_are_declared(self) -> None:
+        stages = {item["id"]: item for item in self.contract["stages"]}
+        stage = stages["independent_methods"]
         self.assertEqual(
             stage["output_contract"],
-            "internal/rensheng-youji-mingli-core/schemas/method-packet.schema.json",
+            "internal/rensheng-youji-mingli-core/schemas/method-semantic-patch.schema.json",
         )
-        self.assertEqual(stage["scaffold"], "scripts/initialize_method_packets.py")
+        self.assertEqual(stages["method_prompt_packs"]["script"], "scripts/build_method_prompt_packs.py")
+        self.assertEqual(stages["method_packet_compile"]["producer"], "deterministic")
+        self.assertIn("method_gate", stages["synthesis_input"]["inputs"])
 
 
 if __name__ == "__main__":

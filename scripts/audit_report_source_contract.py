@@ -72,6 +72,7 @@ def audit(root: Path) -> list[str]:
             "claim_id": "stage-1",
             "domain": "career",
             "origin": "timing_baseline",
+            "claim_class": "stage_judgment",
             "report_role": "primary",
             "calibration_status": "unverified",
             "confidence": "high",
@@ -102,17 +103,9 @@ def audit(root: Path) -> list[str]:
         if "core_quality_audit" not in (freeze_stage.get("inputs") or []):
             errors.append("Baseline freeze must consume the Core quality audit artifact")
 
-    status_stage_ids = [stage_id for stage_id, *_ in STATUS_STAGES if stage_id != "method_packet_drafts"]
+    status_stage_ids = [stage_id for stage_id, *_ in STATUS_STAGES]
     if status_stage_ids != stage_ids:
         errors.append("pipeline-contract.json and report_pipeline.py disagree on production stage order")
-    raw_status_ids = [stage_id for stage_id, *_ in STATUS_STAGES]
-    try:
-        draft_index = raw_status_ids.index("method_packet_drafts")
-    except ValueError:
-        errors.append("report_pipeline.py must expose the deterministic method-packet draft substage")
-    else:
-        if raw_status_ids[draft_index - 1:draft_index + 2] != ["method_input", "method_packet_drafts", "independent_methods"]:
-            errors.append("method-packet drafts must stay between method input and independent method analysis")
 
     for relative in MAINTAINED_TEXTS:
         path = root / relative
@@ -123,8 +116,8 @@ def audit(root: Path) -> list[str]:
 
     delivery_text = (root / "skills/rensheng-youji-growth-map/scripts/generate_full_report.py").read_text(encoding="utf-8")
     renderer_text = (root / "skills/rensheng-youji-growth-map/scripts/render_report.py").read_text(encoding="utf-8")
-    if 'CURRENT_CALIBRATION_SCHEMA = "2.2.0"' not in delivery_text or 'CURRENT_CALIBRATION_SCHEMA = "2.2.0"' not in renderer_text:
-        errors.append("Current delivery and report validation must share calibration schema 2.2.0")
+    if 'CURRENT_CALIBRATION_SCHEMA = "3.0.0"' not in delivery_text or 'CURRENT_CALIBRATION_SCHEMA = "3.0.0"' not in renderer_text:
+        errors.append("Current delivery and report validation must share calibration schema 3.0.0")
 
     growth_skill_text = (root / "skills/rensheng-youji-growth-map/SKILL.md").read_text(encoding="utf-8")
     card_skill_text = (root / "internal/rensheng-youji-free-card-output/SKILL.md").read_text(encoding="utf-8")

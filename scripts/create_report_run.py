@@ -32,7 +32,7 @@ def create_run(run_id: str | None = None) -> dict[str, str]:
         raise ValueError("正式运行目录必须位于仓库work/runs内")
     if work_dir.exists():
         raise FileExistsError(f"运行目录已经存在：{work_dir}")
-    for name in ("method-packet-drafts", "method-packets", "delivery"):
+    for name in ("method-prompt-packs", "method-semantic-patches", "method-packets", "calibration", "report-writing", "editorial", "delivery"):
         (work_dir / name).mkdir(parents=True, exist_ok=True)
     state = {
         "schema_version": "1.0.0",

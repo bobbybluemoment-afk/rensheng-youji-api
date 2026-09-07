@@ -16,33 +16,53 @@ description: 人生有迹内部免费卡片提取层。接收已经通过校验�
 ## 流程
 
 1. 确认 `analysis_bundle.analysis_meta.status` 为 `complete`，目标年份连续且恰好20年。
-2. 读取 [content-selection.md](references/content-selection.md)，提取命局分析、当前课题和完整版提示。
-3. 读取 [visual-algorithm.md](references/visual-algorithm.md)，先把 Core 语义整理为 `visual-signals.json`。必须明确窗口起点状态和20个年度信号；不得让脚本从自然语言关键词猜分。
-4. 校验视觉信号：
+2. 读取 [content-selection.md](references/content-selection.md)，由确定性脚本从校准前Baseline提取命理结构和人生主线，并从校准后选材提取当前课题。这里不调用AI：
+
+```bash
+python scripts/run_in_env.py internal/rensheng-youji-free-card-output/scripts/build_card_content.py \
+  --profile profile.json \
+  --baseline analysis-baseline.json \
+  --analysis analysis-output-calibrated.json \
+  --resolved-sources resolved-report-sources.json \
+  --output card-content.json
+```
+
+3. 由程序把校准前Baseline压缩成卡片视觉提示包：
+
+```bash
+python scripts/run_in_env.py internal/rensheng-youji-free-card-output/scripts/build_card_visual_pack.py \
+  --baseline analysis-baseline.json \
+  --output card-visual-pack.json
+```
+
+4. AI只读取 `card-visual-pack.json` 和 [visual-algorithm.md](references/visual-algorithm.md)，只生成符合Schema的 `visual-signals.json`。必须明确窗口起点状态和20个年度信号；不得读取五题答案，不得让脚本从自然语言关键词猜分。
+5. 校验视觉信号：
 
 ```bash
 python scripts/run_in_env.py internal/rensheng-youji-free-card-output/scripts/validate_visual_signals.py visual-signals.json
 ```
 
-5. 运行确定性趋势映射：
+6. 运行确定性趋势映射：
 
 ```bash
 python scripts/run_in_env.py internal/rensheng-youji-free-card-output/scripts/build_visual_series.py visual-signals.json \
   --output visual-series.json
 ```
 
-6. 按 [content-selection.md](references/content-selection.md) 生成且只生成 `card-content.json`；它包含 `identity`、`mingju_analysis`、`current_issue`、`full_report_hint` 和 `disclaimers`，不得包含 `source` 或 `trend_panel`。
 7. 从仓库根目录运行确定性组装器。不得由模型手工拼接 `free-card-output.json`：
 
 ```bash
 python scripts/run_in_env.py scripts/assemble_free_card.py \
-  --analysis analysis-output.json \
+  --analysis analysis-output-calibrated.json \
+  --baseline analysis-baseline.json \
+  --baseline-lock analysis-baseline-lock.json \
+  --resolved-sources resolved-report-sources.json \
   --content card-content.json \
   --series visual-series.json \
   --output free-card-output.json
 ```
 
-其中 `analysis-output.json` 是入口占位名：单独卡片使用已校验的初始或冻结Core，完整报告内卡片使用由Baseline与校准增量确定性合成且已经通过冻结校验的 `analysis-output-calibrated.json`。
+单独卡片没有五题时，可让 `--analysis` 与 `--baseline` 同时指向已校验的初始Core，并省略锁文件和校准后选材。完整报告内卡片必须同时提供Baseline、锁文件、校准后Core和校准后选材。
 
 8. 运行最终校验：
 
@@ -51,7 +71,7 @@ python scripts/run_in_env.py internal/rensheng-youji-free-card-output/scripts/va
   free-card-output.json
 ```
 
-确定性组装器负责从 Core 写入 `source`、把 `visual-series.json` 原样锁入 `trend_panel`，并在写盘前执行同一套最终校验。任一步失败时只修复对应的 `card-content.json` 或 `visual-signals.json`，不得手改趋势序列或最终输出。
+确定性组装器负责从 Core 写入 `source`、把 `visual-series.json` 原样锁入 `trend_panel`，并在写盘前执行同一套最终校验。任一步失败时，文字提取错误应修复上游Core或确定性提取器；视觉语义错误只修复 `visual-signals.json`。不得手改 `card-content.json`、趋势序列或最终输出。
 
 只有校验通过后才能交给绘图层。
 

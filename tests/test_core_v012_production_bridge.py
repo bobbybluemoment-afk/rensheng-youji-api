@@ -239,7 +239,7 @@ class CoreV012ProductionBridgeTest(unittest.TestCase):
         self.assertEqual(second_errors, [])
         self.assertEqual(first, second)
         self.assertIn("report_source_bundle", first)
-        self.assertEqual(first["analysis_meta"]["core_version"], "0.14.0")
+        self.assertEqual(first["analysis_meta"]["core_version"], "0.15.0")
 
     def test_documented_cli_bridge_writes_a_complete_core(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-core-bridge-") as temp_dir:
@@ -248,6 +248,7 @@ class CoreV012ProductionBridgeTest(unittest.TestCase):
             packet_dir.mkdir()
             analysis_input = work / "analysis-input.json"
             synthesis_input = work / "core-synthesis-input.json"
+            compiler_source = work / "core-compiler-source.json"
             semantic_output = work / "core-semantic-analysis.json"
             final_output = work / "analysis-output-initial.json"
             analysis_input.write_text(json.dumps(self.analysis_input, ensure_ascii=False), encoding="utf-8")
@@ -258,9 +259,9 @@ class CoreV012ProductionBridgeTest(unittest.TestCase):
                     json.dumps(packet, ensure_ascii=False), encoding="utf-8"
                 )
             commands = [
-                [sys.executable, str(ROOT / "scripts/prepare_core_synthesis.py"), str(analysis_input), "--method-packet-dir", str(packet_dir), "--output", str(synthesis_input)],
-                [sys.executable, str(ROOT / "scripts/validate_core_synthesis.py"), str(synthesis_input), str(semantic_output)],
-                [sys.executable, str(ROOT / "scripts/finalize_core_analysis.py"), str(synthesis_input), str(semantic_output), "--output", str(final_output)],
+                [sys.executable, str(ROOT / "scripts/prepare_core_synthesis.py"), str(analysis_input), "--method-packet-dir", str(packet_dir), "--output", str(synthesis_input), "--compiler-source", str(compiler_source)],
+                [sys.executable, str(ROOT / "scripts/validate_core_synthesis.py"), str(synthesis_input), str(semantic_output), "--compiler-source", str(compiler_source)],
+                [sys.executable, str(ROOT / "scripts/finalize_core_analysis.py"), str(synthesis_input), str(semantic_output), "--compiler-source", str(compiler_source), "--output", str(final_output)],
             ]
             for command in commands:
                 result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, check=False)

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rensheng-youji.local/schemas/analysis-output.schema.json",
-  "title": "人生有迹完整命理分析母稿 v0.14.0",
+  "title": "人生有迹完整命理分析母稿 v0.15.0",
   "description": "内置分析核心返回的统一 analysis_bundle。包含各方法独立命理推演、独立现实候选、现实综合、完整人物画像、实体证据台账、开放现实候选、形成链、领域联动与校准审计。",
   "type": "object",
   "additionalProperties": false,
@@ -1550,18 +1550,17 @@
     "methodRealityHypothesis": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["hypothesis_id", "derived_from_conclusion_ids", "domain", "normalized_direction", "statement", "observable_indicators", "conditions", "counterevidence", "unsupported_extensions", "added_information", "time_scope", "reality_confirmation"],
+      "required": ["hypothesis_id", "derived_from_conclusion_ids", "domain", "normalized_direction", "statement", "observable_indicators", "conditions", "counterevidence", "unsupported_extensions", "time_scope", "reality_confirmation"],
       "properties": {
         "hypothesis_id": {"type": "string", "pattern": "^mh_[a-z0-9_]+$"},
         "derived_from_conclusion_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
-        "domain": {"type": "string", "enum": ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth", "learning", "mobility"]},
+        "domain": {"type": "string", "enum": ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]},
         "normalized_direction": {"type": "string", "minLength": 4},
         "statement": {"type": "string", "minLength": 12},
         "observable_indicators": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
         "conditions": {"type": "array", "minItems": 1, "items": {"type": "string"}},
         "counterevidence": {"type": "array", "minItems": 1, "items": {"type": "string"}},
         "unsupported_extensions": {"type": "array", "minItems": 1, "items": {"type": "string"}},
-        "added_information": {"type": "string", "minLength": 4},
         "time_scope": {"type": "string", "minLength": 2},
         "reality_confirmation": {"type": "string", "enum": ["unverified", "supported", "confirmed", "contradicted"]}
       }
@@ -1571,7 +1570,7 @@
       "additionalProperties": false,
       "required": ["domain", "status", "hypothesis_ids", "reasoning"],
       "properties": {
-        "domain": {"type": "string", "enum": ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth", "learning", "mobility"]},
+        "domain": {"type": "string", "enum": ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]},
         "status": {"type": "string", "enum": ["supported", "insufficient_evidence", "not_applicable"]},
         "hypothesis_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^mh_[a-z0-9_]+$"}},
         "reasoning": {"type": "string", "minLength": 8}
@@ -1595,7 +1594,7 @@
         "source_method_ids_read": {"type": "array", "maxItems": 0, "items": {"type": "string"}},
         "technical_conclusions": {"type": "array", "items": {"$ref": "#/$defs/methodTechnicalConclusion"}},
         "reality_hypotheses": {"type": "array", "items": {"$ref": "#/$defs/methodRealityHypothesis"}},
-        "domain_assessments": {"type": "array", "maxItems": 8, "items": {"$ref": "#/$defs/methodDomainAssessment"}},
+        "domain_assessments": {"type": "array", "maxItems": 6, "items": {"$ref": "#/$defs/methodDomainAssessment"}},
         "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}}
       }
     },
@@ -1685,7 +1684,7 @@
         "claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family",
         "claim", "plain_claim", "new_information", "mechanism_chain",
         "evidence_ids", "supporting_methods", "synthesis_ids", "method_hypothesis_ids",
-        "report_role", "coverage_tags", "applicable_conditions", "reality_confirmation",
+        "claim_class", "report_role", "coverage_tags", "applicable_conditions", "reality_confirmation",
         "allowed_examples", "counterevidence", "confidence", "unsupported_extensions",
         "calibration_status", "origin"
       ],
@@ -1703,6 +1702,7 @@
         "supporting_methods": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
         "synthesis_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
         "method_hypothesis_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+        "claim_class": {"type": "string", "enum": ["primary_judgment", "independent_supplement", "conditional_judgment", "stage_judgment", "calibration_pending", "weak_candidate"]},
         "report_role": {"type": "string", "enum": ["primary", "supplemental", "to_verify"]},
         "coverage_tags": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "enum": ["feature", "behavior", "formation", "challenge", "current_change", "response", "parent_kin_interaction", "support_and_constraint", "independence_and_reciprocity", "baseline_signals", "stress_sequence", "recovery_pattern"]}},
         "applicable_conditions": {"type": "array", "minItems": 1, "items": {"type": "string"}},
@@ -1877,8 +1877,6 @@
             "finance_resources",
             "love_partner",
             "family_growth",
-            "learning",
-            "mobility",
             "body_emotion"
           ]
         },

@@ -41,16 +41,15 @@
 
 ## 每种方法的两层输出
 
-正式方法包只能使用 `schemas/method-packet.schema.json`。先由根目录 `scripts/initialize_method_packets.py` 为九个方法生成彼此分离的草稿；每种方法只读取主题隔离输入、自己的草稿、本Schema和本方法所需参考资料。完成后删除 `_draft_notice`，替换全部 `__AI_FILL__`，另存正式方法包并立即校验。不存在其他方法包Schema，不得根据文件名习惯自行猜测。
+每种方法只读取 `build_method_prompt_packs.py` 生成的本方法短提示包。AI输出必须符合 `schemas/method-semantic-patch.schema.json`，只保留真正需要判断的技术结论、现实候选、未支持领域理由和方法限制。方法身份、输入哈希、稳定编号、证据登记、现实确认初始状态和六领域候选编号映射由 `compile_method_packets.py` 确定性补齐。编译后的正式方法包仍只使用 `schemas/method-packet.schema.json`，下游接口不变。
 
 ### 技术结论
 
-每条 `technical_conclusion` 必须包含：
+每条技术结论语义必须包含：
 
-- 稳定编号；
 - 具体命理观察；
 - 至少两步机制链；
-- 排盘事实引用和实体证据引用；
+- 排盘事实引用和内联实体证据；
 - 成立条件与反向条件；
 - 时间范围和置信度。
 
@@ -58,27 +57,26 @@
 
 ### 现实候选
 
-每条 `reality_hypothesis` 必须从本方法自己的技术结论导出，并包含：
+每条现实候选必须从本方法自己的技术结论序号导出，并包含：
 
-- 稳定编号和来源技术结论；
+- 来源技术结论序号；
 - 固定现实领域与标准化现实方向；
 - 完整现实判断；
 - 两条可观察表现；
 - 成立条件、反证和禁止外推；
-- 相比本方法其他候选新增的信息；
 - 时间范围和现实确认状态。
 
 独立方法不得读取其他方法候选后故意改写成同一方向。不同方法自然得到相同现实方向时，由综合层识别，而不是由方法层预先协调。
 
-## 八领域检查
+## 六领域检查
 
-每个 `complete` 方法都必须对 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`、`learning`、`mobility` 各登记一条 `domain_assessment`：
+每个 `complete` 方法都必须对 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth` 各登记一条 `domain_assessment`。学习、教育、迁移和地域变化是这些领域中的现实问题轴，不另设方法领域：
 
 - `supported`：本方法形成了该领域现实候选，必须列出本领域全部 `hypothesis_ids`；
 - `insufficient_evidence`：本方法实际检查过，但不足以形成现实候选；
 - `not_applicable`：该领域超出本方法在本盘中的合理推演范围。
 
-十神动力、宫位六亲、干支动力、盲派和岁运连续性是 `love_partner` 锚点方法，必须在 `supported` 与 `insufficient_evidence` 中二选一，不得用 `not_applicable` 跳过。领域检查用于证明“分析过”，不是要求每种方法硬写八条候选。
+十神动力、宫位六亲、干支动力、盲派和岁运连续性是 `love_partner` 锚点方法，必须在 `supported` 与 `insufficient_evidence` 中二选一，不得用 `not_applicable` 跳过。领域检查用于证明“分析过”，不是要求每种方法硬写六条候选。每个领域允许0—5条候选，不设最低数量。
 
 ## 现实综合
 

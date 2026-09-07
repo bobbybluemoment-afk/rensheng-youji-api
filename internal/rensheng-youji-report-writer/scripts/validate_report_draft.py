@@ -134,10 +134,10 @@ def validate(data: Any, brief: Any | None = None) -> list[str]:
     is_v12 = data.get("schema_version") == "1.2.0"
     is_v13 = data.get("schema_version") == "1.3.0"
     is_v14 = data.get("schema_version") == "1.4.0"
-    is_v15 = data.get("schema_version") == "1.5.0"
+    is_v15 = data.get("schema_version") in {"1.5.0", "1.6.0"}
     is_traced = is_v11 or is_v12 or is_v13 or is_v14 or is_v15
-    if data.get("schema_version") not in {"1.0.0", "1.1.0", "1.2.0", "1.3.0", "1.4.0", "1.5.0"}:
-        errors.append("schema_version 必须为1.0.0—1.5.0中的受支持版本")
+    if data.get("schema_version") not in {"1.0.0", "1.1.0", "1.2.0", "1.3.0", "1.4.0", "1.5.0", "1.6.0"}:
+        errors.append("schema_version 必须为1.0.0—1.6.0中的受支持版本")
     used = check_section(data.get("life_overview"), 500 if is_traced else 350, 700 if is_traced else 550, "life_overview", errors, is_traced, is_v15)
     dimensions = data.get("dimensions")
     if not isinstance(dimensions, list) or [item.get("id") for item in dimensions if isinstance(item, dict)] != list(DIMENSIONS):

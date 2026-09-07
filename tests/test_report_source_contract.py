@@ -28,6 +28,7 @@ class ReportSourceContractTest(unittest.TestCase):
                 "claim_id": "current-1",
                 "domain": "career",
                 "origin": "timing_baseline",
+                "claim_class": "stage_judgment",
                 "report_role": "primary",
                 "calibration_status": "unverified",
                 "confidence": "high",

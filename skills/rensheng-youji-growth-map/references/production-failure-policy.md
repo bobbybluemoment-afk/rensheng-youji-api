@@ -25,4 +25,4 @@
 - 非Skill声明的Schema、示例或辅助文件不存在；
 - 为理解代码而执行的只读命令参数写错。
 
-不得把多条探索命令用 `&&`、管道或其他组合方式包装成一个正式阶段。每条正式生产命令单独执行。方法包唯一正式结构入口为 `internal/rensheng-youji-mingli-core/schemas/method-packet.schema.json`；不得自行寻找或假设存在 `method-analysis.schema.json`、`method_packet.schema.json` 等其他名称。
+不得把多条探索命令用 `&&`、管道或其他组合方式包装成一个正式阶段。每条正式生产命令单独执行。九方法AI答卷只使用 `method-semantic-patch.schema.json`；程序编译后的正式方法包只使用 `method-packet.schema.json`。不得自行猜测其他Schema名称，也不得让AI直接填写正式方法包的机器字段。

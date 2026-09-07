@@ -15,30 +15,38 @@ sys.path.insert(0, str(CORE_SCRIPTS))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from validate_method_packet import validate as validate_method_packet  # noqa: E402
+from validate_method_semantic_patch import validate as validate_method_semantic_patch  # noqa: E402
 from core_baseline import validate_quality_audit  # noqa: E402
 STAGES = [
     ("core_input", "deterministic", ("core-input.json", "profile.json"), "scripts/prepare_core_input.py"),
     ("time_preflight", "deterministic", ("report-preflight.json",), "skills/rensheng-youji-growth-map/scripts/preflight_report.py"),
     ("method_input", "deterministic", ("method-input.json",), "scripts/prepare_method_input.py"),
-    ("method_packet_drafts", "deterministic", ("method-packet-drafts",), "scripts/initialize_method_packets.py"),
-    ("independent_methods", "ai_constrained", ("method-packets",), "internal/rensheng-youji-mingli-core/schemas/method-packet.schema.json"),
-    ("synthesis_input", "deterministic", ("core-synthesis-input.json",), "scripts/prepare_core_synthesis.py"),
+    ("method_prompt_packs", "deterministic", ("method-prompt-packs",), "scripts/build_method_prompt_packs.py"),
+    ("independent_methods", "ai_constrained", ("method-semantic-patches",), "internal/rensheng-youji-mingli-core/schemas/method-semantic-patch.schema.json"),
+    ("method_packet_compile", "deterministic", ("method-packets", "method-gate.json"), "scripts/compile_method_packets.py"),
+    ("synthesis_input", "deterministic", ("core-synthesis-input.json", "core-compiler-source.json"), "scripts/prepare_core_synthesis.py"),
     ("semantic_synthesis", "ai_constrained", ("core-semantic-analysis.json",), "internal/rensheng-youji-mingli-core/references/core-production-bridge.md"),
     ("initial_core", "deterministic", ("analysis-output-initial.json",), "scripts/finalize_core_analysis.py"),
     ("core_quality_audit", "deterministic", ("core-quality-audit.json",), "scripts/audit_claim_diversity.py"),
     ("baseline_freeze", "deterministic", ("analysis-baseline.json", "analysis-baseline-lock.json"), "scripts/core_baseline.py"),
-    ("calibration_plan", "ai_constrained", ("calibration-plan.json",), "skills/rensheng-youji-growth-map/references/calibration.md"),
     ("calibration_questions", "deterministic", ("calibration-questions.json", "calibration-visible.md"), "skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py"),
-    ("calibration_delta", "ai_constrained", ("calibration-delta.json",), "skills/rensheng-youji-growth-map/SKILL.md"),
+    ("calibration_free_text", "ai_constrained_optional", ("calibration-free-text-patch.json",), "internal/rensheng-youji-mingli-core/schemas/calibration-free-text-patch.schema.json"),
+    ("calibration_delta", "deterministic", ("calibration-delta.json",), "scripts/compile_calibration_delta.py"),
     ("calibrated_core", "deterministic", ("analysis-output-calibrated.json",), "scripts/apply_calibration_delta.py"),
     ("report_sources", "deterministic", ("resolved-report-sources.json",), "scripts/resolve_report_sources.py"),
-    ("content_selection", "ai_constrained", ("report-content-selection.json",), "internal/rensheng-youji-report-content-brief/SKILL.md"),
     ("content_brief", "deterministic", ("report-content-brief.json",), "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py"),
-    ("report_draft", "ai_constrained", ("report-draft.json",), "internal/rensheng-youji-report-writer/SKILL.md"),
-    ("edited_report", "ai_constrained", ("report.json", "editorial-review.json"), "internal/rensheng-youji-chinese-editor/SKILL.md"),
-    ("free_card_semantics", "ai_constrained", ("card-content.json", "visual-signals.json"), "internal/rensheng-youji-free-card-output/SKILL.md"),
+    ("report_writing_pack", "deterministic", ("report-writing-pack.json",), "internal/rensheng-youji-report-writer/scripts/build_report_writing_pack.py"),
+    ("report_semantics", "ai_constrained", ("report-semantic-patch.json",), "internal/rensheng-youji-report-writer/schemas/report-semantic-patch.schema.json"),
+    ("report_draft", "deterministic", ("report-draft.json",), "internal/rensheng-youji-report-writer/scripts/compile_report_draft.py"),
+    ("editorial_scan", "deterministic", ("editorial-scan.json",), "internal/rensheng-youji-chinese-editor/scripts/scan_report_language.py"),
+    ("editorial_repair", "ai_constrained_optional", ("editorial-repair-patch.json",), "internal/rensheng-youji-chinese-editor/schemas/editorial-repair-patch.schema.json"),
+    ("editorial_apply", "deterministic", ("edited-report-draft.json", "edited-report-semantic.json", "editorial-review.json"), "internal/rensheng-youji-chinese-editor/scripts/apply_editorial_patch.py"),
+    ("free_card_content", "deterministic", ("card-content.json",), "internal/rensheng-youji-free-card-output/scripts/build_card_content.py"),
+    ("free_card_visual_pack", "deterministic", ("card-visual-pack.json",), "internal/rensheng-youji-free-card-output/scripts/build_card_visual_pack.py"),
+    ("free_card_semantics", "ai_constrained", ("visual-signals.json",), "internal/rensheng-youji-free-card-output/schemas/visual-signals.schema.json"),
     ("free_card_visual_series", "deterministic", ("visual-series.json",), "internal/rensheng-youji-free-card-output/scripts/build_visual_series.py"),
     ("free_card_output", "deterministic", ("free-card-output.json",), "scripts/assemble_free_card.py"),
+    ("report_compile", "deterministic", ("report.json", "editorial-review-final.json"), "skills/rensheng-youji-growth-map/scripts/compile_final_report.py"),
     ("delivery", "deterministic", ("delivery/report-delivery-manifest.json",), "skills/rensheng-youji-growth-map/scripts/generate_full_report.py"),
 ]
 
@@ -56,10 +64,31 @@ def status(run_dir: Path) -> dict[str, object]:
         paths = [run_dir / artifact for artifact in artifacts]
         path = paths[0]
         complete = all(item.is_file() for item in paths)
-        if stage_id == "method_packet_drafts":
-            complete = path.is_dir() and len(list(path.glob("*.draft.json"))) == 9
+        if stage_id == "method_prompt_packs":
+            complete = path.is_dir() and len(list(path.glob("*.prompt.md"))) == 9 and (path / "prompt-pack-manifest.json").is_file()
         elif stage_id == "independent_methods":
             complete = path.is_dir() and len(list(path.glob("*.json"))) == 9
+            if complete:
+                patch_errors: list[str] = []
+                for patch_path in sorted(path.glob("*.json")):
+                    try:
+                        patch = json.loads(patch_path.read_text(encoding="utf-8"))
+                        errors = validate_method_semantic_patch(patch, patch_path.stem)
+                    except (OSError, json.JSONDecodeError) as exc:
+                        errors = [str(exc)]
+                    patch_errors.extend(f"{patch_path.name}: {item}" for item in errors)
+                if patch_errors:
+                    return {
+                        "status": "in_progress",
+                        "run_id": state["run_id"],
+                        "next_stage": stage_id,
+                        "producer": producer,
+                        "required_artifacts": [str(item) for item in paths],
+                        "contract_or_script": contract,
+                        "validation_errors": patch_errors,
+                    }
+        elif stage_id == "method_packet_compile":
+            complete = path.is_dir() and len(list(path.glob("*.json"))) == 9 and paths[1].is_file()
             if complete:
                 packet_errors: list[str] = []
                 for packet_path in sorted(path.glob("*.json")):
@@ -92,6 +121,25 @@ def status(run_dir: Path) -> dict[str, object]:
                     "contract_or_script": contract,
                     "validation_errors": [str(exc)],
                 }
+        elif stage_id == "calibration_free_text":
+            answers = run_dir / "calibration-answers.json"
+            if not answers.is_file():
+                complete = False
+            else:
+                try:
+                    response_items = json.loads(answers.read_text(encoding="utf-8")).get("responses") or []
+                    needs_patch = any(item.get("choice") == "D" for item in response_items if isinstance(item, dict))
+                    complete = path.is_file() if needs_patch else True
+                except (OSError, json.JSONDecodeError):
+                    complete = False
+        elif stage_id == "editorial_repair":
+            scan_path = run_dir / "editorial-scan.json"
+            if scan_path.is_file():
+                try:
+                    needs_patch = json.loads(scan_path.read_text(encoding="utf-8")).get("status") == "repair_required"
+                    complete = path.is_file() if needs_patch else True
+                except (OSError, json.JSONDecodeError):
+                    complete = False
         if not complete:
             return {
                 "status": "in_progress",

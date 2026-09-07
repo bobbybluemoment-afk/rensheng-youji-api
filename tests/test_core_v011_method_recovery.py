@@ -49,11 +49,11 @@ class CoreV011MethodRecoveryTest(unittest.TestCase):
         errors = validate_packet(packet, "blind_school")
         self.assertTrue(any("不符合正式Core Schema" in item and "pattern" in item for item in errors))
 
-    def test_complete_method_must_review_all_eight_domains(self) -> None:
+    def test_complete_method_must_review_all_six_report_domains(self) -> None:
         packet = method_packet("pattern_structure")
         packet["method_analysis"]["domain_assessments"] = packet["method_analysis"]["domain_assessments"][:-1]
         errors = validate_packet(packet, "pattern_structure")
-        self.assertTrue(any("逐项检查八个现实领域" in item for item in errors))
+        self.assertTrue(any("逐项检查六个报告领域" in item for item in errors))
 
     def test_relationship_anchor_cannot_skip_love_partner_review(self) -> None:
         packet = method_packet("blind_school")

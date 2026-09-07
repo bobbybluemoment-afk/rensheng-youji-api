@@ -45,6 +45,14 @@ def main() -> int:
         print("FAILED: an AI-authored production stage lacks a discoverable output contract")
         print(ai_contract_test.stdout or ai_contract_test.stderr)
         return 1
+    method_prompt_test = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/audit_method_prompt_contract.py"), str(ROOT)],
+        cwd=ROOT, text=True, capture_output=True, check=False,
+    )
+    if method_prompt_test.returncode:
+        print("FAILED: compact method prompts are missing, oversized or cross-stage")
+        print(method_prompt_test.stdout or method_prompt_test.stderr)
+        return 1
     method_schema_test = subprocess.run(
         [sys.executable, str(ROOT / "scripts/export_method_packet_schema.py"), "--check"],
         cwd=ROOT, text=True, capture_output=True, check=False,
@@ -76,7 +84,10 @@ def main() -> int:
         ROOT / "internal/rensheng-youji-mingli-core/references/method-failure-and-recovery.md",
         ROOT / "internal/rensheng-youji-mingli-core/references/core-production-bridge.md",
         ROOT / "internal/rensheng-youji-mingli-core/scripts/validate_method_packet.py",
+        ROOT / "internal/rensheng-youji-mingli-core/scripts/validate_method_semantic_patch.py",
         ROOT / "internal/rensheng-youji-mingli-core/schemas/method-packet.schema.json",
+        ROOT / "internal/rensheng-youji-mingli-core/schemas/method-semantic-patch.schema.json",
+        ROOT / "internal/rensheng-youji-mingli-core/method-prompts/manifest.json",
         ROOT / "internal/rensheng-youji-report-content-brief/SKILL.md",
         ROOT / "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py",
         ROOT / "internal/rensheng-youji-report-writer/SKILL.md",
@@ -100,7 +111,10 @@ def main() -> int:
         ROOT / "scripts/create_report_run.py",
         ROOT / "scripts/report_pipeline.py",
         ROOT / "scripts/export_method_packet_schema.py",
-        ROOT / "scripts/initialize_method_packets.py",
+        ROOT / "scripts/build_method_prompt_packs.py",
+        ROOT / "scripts/compile_method_packet.py",
+        ROOT / "scripts/compile_method_packets.py",
+        ROOT / "scripts/audit_method_prompt_contract.py",
         ROOT / "scripts/method_input_contract.py",
         ROOT / "scripts/prepare_method_input.py",
         ROOT / "scripts/prepare_core_synthesis.py",
@@ -169,10 +183,10 @@ def main() -> int:
         cwd=ROOT, text=True, capture_output=True, check=False,
     )
     if core_test.returncode:
-        print("FAILED: v0.14.0 Core topic isolation, domain review, source coverage, synthesis validation or deterministic assembly")
+        print("FAILED: v0.15.0 Core topic isolation, six-domain review, source coverage, synthesis validation or deterministic assembly")
         print(core_test.stdout or core_test.stderr)
         return 7
-    print("READY: dependencies, chart, v2 card, Core v0.14.0 topic isolation, eight-domain method review, source coverage, semantic consensus, deterministic assembly and report sources, calibration delta, post-calibration source resolution, sparse emphasis, stable fallback and fixed 10-page report pipeline passed")
+    print("READY: dependencies, chart, v2 card, Core v0.15.0 topic isolation, six-domain method review, source coverage, semantic consensus, deterministic assembly and report sources, deterministic five-question calibration, post-calibration source resolution, optional local editing, stable fallback and fixed 10-page report pipeline passed")
     return 0
 
 

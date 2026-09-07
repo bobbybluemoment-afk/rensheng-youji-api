@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def audit(root: Path, contract: dict[str, object]) -> list[str]:
     errors: list[str] = []
     for stage in contract.get("stages", []):
-        if not isinstance(stage, dict) or stage.get("producer") != "ai_constrained":
+        if not isinstance(stage, dict) or stage.get("producer") not in {"ai_constrained", "ai_constrained_optional"}:
             continue
         stage_id = str(stage.get("id"))
         for key in ("contract", "output_contract", "validator"):
@@ -24,14 +24,14 @@ def audit(root: Path, contract: dict[str, object]) -> list[str]:
                 continue
             if not value.startswith("dynamic:") and not (root / value).is_file():
                 errors.append(f"{stage_id}.{key}引用文件不存在：{value}")
-    methods = next(
-        (item for item in contract.get("stages", []) if isinstance(item, dict) and item.get("id") == "independent_methods"),
+    prompts = next(
+        (item for item in contract.get("stages", []) if isinstance(item, dict) and item.get("id") == "method_prompt_packs"),
         {},
     )
-    if not isinstance(methods, dict) or not methods.get("scaffold"):
-        errors.append("independent_methods必须声明九方法草稿生成器")
-    elif not (root / str(methods["scaffold"])).is_file():
-        errors.append("independent_methods草稿生成器不存在")
+    if not isinstance(prompts, dict) or not prompts.get("script"):
+        errors.append("method_prompt_packs必须声明九方法短提示生成器")
+    elif not (root / str(prompts["script"])).is_file():
+        errors.append("九方法短提示生成器不存在")
     return errors
 
 

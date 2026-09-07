@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.19.2",
+  "version": "2.20.0",
   "visibility": "internal",
   "stages": [
     {
@@ -38,15 +38,15 @@
     "post_calibration_selector": "../scripts/resolve_report_sources.py",
     "pages": 10,
     "card_page": 2,
-    "report_schema_version": "2.13.0",
-    "core_version": "0.14.0",
-    "content_brief_schema_version": "1.5.0",
-    "report_draft_schema_version": "1.5.0",
-    "editorial_review_version": "2.4.0",
-    "calibration_schema_version": "2.2.0",
-    "calibration_template_version": "1.0.0",
+    "report_schema_version": "2.14.0",
+    "core_version": "0.15.0",
+    "content_brief_schema_version": "1.6.0",
+    "report_draft_schema_version": "1.6.0",
+    "editorial_review_version": "2.5.0",
+    "calibration_schema_version": "3.0.0",
+    "calibration_template_version": "2.0.0",
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "2.19.2在2.19.1机器契约基础上收口全部正式上下文：多样性、段数、篇幅、逐段来源、领域机制和必进判断均按delivery_mode动态执行；报告内卡片继续继承校准状态，但命理结构、人生K线和原始判断来自校准前冻结Core。报告来源审计扩展到主Skill、Core与写作必读参考，并核对流水线状态顺序；当前正式报告只接受2.2.0校准题。Core仍为0.14.0，报告Schema仍为2.13.0。"
+  "notes": "2.20.0完成AI与确定性程序职责重构：九方法读取隔离短提示并并行扫描六个报告领域；Core使用六类判断并生成可确定性选择的个性化校准候选；五题由程序选择，自由回答才调用小型语义补丁；报告选材、来源映射、局部编辑和最终组装由程序完成；卡片人生K线锁定校准前Baseline。"
 }

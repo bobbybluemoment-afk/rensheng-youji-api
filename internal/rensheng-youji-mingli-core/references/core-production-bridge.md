@@ -19,6 +19,7 @@ python scripts/run_in_env.py scripts/prepare_method_input.py analysis-input.json
 ```bash
 python scripts/run_in_env.py scripts/prepare_core_synthesis.py analysis-input.json \
   --method-packet-dir method-packets \
+  --method-gate method-gate.json \
   --output core-synthesis-input.json
 ```
 
@@ -26,11 +27,11 @@ python scripts/run_in_env.py scripts/prepare_core_synthesis.py analysis-input.js
 
 - 确认九个方法恰好各有一个方法包；
 - 再次执行逐方法校验；
-- 核对每个方法的主题隔离输入哈希和八领域检查；
+- 核对每个方法的主题隔离输入哈希和六领域检查；
 - 合并实体证据并拒绝跨方法重复编号；
 - 拒绝单方法校验遗漏的非法现实领域，并检查跨方法技术结论、现实候选和证据编号；
 - 确定性计算完整、降级或仅初步分析；
-- 生成六领域 `source_coverage_audit`、八领域检查计数与关系锚点状态；没有来源的领域进入证据缺口，不停止其他内容；
+- 生成六领域 `source_coverage_audit`、六领域检查计数与关系锚点状态；没有来源的领域进入证据缺口，不停止其他内容；
 - 冻结排盘输入和方法包哈希；
 - 列出语义综合必须生成的全部区块。
 

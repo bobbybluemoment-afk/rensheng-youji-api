@@ -34,7 +34,7 @@ ALLOWED_ROOTS = {
 TERMINAL_FAILURES = {"insufficient_evidence", "blocked_input", "generation_failed"}
 HYPOTHESIS_DOMAINS = {
     "self_growth", "love_partner", "career", "finance_resources",
-    "body_emotion", "family_growth", "learning", "mobility",
+    "body_emotion", "family_growth",
 }
 REALITY_CONFIRMATIONS = {"unverified", "supported", "confirmed", "contradicted"}
 LOVE_PARTNER_ANCHORS = {
@@ -184,7 +184,7 @@ def validate(packet: Any, expected_method: str | None = None) -> list[str]:
     hypothesis_required = {
         "hypothesis_id", "derived_from_conclusion_ids", "domain", "normalized_direction",
         "statement", "observable_indicators", "conditions", "counterevidence",
-        "unsupported_extensions", "added_information", "time_scope", "reality_confirmation",
+        "unsupported_extensions", "time_scope", "reality_confirmation",
     }
     for item in hypotheses:
         if not isinstance(item, dict):
@@ -229,7 +229,7 @@ def validate(packet: Any, expected_method: str | None = None) -> list[str]:
             assessment_by_domain[str(domain)] = item
         if set(assessment_by_domain) != HYPOTHESIS_DOMAINS:
             errors.append(
-                "完成方法必须逐项检查八个现实领域；"
+                "完成方法必须逐项检查六个报告领域；"
                 f"缺少={sorted(HYPOTHESIS_DOMAINS - set(assessment_by_domain))}；"
                 f"多余={sorted(set(assessment_by_domain) - HYPOTHESIS_DOMAINS)}"
             )

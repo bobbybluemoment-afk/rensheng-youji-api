@@ -23,7 +23,7 @@
 
 每条候选至少包含一个真实方法来源；只有标记高置信度时才必须包含两个独立主要方法视角。候选还应包含 `root_seed_flower_fruit_map`、`resource_relationship`、`cross_method_analysis`、`luck_cycle_themes`、`annual_theme_activation` 或 `domain_connections` 中适用的一项。日主旺衰可以参与判断，但不能单独支撑现实候选。
 
-Core 0.14.0 先完成逐方法校验、生产桥汇总、`method_execution_audit`、`source_coverage_audit`、`independent_method_analyses` 和 `method_synthesis`。多方法一致只提高结构置信度，不能替代现实确认。校准优先核对 `to_verify`、真正冲突和区分度高的单方法补充；不得重复询问已经由多个主要方法同向且现实明确支持的内容。
+Core 0.15.0 先完成逐方法校验、生产桥汇总、`method_execution_audit`、`source_coverage_audit`、`independent_method_analyses` 和 `method_synthesis`。多方法一致只提高结构置信度，不能替代现实确认。校准优先核对待校准判断、条件判断、区分度高的独立补充与阶段判断；不得重复询问已经现实明确支持的内容。
 
 用户否定综合判断时，只调整综合判断、报告判断与现实候选的确认状态，不得回写任一方法的技术结论或独立现实候选。单一主要方法的 `supplemental` 可以被现实支持、弱化或排除。
 
@@ -36,7 +36,7 @@ Core 0.14.0 先完成逐方法校验、生产桥汇总、`method_execution_audit
 
 `timed_event` 必须同时具有大运或流年来源。没有时间证据的性格判断不能伪装成事件题。
 
-进入用户校准题前，不直接把三条独立候选拼在一起。报告层从固定题型库选择同一比较轴，把A、B、C分别绑定为对候选的支持、部分支持或否定；题干和选项由确定性构建器生成。候选编号、命理证据、替代解释、时柱依赖和原置信度均只保留在内部审计。
+进入用户校准题前，不直接把三条独立候选拼在一起。程序从当前Core选择五个不同现实问题轴，用统一的比较结构生成A、B、C、D；题干与前两个选项来自本人的候选，不读取人人相同的固定问题。候选编号、命理证据、替代解释、时柱依赖和原置信度均只保留在内部审计。
 
 ## 三、用户反馈选项
 

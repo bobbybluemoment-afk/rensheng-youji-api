@@ -14,7 +14,7 @@ from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = SKILL_ROOT.parents[1]
-CURRENT_CALIBRATION_SCHEMA = "2.2.0"
+CURRENT_CALIBRATION_SCHEMA = "3.0.0"
 
 
 def run(command: list[str]) -> dict:
@@ -40,7 +40,7 @@ def main() -> int:
     parser.add_argument("--calibration-delta", type=Path, help="calibration-delta.json，v2.12.0正式报告必填")
     parser.add_argument("--resolved-sources", type=Path, help="resolved-report-sources.json，v2.13.0正式报告必填")
     parser.add_argument("--free-card", type=Path, required=True, help="free-card-output.json")
-    parser.add_argument("--calibration-questions", type=Path, required=True, help="已通过2.2.0校验的calibration-questions.json")
+    parser.add_argument("--calibration-questions", type=Path, required=True, help="当前正式报告使用已通过3.0.0校验的calibration-questions.json")
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--keep-pages", action="store_true", help="保留10页PNG用于视觉验收")
     parser.add_argument("--allow-test-fixture", action="store_true", help=argparse.SUPPRESS)
@@ -49,7 +49,7 @@ def main() -> int:
         report = json.loads(args.report.read_text(encoding="utf-8"))
         free_card = json.loads(args.free_card.read_text(encoding="utf-8"))
         calibration_questions = json.loads(args.calibration_questions.read_text(encoding="utf-8"))
-        is_traceable = report.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0"}
+        is_traceable = report.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0", "2.14.0"}
         if is_traceable:
             required_artifacts = {
                 "--content-brief": args.content_brief,
@@ -72,7 +72,7 @@ def main() -> int:
             ]
             if temporary_patches:
                 raise ValueError("正式交付目录含临时报告修补脚本，禁止据此修改正文或哈希：" + "、".join(sorted(set(temporary_patches))))
-            if report.get("schema_version") in {"2.12.0", "2.13.0"}:
+            if report.get("schema_version") in {"2.12.0", "2.13.0", "2.14.0"}:
                 protected = {
                     "--analysis-baseline": args.analysis_baseline,
                     "--baseline-lock": args.baseline_lock,
@@ -96,7 +96,14 @@ def main() -> int:
                     "--calibrated", str(args.analysis),
                 ])
                 run([sys.executable, str(REPO_ROOT / "scripts/audit_claim_diversity.py"), str(args.analysis)])
-            if report.get("schema_version") == "2.13.0":
+                if report.get("schema_version") == "2.14.0":
+                    run([
+                        sys.executable,
+                        str(SKILL_ROOT / "scripts/validate_calibration_questions.py"),
+                        str(args.calibration_questions),
+                        "--analysis", str(args.analysis_baseline),
+                    ])
+            if report.get("schema_version") in {"2.13.0", "2.14.0"}:
                 if args.resolved_sources is None:
                     raise ValueError("2.13.0正式报告缺少--resolved-sources")
                 with tempfile.TemporaryDirectory(prefix="rensheng-youji-resolved-") as temp_dir:
@@ -115,7 +122,7 @@ def main() -> int:
                 str(REPO_ROOT / "internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py"),
                 str(args.content_brief), "--analysis", str(args.analysis),
             ]
-            if report.get("schema_version") == "2.13.0":
+            if report.get("schema_version") in {"2.13.0", "2.14.0"}:
                 brief_validation.extend(["--resolved-sources", str(args.resolved_sources)])
             run(brief_validation)
             run([
@@ -128,22 +135,25 @@ def main() -> int:
                 str(REPO_ROOT / "internal/rensheng-youji-chinese-editor/scripts/validate_editorial_review.py"),
                 str(args.editorial_review), "--draft", str(args.report_draft), "--report", str(args.report),
             ])
-            if report.get("schema_version") in {"2.12.0", "2.13.0"}:
+            if report.get("schema_version") in {"2.12.0", "2.13.0", "2.14.0"}:
                 run([
                     sys.executable, str(REPO_ROOT / "scripts/audit_report_claim_coverage.py"),
                     "--analysis", str(args.analysis), "--brief", str(args.content_brief),
                     "--draft", str(args.report_draft), "--report", str(args.report),
                 ])
         question_schema = calibration_questions.get("schema_version")
-        if report.get("schema_version") == "2.13.0":
-            if question_schema != CURRENT_CALIBRATION_SCHEMA or calibration_questions.get("template_version") != "1.0.0":
+        if report.get("schema_version") == "2.14.0":
+            if question_schema != CURRENT_CALIBRATION_SCHEMA or calibration_questions.get("template_version") != "2.0.0":
+                raise ValueError("2.14.0正式交付必须使用3.0.0个性化确定性校准结果")
+        elif report.get("schema_version") == "2.13.0":
+            if question_schema != "2.2.0" or calibration_questions.get("template_version") != "1.0.0":
                 raise ValueError("2.13.0正式交付必须使用2.2.0固定题型校准结果")
-        elif question_schema not in {"2.1.0", CURRENT_CALIBRATION_SCHEMA} or calibration_questions.get("template_version") != "1.0.0":
-            raise ValueError("旧版兼容交付必须使用2.1.0或2.2.0固定题型校准结果")
+        elif (question_schema, calibration_questions.get("template_version")) not in {("2.1.0", "1.0.0"), (CURRENT_CALIBRATION_SCHEMA, "2.0.0")}:
+            raise ValueError("旧版兼容交付必须使用受支持的确定性校准结果")
         questions = calibration_questions.get("questions")
         responses = report.get("calibration", {}).get("responses", [])
         if not isinstance(questions, list) or len(questions) != 5:
-            raise ValueError("calibration-questions.json 必须包含五道固定题型")
+            raise ValueError("calibration-questions.json 必须包含五道个性化确定性题目")
         if report.get("document_mode") == "full_calibrated" and len(responses) != 5:
             raise ValueError("正式报告必须包含五道校准响应")
         for index, response in enumerate(responses):
@@ -153,9 +163,10 @@ def main() -> int:
                 raise ValueError(f"第{index + 1}条报告响应与固定校准题不一致")
             choice = response.get("choice")
             choices = {item.get("key"): item.get("text") for item in display.get("choices", [])}
-            if response.get("selected_text") != choices.get(choice) or response.get("selected_value") != audit.get("choice_meanings", {}).get(choice):
+            expected_value = choice.lower() if question_schema == CURRENT_CALIBRATION_SCHEMA else audit.get("choice_meanings", {}).get(choice)
+            if response.get("selected_text") != choices.get(choice) or response.get("selected_value") != expected_value:
                 raise ValueError(f"第{index + 1}条报告响应的文本或值编码与用户实际选择不一致")
-            expected_updates = [] if choice == "D" else audit.get("candidate_effects", {}).get(choice)
+            expected_updates = audit.get("candidate_effects", {}).get(choice, [])
             if response.get("candidate_updates") != expected_updates:
                 raise ValueError(f"第{index + 1}条报告响应没有忠实回写该选项的Core候选影响")
         report_source = report.get("source", {})
@@ -192,14 +203,14 @@ def main() -> int:
                 "traceable_editorial_review_valid": True,
                 "calibration_hidden_from_visible_report": True,
             })
-        if report.get("schema_version") in {"2.12.0", "2.13.0"}:
+        if report.get("schema_version") in {"2.12.0", "2.13.0", "2.14.0"}:
             checks.update({
                 "baseline_core_locked": True,
                 "calibration_delta_only": True,
                 "claim_diversity_valid": True,
                 "mandatory_core_claims_realized": True,
             })
-        if report.get("schema_version") == "2.13.0":
+        if report.get("schema_version") in {"2.13.0", "2.14.0"}:
             checks.update({
                 "post_calibration_sources_resolved": True,
                 "rejected_claims_removed": True,

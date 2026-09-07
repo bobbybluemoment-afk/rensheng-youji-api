@@ -49,9 +49,9 @@ python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/adapter
 
 适配器只转换并补全确定性结构，不继承旧免费卡片中的角色标签、文案判断或 K 线评分作为 Core 结论。
 
-## 参考文件读取顺序
+## 参考规则目录与阶段路由
 
-完整分析时依次读取下列文件。不要只读与调用方展示栏目同名的文件。
+下列文件是完整规则库，不是每个AI阶段都要重复读取的提示词。九方法阶段禁止完整加载本Skill、完整Core Schema和下列全部参考文件；应由 `build_method_prompt_packs.py` 为每种方法生成“共同短规则＋本方法专用提示＋唯一method-input”的隔离提示包。完整长文继续作为规则来源与维护依据。
 
 1. [analysis-workflow.md](references/analysis-workflow.md)：执行完整二十四步流程和最终质检。
 2. [natal-structure.md](references/natal-structure.md)：分析月令、全局势、格局、调候、十神网络和刑冲合化。
@@ -72,6 +72,13 @@ python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/adapter
 17. [report-grade-reality-mapping.md](references/report-grade-reality-mapping.md)：建立开放现实候选、人物形成链、领域联动链和报告级判断台账。
 18. [safety-boundaries.md](references/safety-boundaries.md)：执行非宿命表达、高风险边界和不确定性披露。
 19. [post-calibration-report-selection.md](references/post-calibration-report-selection.md)：冻结报告候选池，并在校准后确定性生成最终选材与单章降级状态。
+
+阶段读取规则：
+
+- 九方法AI：只读取 `method-prompt-packs/<method_id>.prompt.md`，不得另读上述完整规则库；
+- Core综合AI：在METHOD GATE通过后读取生产桥、人物画像、社会现实、领域独立、现实映射与安全边界等综合规则；
+- 校准与报告阶段：只在各自阶段读取校准、候选关系和报告选材规则；
+- Schema、哈希、重试次数、方法身份、六领域编号映射和证据编号由确定性程序处理，不作为AI提示内容。
 
 ## 执行规则
 
@@ -99,7 +106,7 @@ python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/adapter
 
 多方法一致必须按不同主要方法家族计算，不能把扶抑、病药、通关、旺衰、根透、刑冲合害等同源术语拆成多票。只有至少两个不同主要方法家族独立同向时，结构置信度才可为高。单一主要方法若新增实质信息、条件明确、可观察且没有事实冲突，可以保留为补充判断。
 
-每个完整方法先逐项检查八个现实领域，再单独保存方法包并校验。现实候选的 `domain` 只允许 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`、`learning`、`mobility`；每项检查登记 `supported`、`insufficient_evidence` 或 `not_applicable`。十神动力、宫位六亲、干支动力、盲派和岁运连续性是关系锚点，必须实际检查 `love_partner`，不能标为 `not_applicable`。输出错误最多进行三轮局部修复；第三轮仍失败则按失败类型记录 `generation_failed`、`blocked_input` 或 `insufficient_evidence`，清空半成品并排除计票。单方法通过只是暂时合格，九方法集合经生产桥汇总成功并写入方法包哈希后才冻结。七个主要方法全部完成时为 `full`；至少五个完成且结构、现实机制与岁运锚点齐全时为 `degraded`；其余为 `preliminary_only`。不得因单个部分独立方法失败或某个报告领域缺少候选而停止全部可靠内容，也不得让 `preliminary_only` 进入完整报告。
+每个完整方法先逐项检查六个报告领域。现实候选的 `domain` 只允许 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`；学习、教育、迁移和地域变化作为这些领域中的现实问题轴处理。每个领域允许0—5条候选、不设最低数；没有候选时登记 `insufficient_evidence` 或 `not_applicable`。十神动力、宫位六亲、干支动力、盲派和岁运连续性是关系锚点，必须实际检查 `love_partner`。输出错误最多进行三轮局部修复；第三轮仍失败则记录真实失败并排除计票。不得因单个部分方法失败或某个报告领域缺少候选而停止其他可靠内容，也不得让 `preliminary_only` 进入完整报告。
 
 ### 6. 把命盘当作现实中的人
 
@@ -131,7 +138,7 @@ python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/adapter
 
 ### 12. 校准而不倒推
 
-生成10—24个可证伪现实候选，尽量覆盖六个报告领域，并逐条标注固定领域、现实维度、候选类型、时间范围、实体证据和受影响的报告判断。提出问题前必须先建立候选关系图，区分可共存、互补、主次、阶段、情境、上下位和真正互斥。报告层只从中选择最有区分度的少数候选，通过固定题型组织成同一比较轴下的A/B/C。
+生成10—24个可证伪现实候选，尽量覆盖六个报告领域，并逐条标注固定领域、现实维度、候选类型、时间范围、实体证据和受影响的报告判断。提出问题前必须先建立候选关系图，区分可共存、互补、主次、阶段、情境、上下位和真正互斥。程序只从中选择最有区分度的五个候选，用统一比较结构生成同一现实问题轴下的A/B/C/D，不让AI自由选题。
 
 吸收用户选择、D“都不符合／不确定”和补充事实时，不能把“未选择”等同于“被否定”。得到校准的候选分别进入主要确认、未选但仍受支持、条件成立、降低优先、明确排除或仍不确定。只有在相同时间、相同口径和相同比较轴下真正互斥时，才排除未选候选。不得倒改四柱和结构事实，也不得因为用户只选A就把完整人物写成单一A类型。
 
@@ -309,18 +316,32 @@ validation: []
 
 不要省略没有明显结论的栏目。使用空数组、`null` 或“证据不足”保留结构，不得补造内容。
 
-完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.14.0`。独立方法包的唯一正式结构入口是 [method-packet.schema.json](schemas/method-packet.schema.json)，它由完整Core Schema确定性导出；不得猜测或查找其他方法包Schema文件。生成方法包前先运行：
+完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.15.0`。正式方法包仍符合 [method-packet.schema.json](schemas/method-packet.schema.json)，但九方法AI不再直接填写这份生产结构。AI只生成 [method-semantic-patch.schema.json](schemas/method-semantic-patch.schema.json) 约束的语义答卷，再由程序编译为正式方法包。
+
+先生成主题隔离输入和九份短提示包：
 
 ```bash
 python scripts/run_in_env.py scripts/prepare_method_input.py analysis-input.json \
   --output method-input.json
+python scripts/run_in_env.py scripts/build_method_prompt_packs.py method-input.json \
+  --output-dir method-prompt-packs
 ```
 
-九个方法只读取 `method-input.json`。每个方法生成后运行：
+九个方法可以并行；不能并行时可以分组运行。每个方法只读取自己的 `.prompt.md`，输出 `method-semantic-patches/<method_id>.json`，并立即校验语义答卷：
 
 ```bash
-python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_method_packet.py method-analysis-pattern-structure.json \
-  --expected-method pattern_structure
+python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_method_semantic_patch.py \
+  method-semantic-patches/<method_id>.json --expected-method <method_id>
+```
+
+九份语义答卷完成或被合法归类后，由程序批量补齐方法身份、哈希、稳定编号、证据登记和六领域映射，并生成METHOD GATE：
+
+```bash
+python scripts/run_in_env.py scripts/compile_method_packets.py \
+  --method-input method-input.json \
+  --semantic-dir method-semantic-patches \
+  --output-dir method-packets \
+  --gate-output method-gate.json
 ```
 
 九个方法完成或被合法归类后，按生产桥生成受约束综合输入。AI只生成规定的语义综合区块，随后由程序组装完整Core并自动生成报告来源：
@@ -328,6 +349,7 @@ python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validat
 ```bash
 python scripts/run_in_env.py scripts/prepare_core_synthesis.py analysis-input.json \
   --method-packet-dir method-packets \
+  --method-gate method-gate.json \
   --output core-synthesis-input.json
 python scripts/run_in_env.py scripts/validate_core_synthesis.py \
   core-synthesis-input.json core-semantic-analysis.json

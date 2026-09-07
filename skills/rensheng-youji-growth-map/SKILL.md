@@ -106,30 +106,42 @@ python scripts/run_in_env.py scripts/prepare_method_input.py work/core-input.jso
 
 该脚本保留排盘、原局、大运和流年，清空现实资料、当前问题与校准信息。九个方法不得读取 `work/core-input.json`、`work/report-preflight.json`、用户关注方向或对话中的现实答案；每个方法包必须登记命令返回的 `method_input_sha256` 和 `input_scope=chart_only_topic_isolated`。
 
-随后确定性生成九个方法包草稿：
+随后确定性生成九份彼此隔离的短提示包：
 
 ```bash
-python scripts/run_in_env.py scripts/initialize_method_packets.py \
-  work/method-input.json --output-dir work/method-packet-drafts
+python scripts/run_in_env.py scripts/build_method_prompt_packs.py \
+  work/method-input.json --output-dir work/method-prompt-packs
 ```
 
-方法包唯一正式结构入口为 `internal/rensheng-youji-mingli-core/schemas/method-packet.schema.json`。不得寻找或假设存在其他方法Schema。草稿只负责固定方法身份、独立家族、输入范围、输入哈希和八领域；AI完成独立分析后必须删除 `_draft_notice`、替换全部 `__AI_FILL__`，并另存到 `work/method-packets/<method_id>.json`。
+每份提示包只包含共同短规则、本方法专用规则、规则来源回执和同一份主题隔离输入。九方法AI不得再次读取完整Core Skill、完整Core Schema、其他方法提示、校准或报告文件。
 
-9. 完整读取 `internal/rensheng-youji-mingli-core/SKILL.md` 及其要求的全部参考文件。只读取 `work/method-input.json`、当前方法草稿和正式 `method-packet.schema.json`，依次生成九个独立方法包，保存到 `work/method-packets/<method_id>.json`。不得读取其他方法的草稿或成品。每个完整方法必须逐项检查 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`、`learning`、`mobility`，分别登记 `supported`、`insufficient_evidence` 或 `not_applicable`；不能为了覆盖而硬造候选。每个方法包生成后立即运行：
+9. 九种方法可以并行执行；运行环境不支持时分组或依次执行。每个方法只读取 `work/method-prompt-packs/<method_id>.prompt.md`，只输出技术结论、现实候选、未支持领域理由和本方法限制，保存到 `work/method-semantic-patches/<method_id>.json`。每个方法都逐项检查六个报告领域，每个领域允许0—5条候选、不设最低数；学习和迁移作为六领域中的现实问题轴处理。编号、哈希、方法身份、证据登记与六领域候选映射不得由AI填写。每份答卷生成后立即运行：
 
 ```bash
-python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_method_packet.py \
-  work/method-packets/<method_id>.json --expected-method <method_id>
+python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_method_semantic_patch.py \
+  work/method-semantic-patches/<method_id>.json --expected-method <method_id>
 ```
 
-单个方法失败只修复该方法，最多三轮；仍失败则清空半成品并记录失败状态。单方法通过只是暂时合格，方法集合要到步骤10汇总成功后才冻结。当前固定方法为七个主要方法与两个部分独立方法，不生成或分析神煞、纳音。
+单个方法失败只修复该方法语义答卷，最多三轮；仍失败则输出合法失败答卷，不借用其他方法结论。当前固定方法为七个主要方法与两个部分独立方法，不生成或分析神煞、纳音。
 
-10. 九个方法包全部完成或被合法归类后，运行确定性汇总：
+10. 九份语义答卷全部完成或被合法归类后，确定性编译为原有正式方法包，并一次生成METHOD GATE：
+
+```bash
+python scripts/run_in_env.py scripts/compile_method_packets.py \
+  --method-input work/method-input.json \
+  --semantic-dir work/method-semantic-patches \
+  --output-dir work/method-packets \
+  --gate-output work/method-gate.json
+```
+
+METHOD GATE负责核对九份答卷、编译后的正式Schema、主题隔离哈希、方法身份、证据引用和六领域检查。只有Gate通过才能运行确定性汇总：
 
 ```bash
 python scripts/run_in_env.py scripts/prepare_core_synthesis.py work/core-input.json \
   --method-packet-dir work/method-packets \
-  --output work/core-synthesis-input.json
+  --method-gate work/method-gate.json \
+  --output work/core-synthesis-input.json \
+  --compiler-source work/core-compiler-source.json
 ```
 
 该脚本必须实际生成 `core-synthesis-input.json`；不得让模型手工复制方法、证据或方法执行审计。若汇总器报告非法领域、无效引用或跨方法重复编号，只返修错误点名的方法包并重新校验、汇总。若只报告 `source_coverage_audit.status=ready_with_gaps`，不得停止；没有来源的领域进入证据缺口并在报告中降级。
@@ -140,7 +152,8 @@ python scripts/run_in_env.py scripts/prepare_core_synthesis.py work/core-input.j
 
 ```bash
 python scripts/run_in_env.py scripts/validate_core_synthesis.py \
-  work/core-synthesis-input.json work/core-semantic-analysis.json
+  work/core-synthesis-input.json work/core-semantic-analysis.json \
+  --compiler-source work/core-compiler-source.json
 ```
 
 失败时最多三轮局部修复：依次处理结构与引用、方法独立性与判断角色、人物覆盖与领域映射。此时方法集合已经冻结，不得重新运行方法包。第三轮仍失败才停止完整Core综合，并报告真实错误。
@@ -150,6 +163,7 @@ python scripts/run_in_env.py scripts/validate_core_synthesis.py \
 ```bash
 python scripts/run_in_env.py scripts/finalize_core_analysis.py \
   work/core-synthesis-input.json work/core-semantic-analysis.json \
+  --compiler-source work/core-compiler-source.json \
   --output work/analysis-output-initial.json
 ```
 
@@ -188,13 +202,13 @@ python scripts/run_in_env.py scripts/core_baseline.py freeze work/analysis-outpu
 ## 五条现实校准
 
 1. 完整读取 [calibration.md](references/calibration.md)。
-2. 从 Core 的 `reality_candidate_pool` 选择最有信息量的现实分歧，读取固定题型库 `references/calibration-question-templates.json`，只生成内部 `work/calibration-plan.json`。不得自行撰写题干和选项。五题至少覆盖四个生活领域，同一领域最多两题，用户关注方向最多两题；至少两题核对客观状态或已经发生的事件，至少一题使用带时间窗口的已发生事件校准大运流年执行。
-3. 运行构建器，把题型、Core候选关系和影响范围转换为 `schema_version=2.2.0` 的正式问题：
+2. 由程序直接从冻结Core的 `reality_candidate_pool` 选择五个最有区分度的待核对点，并生成 `schema_version=3.0.0` 的个性化问题。没有独立的AI选题计划，也不生成 `calibration-plan.json`。五题至少覆盖四个报告领域，同一领域最多两题；至少两题核对客观状态或已发生事件，至少一题带明确时间范围。题干、A项和B项来自当前Core候选，不从全局通用题库硬套。
+3. 运行确定性构建器：
 
 ```bash
 python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py \
-  --plan work/calibration-plan.json \
-  --analysis work/analysis-output-initial.json \
+  --analysis work/analysis-baseline.json \
+  --focus "事业发展" \
   --output work/calibration-questions.json
 ```
 
@@ -203,14 +217,26 @@ python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/build_cali
 ```bash
 python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py \
   work/calibration-questions.json \
-  --analysis work/analysis-output-initial.json \
+  --analysis work/analysis-baseline.json \
   --visible-out work/calibration-visible.md
 ```
 
 不得自行把 `audit`、候选编号、盘面支持、置信度、替代解释或任何命理证据附在问题后面。
-5. 让用户只回复题号和字母；鼓励在最关心的一至两题后补充一个具体事实或年份，但不能要求用户先懂命理。
-6. 将五个选择完整写入 Core 输入的 `calibration` 和报告的 `calibration.responses`。A/B/C记录固定 `template_id`、`selected_value` 与该选项对应的 `candidate_updates`；D记录 `selected_value=uncertain` 和空更新列表。用户补充内容同时写入 `reality_context` 与 `responses.user_note`。不得为了迎合反馈修改四柱、原局结构或大运流年事实。
-7. 只生成 `work/calibration-delta.json`，不得重新生成Core、`portrait_thesis`、报告判断正文、命理机制、证据登记或六领域素材。校准增量只包含候选状态、判断状态、理由、用户事实证据和五题响应，并绑定冻结Baseline的SHA-256。
+5. 让用户回复五个题号和A/B/C/D。A/B/C由程序直接映射为匹配、排除或条件成立；只有选择D并填写自由文字时，才调用一次小型AI，把用户原文整理为“事实＋当前题已绑定候选的状态补丁”。AI不得新建候选、改写题目或读取命理结构来迎合答案。
+6. 自由文字补丁必须符合 `calibration-free-text-patch.schema.json`，并先运行 `scripts/validate_calibration_free_text.py`。没有D答案时跳过该AI阶段，不创建占位内容。
+7. 由程序把五个固定选择和可选自由文字补丁编译为 `work/calibration-delta.json`：
+
+```bash
+python scripts/run_in_env.py scripts/compile_calibration_delta.py \
+  --baseline work/analysis-baseline.json \
+  --lock work/analysis-baseline-lock.json \
+  --questions work/calibration-questions.json \
+  --answers work/calibration-answers.json \
+  --free-text-patch work/calibration-free-text-patch.json \
+  --output work/calibration-delta.json
+```
+
+没有D答案时省略 `--free-text-patch`。校准增量不得重新生成Core、`portrait_thesis`、报告判断正文、命理机制或六领域素材；它只改变既有候选的现实确认状态并登记用户事实。
 8. 使用确定性程序合成校准后Core并验证冻结字段：
 
 ```bash
@@ -240,20 +266,38 @@ python scripts/run_in_env.py scripts/core_baseline.py verify \
    - [brand-and-conversion.md](references/brand-and-conversion.md)：免费使用与人工服务入口；
    - [safety-language.md](references/safety-language.md)：健康、财务、关系和隐私边界。
 2. 校准完成后先运行 `scripts/resolve_report_sources.py`，从冻结候选池排除 `reject`，按稳定优先级和覆盖备用映射生成 `work/resolved-report-sources.json`。不得手工编辑该文件，也不得直接沿用校准前的最终报告名单。
-3. 完整读取 `internal/rensheng-youji-report-content-brief/SKILL.md`，从校准后Core、确定性选材和 `work/report-content-selection.json` 生成实体化 `work/report-content-brief.json`。事实提纲必须携带Core判断正文、机制、证据、限制、选材哈希和降级状态；不能只传判断编号。
-4. 完整读取 `internal/rensheng-youji-report-writer/SKILL.md`，从实体化事实提纲生成 `work/report-draft.json`。每个内容区必须把 `mandatory_claim_ids` 对应的 `plain_claim` 原句放入正文，并登记 `claim_realization_map`；写作层只补充形成过程、条件、例子和限制，不能重新概括锁定判断。正常章节写500—700个汉字；判断不足时按确定性选材给出的 `shortened`、`minimal` 或 `evidence_gap` 缩短，不得用重复内容凑字。
-5. 完整读取 `internal/rensheng-youji-chinese-editor/SKILL.md`，对初稿逐段执行第二遍中文编辑，生成 `work/editorial-review.json` 和正式 `work/report.json`。编辑记录必须保存初稿与终稿对应关系、降级状态和实际修改，不能再用几个布尔值代替编辑。
-6. 正式报告使用 `schema_version=2.13.0`、`document_mode=full_calibrated`。Core使用0.14.0、事实提纲和初稿使用1.5.0、中文编辑使用2.4.0。Core先让九种方法读取主题隔离输入，独立完成技术推演、八领域检查和现实候选，再通过生产桥完成来源覆盖审计、受约束语义综合与确定性组装；单个方法最多独立重试3次，仍失败则退出综合投票。没有方法候选的领域只形成证据缺口并缩短章节，不停止其他可靠内容。只有方法覆盖度达到完整或降级交付门槛时才能冻结Baseline并继续正式报告，`preliminary_only` 必须停止正式链路。完整人生主线先根据全盘材料生成，再在第4页单独回应用户问题。六个领域先写各自的人物侧面，再用人生主线串联；用户关注方向只在当前阶段、问题回应、相关年度和行动建议中加重。
+3. 完整读取 `internal/rensheng-youji-report-content-brief/SKILL.md`。`materialize_content_brief.py` 直接从校准后Core与 `resolved-report-sources.json` 生成实体化 `report-content-brief.json`；不再调用AI做第二次选材，也不生成 `report-content-selection.json`。
+4. 完整读取 `internal/rensheng-youji-report-writer/SKILL.md`。先由 `build_report_writing_pack.py` 把事实提纲拆成段落任务槽；AI只返回正文和摘要、阶段、年度、行动等语义文字，不填写来源编号、段落映射、哈希或审计字段。再由 `compile_report_draft.py` 确定性补齐 `source_claim_ids`、`paragraph_claim_map`、`claim_realization_map` 和重点句映射。
+5. 完整读取 `internal/rensheng-youji-chinese-editor/SKILL.md`。先运行 `scan_report_language.py`，同时检查正文段落和阶段、逐年、行动等其他用户可见文字；没有发现问题时不调用编辑AI，直接生成编辑记录。发现问题时只把被点名的小块交给AI修订，再由 `apply_editorial_patch.py` 验证锁定判断仍在原位置，并输出 `edited-report-draft.json` 与 `edited-report-semantic.json`。最终报告不得绕过编辑结果读取原始语义补丁，也不得要求编辑层为了证明工作发生而强制修改若干章节。
+6. 正式报告使用 `schema_version=2.14.0`、`document_mode=full_calibrated`。Core使用0.15.0、事实提纲和初稿使用1.6.0、中文编辑使用2.5.0、校准题使用3.0.0。Core综合把判断分为主要判断、独立补充、条件判断、阶段判断、待校准判断和证据较弱候选；不设置每领域必须几条。证据较弱候选仅内部保留，待校准判断在现实确认前不直接进入报告。报告章节再按真实可用证据决定正常、缩短、最小或证据缺口模式。
 7. 时间分析继续使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系，同时概括更长阶段。
-8. 卡片没有独立校准流程。完整报告内的卡片从同一份校准后 Core 母稿依次运行 `rensheng-youji-free-card-output` 与 `rensheng-youji-free-card-renderer`，生成 `work/free-card-output.json`；它只继承报告已确定的候选主次与排除状态，命理结构、人生K线语义和原始判断仍来自校准前冻结的同一Core。报告与卡片的分析编号、Core版本和明显关系机会年份必须一致。
-9. 运行统一交付命令：
+8. 卡片没有独立校准流程。`build_card_content.py` 从冻结Core、校准后选材和用户资料确定性提取卡面文字；AI只读取 `build_card_visual_pack.py` 生成的Baseline紧凑包，输出20年视觉语义。完整报告内卡片可以继承报告已确定的可见候选主次，但命理结构、人生K线语义和原始判断仍来自校准前冻结的同一Core。报告与卡片的分析编号、Core版本、Baseline哈希和明显关系机会年份必须一致。
+9. 卡片与编辑结果都完成后，由程序确定性编译正式 `report.json`。这里必须使用编辑后的正文和编辑后的语义文件：
+
+```bash
+python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/compile_final_report.py \
+  --analysis work/analysis-output-calibrated.json \
+  --profile work/profile.json \
+  --brief work/report-content-brief.json \
+  --draft work/edited-report-draft.json \
+  --semantic work/edited-report-semantic.json \
+  --questions work/calibration-questions.json \
+  --delta work/calibration-delta.json \
+  --resolved work/resolved-report-sources.json \
+  --free-card work/free-card-output.json \
+  --review work/editorial-review.json \
+  --output work/report.json \
+  --review-output work/editorial-review-final.json
+```
+
+10. 运行统一交付命令：
 
 ```bash
 python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/generate_full_report.py \
   --report work/report.json \
   --content-brief work/report-content-brief.json \
   --report-draft work/report-draft.json \
-  --editorial-review work/editorial-review.json \
+  --editorial-review work/editorial-review-final.json \
   --analysis work/analysis-output-calibrated.json \
   --analysis-baseline work/analysis-baseline.json \
   --baseline-lock work/analysis-baseline-lock.json \
@@ -265,7 +309,7 @@ python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/generate_f
   --keep-pages
 ```
 
-10. 正式交付固定包含新版1242×1660卡片PNG、Markdown、恰好10页的PDF和 `report-delivery-manifest.json`。PDF第2页必须嵌入刚刚生成的同一张新版卡片；不得让用户模型自行决定版式、页数、换行、颜色或二维码位置。
+11. 正式交付固定包含新版1242×1660卡片PNG、Markdown、恰好10页的PDF和 `report-delivery-manifest.json`。PDF第2页必须嵌入刚刚生成的同一张新版卡片；不得让用户模型自行决定版式、页数、换行、颜色或二维码位置。
 
 ## 交付容错
 
@@ -311,18 +355,18 @@ python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/generate_f
 - 四柱、时间口径和大运事实未被改写；
 - `analysis-baseline.json` 已在五题前冻结，校准后受保护字段哈希完全一致；
 - 六个领域按实际判断数量执行多样性检查：4条及以上至少覆盖三个判断家族、两个机制家族和三个现实问题轴；2—3条至少覆盖两个现实问题轴；0—1条进入证据缺口或稀疏交付；
-- 每个内容区锁定的1—2条 `plain_claim` 均以原句进入初稿和终稿，中文编辑没有改变其落地映射；
+- 每个内容区按交付模式锁定的0—2条 `plain_claim` 均以原句进入初稿和终稿；没有可用判断时允许0条，中文编辑不得改变其落地映射；
 - 第2页为同一 Core 生成的新版人生卡片，卡片尺寸为1242×1660；
 - PDF恰好10页，所有正文无截断，微信二维码实际嵌入；重点判断使用独立深青色行，稳定模式允许取消重点样式；
 - 用户可见校准题中没有候选编号、置信度、盘面支持或命理证据；
-- 用户可见题干和A/B/C来自固定题型库，模型没有自行改写；每题只比较一个轴，三个答案对应不同的候选更新结果；
+- 用户可见题干、A项和B项来自冻结Core的个性化候选，C表示条件或阶段并存，D允许用户自行描述；每题只比较一个现实问题轴；
 - 五题至少包含两道客观状态或事件题、一道带时间窗口的事件题，并且时间题实际绑定带大运或流年证据的 `timed_event` 候选；
 - 不包含“初始角色、核心配置、主线任务、人物小传”等旧卡片字段；
 - 六个领域均有实质内容或明确写证据不足，不能把事业段落换词复制到其他领域；
 - 正常领域写成2—4个连贯自然段并完整覆盖行为模式、形成经历、现实条件、重复挑战、阶段变化与应对；降级领域严格按照选材状态缩短并记录缺失覆盖项；
 - 正常领域和完整人生主线为500—700个汉字；`shortened` 为320—500字，`minimal` 为180—320字，`evidence_gap` 为60—180字；不得为了统一篇幅重复判断；
 - 最终正文没有“现实落点、核对点、判断等级、校准后的现实线索”等内部栏目，也没有固定“好处—代价”句式；
-- 已执行事实提纲、人物初稿和可追溯中文编辑，初稿与终稿真实存在，编辑没有新增判断；
+- 已执行确定性事实提纲、正文语义补丁、程序化来源映射和按需中文编辑；没有语言问题时编辑AI调用次数为零，编辑记录仍真实存在且没有新增判断；
 - 正常和缩短章节每个自然段至少映射两个实体化Core判断，最小章节每段至少一个，证据缺口章节允许不引用判断但只能说明可靠边界；完整人生主线和六领域至少八成来源为命盘或时运基线；
 - 盲派象法与技法只作交叉验证，高置信判断同时有非盲派方法支持，不向用户显示内部盲派术语；
 - “经营”只在用户确有经商、创业、利润责任或业务经营语境时使用；

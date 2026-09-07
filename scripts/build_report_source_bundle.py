@@ -21,7 +21,12 @@ def _ordered_unique(values: list[str]) -> list[str]:
 
 
 def _priority(claim: dict[str, Any]) -> tuple[int, int, str]:
-    role_rank = {"primary": 0, "supplemental": 1}.get(claim.get("report_role"), 2)
+    role_rank = {
+        "primary_judgment": 0,
+        "independent_supplement": 1,
+        "conditional_judgment": 2,
+        "stage_judgment": 3,
+    }.get(claim.get("claim_class"), 4)
     confidence_rank = {"high": 0, "medium": 1, "to_verify": 2}.get(claim.get("confidence"), 3)
     return role_rank, confidence_rank, str(claim.get("claim_id", ""))
 
@@ -46,7 +51,10 @@ def _source(
 ) -> dict[str, Any]:
     eligible = [
         item for item in claims
-        if item.get("report_role") in {"primary", "supplemental"}
+        if item.get("claim_class") in {
+            "primary_judgment", "independent_supplement",
+            "conditional_judgment", "stage_judgment",
+        }
         and item.get("calibration_status") != "reject"
         and (domain is None or item.get("domain") == domain)
     ]
@@ -76,11 +84,11 @@ def _source(
     expected = set(required_coverage(domain)) if domain in DIMENSIONS else set(BASE_COVERAGE)
     missing = sorted(expected - set(coverage))
     mechanisms = _ordered_unique([str(item.get("mechanism_family", "")) for item in eligible])
-    primary_ids = [str(item["claim_id"]) for item in eligible if item.get("report_role") == "primary"]
+    primary_ids = [str(item["claim_id"]) for item in eligible if item.get("claim_class") == "primary_judgment"]
     mandatory_pool = primary_ids or claim_ids
     emphasis = [
         str(item["claim_id"]) for item in eligible
-        if item.get("report_role") == "primary" and item.get("confidence") == "high"
+        if item.get("claim_class") == "primary_judgment" and item.get("confidence") == "high"
     ][:emphasis_limit]
     concrete = _ordered_unique([
         str(example)

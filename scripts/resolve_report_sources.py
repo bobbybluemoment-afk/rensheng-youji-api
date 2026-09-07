@@ -21,15 +21,44 @@ def _ordered_unique(values: list[str]) -> list[str]:
     return list(dict.fromkeys(values))
 
 
-def _resolve_section(source: dict[str, Any], ledger: dict[str, dict[str, Any]], domain: str | None, emphasis_limit: int = 1) -> dict[str, Any]:
-    priority = source.get("claim_priority") or source.get("claim_ids") or []
+def _resolve_section(
+    source: dict[str, Any],
+    ledger: dict[str, dict[str, Any]],
+    domain: str | None,
+    emphasis_limit: int = 1,
+    promote_confirmed_pending: bool = False,
+) -> dict[str, Any]:
+    priority = list(source.get("claim_priority") or source.get("claim_ids") or [])
     pool = set(source.get("claim_ids") or [])
+    promoted_pending = []
+    if promote_confirmed_pending:
+        promoted_pending = [
+            claim_id
+            for claim_id, claim in ledger.items()
+            if claim.get("claim_class") == "calibration_pending"
+            and claim.get("calibration_status") in {"match", "supported_unselected", "conditional", "partial"}
+            and (domain is None or claim.get("domain") == domain)
+        ]
+        # A candidate that survived an explicit reality check should compete near
+        # the front of post-calibration selection, not remain behind the old
+        # pre-calibration shortlist where an eight-item writing cap can hide it.
+        priority = _ordered_unique(promoted_pending + priority)
+        pool.update(promoted_pending)
     rejected = [claim_id for claim_id in priority if ledger.get(claim_id, {}).get("calibration_status") == "reject"]
-    ineligible = [claim_id for claim_id in priority if ledger.get(claim_id, {}).get("report_role") not in {"primary", "supplemental"}]
+    reportable = {"primary_judgment", "independent_supplement", "conditional_judgment", "stage_judgment"}
+    ineligible = [
+        claim_id
+        for claim_id in priority
+        if ledger.get(claim_id, {}).get("claim_class") not in reportable
+        and claim_id not in promoted_pending
+    ]
     available = [claim_id for claim_id in priority if claim_id in pool and claim_id in ledger and claim_id not in rejected and claim_id not in ineligible]
-    specific_pool = set(source.get("domain_specific_claim_ids") or [])
+    specific_pool = set(source.get("domain_specific_claim_ids") or []) | set(promoted_pending)
     mainline_pool = set(source.get("mainline_claim_ids") or [])
-    coverage_map = source.get("coverage_claim_map") or {}
+    coverage_map = {key: list(value) for key, value in (source.get("coverage_claim_map") or {}).items()}
+    for claim_id in promoted_pending:
+        for tag in ledger[claim_id].get("coverage_tags") or []:
+            coverage_map[tag] = _ordered_unique([claim_id] + coverage_map.get(tag, []))
     required = list(required_coverage(domain))
 
     selected: list[str] = []
@@ -117,6 +146,7 @@ def _resolve_section(source: dict[str, Any], ledger: dict[str, dict[str, Any]], 
         "delivery_mode": mode,
         "rejected_claim_ids": rejected,
         "ineligible_claim_ids": ineligible,
+        "promoted_calibration_pending_claim_ids": promoted_pending,
         "replacement_log": replacements,
         "evidence_gaps": _ordered_unique((source.get("evidence_gaps") or []) + (["校准后可用判断不足，章节按证据缩短。"] if mode != "normal" else [])),
     }
@@ -124,8 +154,8 @@ def _resolve_section(source: dict[str, Any], ledger: dict[str, dict[str, Any]], 
 
 def resolve(analysis: dict[str, Any]) -> dict[str, Any]:
     meta = analysis.get("analysis_meta") or {}
-    if meta.get("core_version") != "0.14.0":
-        raise ValueError("Post-calibration source resolution requires core_version=0.14.0")
+    if meta.get("core_version") not in {"0.14.0", "0.15.0"}:
+        raise ValueError("Post-calibration source resolution requires core_version=0.14.0 or 0.15.0")
     if analysis.get("method_execution_audit", {}).get("delivery_decision") == "preliminary_only":
         raise ValueError("preliminary_only Core cannot enter full report source resolution")
     ledger = {item.get("claim_id"): item for item in analysis.get("report_claim_ledger") or [] if isinstance(item, dict)}
@@ -138,8 +168,8 @@ def resolve(analysis: dict[str, Any]) -> dict[str, Any]:
             "core_version": meta.get("core_version"),
             "analysis_sha256": digest(analysis),
         },
-        "life_overview": _resolve_section(source_bundle.get("life_narrative_source") or {}, ledger, None, 2),
-        "dimensions": {domain: _resolve_section(dimensions.get(domain) or {}, ledger, domain) for domain in DIMENSIONS},
+        "life_overview": _resolve_section(source_bundle.get("life_narrative_source") or {}, ledger, None, 2, True),
+        "dimensions": {domain: _resolve_section(dimensions.get(domain) or {}, ledger, domain, 1, True) for domain in DIMENSIONS},
         "current_question": _resolve_section(source_bundle.get("current_stage_source") or {}, ledger, None, 1),
     }
     result["resolved_sha256"] = digest({key: value for key, value in result.items() if key != "resolved_sha256"})

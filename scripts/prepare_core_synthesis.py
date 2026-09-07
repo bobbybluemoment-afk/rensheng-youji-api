@@ -106,24 +106,80 @@ def prepare(analysis_input: dict[str, Any], packets: list[dict[str, Any]]) -> di
     }
 
 
+def compact_view(source: dict[str, Any]) -> dict[str, Any]:
+    """Return the only synthesis view that the AI is allowed to read."""
+    methods = []
+    for method in source["independent_method_analyses"]:
+        methods.append({
+            "method_id": method["method_id"],
+            "tier": method["tier"],
+            "status": method["status"],
+            "technical_conclusions": method.get("technical_conclusions") or [],
+            "reality_hypotheses": method.get("reality_hypotheses") or [],
+            "limitations": method.get("limitations") or [],
+        })
+    evidence_index = [{
+        "evidence_id": item["evidence_id"],
+        "method_id": item["method_id"],
+        "independence_group": item["independence_group"],
+        "source_layer": item["source_layer"],
+        "observation": item["observation"],
+        "interpretation": item["interpretation"],
+        "confidence": item["confidence"],
+    } for item in source["evidence_registry"]]
+    return {
+        "schema_version": "1.1.0",
+        "core_version": source["core_version"],
+        "analysis_input_sha256": source["analysis_input_sha256"],
+        "method_input_sha256": source["method_input_sha256"],
+        "method_packets_sha256": source["method_packets_sha256"],
+        "analysis_context": source["analysis_input"],
+        "method_summaries": methods,
+        "evidence_index": evidence_index,
+        "method_execution_audit": source["method_execution_audit"],
+        "source_coverage_audit": source["source_coverage_audit"],
+        "semantic_output_contract": source["semantic_output_contract"] | {
+            "claim_class_rule": "每条报告判断只标记六类claim_class之一；report_role由编译器填写。",
+            "calibration_probe_rule": "现实候选的validation_question、正向表现、替代解释和时间范围必须足以让程序生成个性化校准题。",
+        },
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("analysis_input", type=Path)
     parser.add_argument("--method-packet-dir", type=Path, required=True)
+    parser.add_argument("--method-gate", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--compiler-source", type=Path, help="完整方法包与证据，仅供确定性Core编译器读取")
     args = parser.parse_args()
     try:
         packet_paths = [args.method_packet_dir / f"{method_id}.json" for method_id in sorted(ALL_METHODS)]
         missing_paths = [str(path) for path in packet_paths if not path.is_file()]
         if missing_paths:
             raise ValueError("缺少规定方法包文件：" + "，".join(missing_paths))
-        result = prepare(_load(args.analysis_input), [_load(path) for path in packet_paths])
+        packets = [_load(path) for path in packet_paths]
+        if args.method_gate:
+            gate = _load(args.method_gate)
+            if gate.get("status") != "pass" or gate.get("packet_count") != 9:
+                raise ValueError("METHOD GATE未通过或方法包数量无效")
+            expected_hashes = gate.get("packet_sha256_by_method") or {}
+            actual_hashes = {
+                str(packet["method_analysis"]["method_id"]): canonical_digest(packet)
+                for packet in packets
+            }
+            if expected_hashes != actual_hashes:
+                raise ValueError("METHOD GATE与当前九个方法包哈希不一致")
+        compiler_source = prepare(_load(args.analysis_input), packets)
+        result = compact_view(compiler_source)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+        compiler_path = args.compiler_source or args.output.with_name("core-compiler-source.json")
+        compiler_path.write_text(json.dumps(compiler_source, ensure_ascii=False, indent=2), encoding="utf-8")
     except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
         print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False))
         return 1
-    print(json.dumps({"status": "ok", "output": str(args.output)}, ensure_ascii=False))
+    print(json.dumps({"status": "ok", "output": str(args.output), "compiler_source": str(compiler_path)}, ensure_ascii=False))
     return 0
 
 

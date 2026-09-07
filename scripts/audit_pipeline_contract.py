@@ -11,8 +11,8 @@ from typing import Any
 
 def audit(root: Path, contract: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    if contract.get("schema_version") != "1.0.0":
-        errors.append("pipeline contract schema_version 必须为1.0.0")
+    if contract.get("schema_version") not in {"1.0.0", "2.0.0"}:
+        errors.append("pipeline contract schema_version 必须为1.0.0或2.0.0")
     runtime = contract.get("runtime")
     if not isinstance(runtime, dict):
         errors.append("pipeline contract 缺少runtime运行入口")
@@ -40,9 +40,10 @@ def audit(root: Path, contract: dict[str, Any]) -> list[str]:
             continue
         stage_ids.add(stage_id)
         producer = stage.get("producer")
-        if producer not in {"deterministic", "ai_constrained"}:
+        if producer not in {"deterministic", "ai_constrained", "ai_constrained_optional"}:
             errors.append(f"{path}.producer 值无效")
-        missing_inputs = sorted(set(stage.get("inputs") or []) - available)
+        declared_inputs = {str(item).rstrip("?") for item in stage.get("inputs") or []}
+        missing_inputs = sorted(declared_inputs - available)
         if missing_inputs:
             errors.append(f"{stage_id}存在没有上游生产者的输入：{missing_inputs}")
         outputs = stage.get("outputs") or []
@@ -55,7 +56,7 @@ def audit(root: Path, contract: dict[str, Any]) -> list[str]:
             produced_by[output] = stage_id
         if producer == "deterministic" and not stage.get("script"):
             errors.append(f"{stage_id}是确定性阶段但没有生产脚本")
-        if producer == "ai_constrained" and not stage.get("contract"):
+        if producer in {"ai_constrained", "ai_constrained_optional"} and not stage.get("contract"):
             errors.append(f"{stage_id}是AI阶段但没有Skill或参考契约")
         for key in ("script", "contract", "validator", "output_contract", "scaffold"):
             value = stage.get(key)

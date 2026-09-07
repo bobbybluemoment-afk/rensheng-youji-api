@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "common_rules": "internal/rensheng-youji-mingli-core/method-prompts/common-rules.md",
+  "methods": {
+    "pattern_structure": {"guide": "internal/rensheng-youji-mingli-core/method-prompts/pattern-structure.md", "sources": ["internal/rensheng-youji-mingli-core/references/natal-structure.md", "internal/rensheng-youji-mingli-core/references/branch-qi-and-roots.md"]},
+    "momentum_configuration": {"guide": "internal/rensheng-youji-mingli-core/method-prompts/momentum-configuration.md", "sources": ["internal/rensheng-youji-mingli-core/references/natal-structure.md"]},
+    "climate_adjustment": {"guide": "internal/rensheng-youji-mingli-core/method-prompts/climate-adjustment.md", "sources": ["internal/rensheng-youji-mingli-core/references/natal-structure.md", "internal/rensheng-youji-mingli-core/references/safety-boundaries.md"]},
+    "ten_god_dynamics": {"guide": "internal/rensheng-youji-mingli-core/method-prompts/ten-god-dynamics.md", "sources": ["internal/rensheng-youji-mingli-core/references/natal-structure.md", "internal/rensheng-youji-mingli-core/references/branch-qi-and-roots.md", "internal/rensheng-youji-mingli-core/references/resource-and-domain-links.md"]},
+    "root_seed_flower_fruit": {"guide": "internal/rensheng-youji-mingli-core/method-prompts/root-seed-flower-fruit.md", "sources": ["internal/rensheng-youji-mingli-core/references/root-seed-flower-fruit.md", "internal/rensheng-youji-mingli-core/references/branch-qi-and-roots.md"]},
+    "blind_school": {"guide": "internal/rensheng-youji-mingli-core/method-prompts/blind-school.md", "sources": ["internal/rensheng-youji-mingli-core/references/blind-school-cross-method.md", "internal/rensheng-youji-mingli-core/references/safety-boundaries.md"]},
+    "timing_continuity": {"guide": "internal/rensheng-youji-mingli-core/method-prompts/timing-continuity.md", "sources": ["internal/rensheng-youji-mingli-core/references/luck-cycle-theme.md", "internal/rensheng-youji-mingli-core/references/annual-activation.md"]},
+    "position_relationship": {"guide": "internal/rensheng-youji-mingli-core/method-prompts/position-relationship.md", "sources": ["internal/rensheng-youji-mingli-core/references/complete-person-and-relationship-portrait.md", "internal/rensheng-youji-mingli-core/references/resource-and-domain-links.md"]},
+    "stem_branch_dynamics": {"guide": "internal/rensheng-youji-mingli-core/method-prompts/stem-branch-dynamics.md", "sources": ["internal/rensheng-youji-mingli-core/references/branch-qi-and-roots.md", "internal/rensheng-youji-mingli-core/references/natal-structure.md"]}
+  }
+}

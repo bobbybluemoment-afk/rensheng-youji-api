@@ -1,189 +1,38 @@
 {
-  "schema_version": "1.0.0",
-  "runtime": {
-    "bootstrap": "scripts/setup_env.py",
-    "launcher": "scripts/run_in_env.py",
-    "environment": "venv"
-  },
+  "schema_version": "2.0.0",
+  "runtime": {"bootstrap": "scripts/setup_env.py", "launcher": "scripts/run_in_env.py", "environment": "venv"},
   "external_artifacts": ["birth_input", "user_focus", "user_calibration_answers"],
+  "gates": ["METHOD_GATE", "CORE_GATE", "CALIBRATION_GATE", "REPORT_GATE", "DELIVERY_GATE"],
   "stages": [
-    {
-      "id": "core_input",
-      "producer": "deterministic",
-      "inputs": ["birth_input"],
-      "outputs": ["core_input", "profile"],
-      "script": "scripts/prepare_core_input.py",
-      "validator": "internal/rensheng-youji-mingli-core/scripts/validate_analysis_input.py"
-    },
-    {
-      "id": "time_preflight",
-      "producer": "deterministic",
-      "inputs": ["core_input", "user_focus"],
-      "outputs": ["report_preflight"],
-      "script": "skills/rensheng-youji-growth-map/scripts/preflight_report.py"
-    },
-    {
-      "id": "method_input",
-      "producer": "deterministic",
-      "inputs": ["core_input"],
-      "outputs": ["method_input"],
-      "script": "scripts/prepare_method_input.py",
-      "validator": "internal/rensheng-youji-mingli-core/scripts/validate_analysis_input.py"
-    },
-    {
-      "id": "independent_methods",
-      "producer": "ai_constrained",
-      "inputs": ["method_input"],
-      "outputs": ["method_packets"],
-      "contract": "internal/rensheng-youji-mingli-core/SKILL.md",
-      "output_contract": "internal/rensheng-youji-mingli-core/schemas/method-packet.schema.json",
-      "scaffold": "scripts/initialize_method_packets.py",
-      "validator": "internal/rensheng-youji-mingli-core/scripts/validate_method_packet.py"
-    },
-    {
-      "id": "synthesis_input",
-      "producer": "deterministic",
-      "inputs": ["core_input", "method_packets"],
-      "outputs": ["core_synthesis_input"],
-      "script": "scripts/prepare_core_synthesis.py"
-    },
-    {
-      "id": "semantic_synthesis",
-      "producer": "ai_constrained",
-      "inputs": ["core_synthesis_input"],
-      "outputs": ["core_semantic_analysis"],
-      "contract": "internal/rensheng-youji-mingli-core/references/core-production-bridge.md",
-      "output_contract": "dynamic:core-synthesis-input.json#semantic_output_contract",
-      "validator": "scripts/validate_core_synthesis.py"
-    },
-    {
-      "id": "initial_core",
-      "producer": "deterministic",
-      "inputs": ["core_synthesis_input", "core_semantic_analysis"],
-      "outputs": ["analysis_initial"],
-      "script": "scripts/finalize_core_analysis.py",
-      "validator": "internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py"
-    },
-    {
-      "id": "core_quality_audit",
-      "producer": "deterministic",
-      "inputs": ["analysis_initial"],
-      "outputs": ["core_quality_audit"],
-      "script": "scripts/audit_claim_diversity.py"
-    },
-    {
-      "id": "baseline_freeze",
-      "producer": "deterministic",
-      "inputs": ["analysis_initial", "core_quality_audit"],
-      "outputs": ["analysis_baseline", "baseline_lock"],
-      "script": "scripts/core_baseline.py"
-    },
-    {
-      "id": "calibration_plan",
-      "producer": "ai_constrained",
-      "inputs": ["analysis_baseline", "user_focus"],
-      "outputs": ["calibration_plan"],
-      "contract": "skills/rensheng-youji-growth-map/references/calibration.md",
-      "output_contract": "skills/rensheng-youji-growth-map/references/calibration.md",
-      "validator": "skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py"
-    },
-    {
-      "id": "calibration_questions",
-      "producer": "deterministic",
-      "inputs": ["analysis_baseline", "calibration_plan"],
-      "outputs": ["calibration_questions"],
-      "script": "skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py",
-      "validator": "skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py"
-    },
-    {
-      "id": "calibration_delta",
-      "producer": "ai_constrained",
-      "inputs": ["analysis_baseline", "baseline_lock", "calibration_questions", "user_calibration_answers"],
-      "outputs": ["calibration_delta"],
-      "contract": "skills/rensheng-youji-growth-map/SKILL.md",
-      "output_contract": "internal/rensheng-youji-mingli-core/references/candidate-relations-and-calibrated-synthesis.md",
-      "validator": "scripts/apply_calibration_delta.py"
-    },
-    {
-      "id": "calibrated_core",
-      "producer": "deterministic",
-      "inputs": ["analysis_baseline", "baseline_lock", "calibration_delta"],
-      "outputs": ["analysis_calibrated"],
-      "script": "scripts/apply_calibration_delta.py",
-      "validator": "scripts/core_baseline.py"
-    },
-    {
-      "id": "report_sources",
-      "producer": "deterministic",
-      "inputs": ["analysis_calibrated"],
-      "outputs": ["resolved_report_sources"],
-      "script": "scripts/resolve_report_sources.py"
-    },
-    {
-      "id": "content_selection",
-      "producer": "ai_constrained",
-      "inputs": ["analysis_calibrated", "resolved_report_sources", "user_focus"],
-      "outputs": ["report_content_selection"],
-      "contract": "internal/rensheng-youji-report-content-brief/SKILL.md",
-      "output_contract": "internal/rensheng-youji-report-content-brief/references/content-brief.md",
-      "validator": "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py"
-    },
-    {
-      "id": "content_brief",
-      "producer": "deterministic",
-      "inputs": ["analysis_calibrated", "resolved_report_sources", "report_content_selection"],
-      "outputs": ["report_content_brief"],
-      "script": "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py",
-      "validator": "internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py"
-    },
-    {
-      "id": "report_draft",
-      "producer": "ai_constrained",
-      "inputs": ["report_content_brief"],
-      "outputs": ["report_draft"],
-      "contract": "internal/rensheng-youji-report-writer/SKILL.md",
-      "output_contract": "internal/rensheng-youji-report-writer/scripts/validate_report_draft.py",
-      "validator": "internal/rensheng-youji-report-writer/scripts/validate_report_draft.py"
-    },
-    {
-      "id": "edited_report",
-      "producer": "ai_constrained",
-      "inputs": ["report_draft", "report_content_brief"],
-      "outputs": ["report", "editorial_review"],
-      "contract": "internal/rensheng-youji-chinese-editor/SKILL.md",
-      "output_contract": "skills/rensheng-youji-growth-map/references/report-schema.md",
-      "validator": "internal/rensheng-youji-chinese-editor/scripts/validate_editorial_review.py"
-    },
-    {
-      "id": "free_card_semantics",
-      "producer": "ai_constrained",
-      "inputs": ["analysis_calibrated"],
-      "outputs": ["card_content", "visual_signals"],
-      "contract": "internal/rensheng-youji-free-card-output/SKILL.md",
-      "output_contract": "internal/rensheng-youji-free-card-output/schemas/visual-signals.schema.json",
-      "validator": "internal/rensheng-youji-free-card-output/scripts/validate_visual_signals.py"
-    },
-    {
-      "id": "free_card_visual_series",
-      "producer": "deterministic",
-      "inputs": ["visual_signals"],
-      "outputs": ["visual_series"],
-      "script": "internal/rensheng-youji-free-card-output/scripts/build_visual_series.py"
-    },
-    {
-      "id": "free_card_output",
-      "producer": "deterministic",
-      "inputs": ["analysis_calibrated", "card_content", "visual_series"],
-      "outputs": ["free_card_output"],
-      "script": "scripts/assemble_free_card.py",
-      "validator": "internal/rensheng-youji-free-card-output/scripts/validate_free_card_output.py"
-    },
-    {
-      "id": "delivery",
-      "producer": "deterministic",
-      "inputs": ["analysis_calibrated", "analysis_baseline", "baseline_lock", "calibration_delta", "calibration_questions", "resolved_report_sources", "report_content_brief", "report_draft", "report", "editorial_review", "free_card_output"],
-      "outputs": ["delivery_manifest", "card_png", "report_markdown", "report_pdf"],
-      "script": "skills/rensheng-youji-growth-map/scripts/generate_full_report.py"
-    }
+    {"id":"core_input","producer":"deterministic","inputs":["birth_input"],"outputs":["core_input","profile"],"script":"scripts/prepare_core_input.py","validator":"internal/rensheng-youji-mingli-core/scripts/validate_analysis_input.py"},
+    {"id":"time_preflight","producer":"deterministic","inputs":["core_input","user_focus"],"outputs":["report_preflight"],"script":"skills/rensheng-youji-growth-map/scripts/preflight_report.py"},
+    {"id":"method_input","producer":"deterministic","inputs":["core_input"],"outputs":["method_input"],"script":"scripts/prepare_method_input.py","validator":"internal/rensheng-youji-mingli-core/scripts/validate_analysis_input.py"},
+    {"id":"method_prompt_packs","producer":"deterministic","inputs":["method_input"],"outputs":["method_prompt_packs"],"script":"scripts/build_method_prompt_packs.py","validator":"scripts/audit_method_prompt_contract.py"},
+    {"id":"independent_methods","producer":"ai_constrained","parallel":true,"inputs":["method_prompt_packs"],"outputs":["method_semantic_patches"],"contract":"internal/rensheng-youji-mingli-core/method-prompts/common-rules.md","output_contract":"internal/rensheng-youji-mingli-core/schemas/method-semantic-patch.schema.json","validator":"internal/rensheng-youji-mingli-core/scripts/validate_method_semantic_patch.py"},
+    {"id":"method_packet_compile","producer":"deterministic","inputs":["method_input","method_semantic_patches"],"outputs":["method_packets","method_gate"],"script":"scripts/compile_method_packets.py","validator":"internal/rensheng-youji-mingli-core/scripts/validate_method_packet.py","gate":"METHOD_GATE"},
+    {"id":"synthesis_input","producer":"deterministic","inputs":["core_input","method_packets","method_gate"],"outputs":["core_synthesis_input","core_compiler_source"],"script":"scripts/prepare_core_synthesis.py"},
+    {"id":"semantic_synthesis","producer":"ai_constrained","inputs":["core_synthesis_input"],"outputs":["core_semantic_analysis"],"contract":"internal/rensheng-youji-mingli-core/references/core-production-bridge.md","output_contract":"dynamic:core-synthesis-input.json#semantic_output_contract","validator":"scripts/validate_core_synthesis.py"},
+    {"id":"initial_core","producer":"deterministic","inputs":["core_synthesis_input","core_compiler_source","core_semantic_analysis"],"outputs":["analysis_initial"],"script":"scripts/finalize_core_analysis.py","validator":"internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py"},
+    {"id":"core_quality_audit","producer":"deterministic","inputs":["analysis_initial"],"outputs":["core_quality_audit"],"script":"scripts/audit_claim_diversity.py","gate":"CORE_GATE"},
+    {"id":"baseline_freeze","producer":"deterministic","inputs":["analysis_initial","core_quality_audit"],"outputs":["analysis_baseline","baseline_lock"],"script":"scripts/core_baseline.py"},
+    {"id":"calibration_questions","producer":"deterministic","inputs":["analysis_baseline","user_focus"],"outputs":["calibration_questions"],"script":"skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py","validator":"skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py"},
+    {"id":"calibration_free_text","producer":"ai_constrained_optional","condition":"任一回答选择D并提供自由文字","inputs":["analysis_baseline","calibration_questions","user_calibration_answers"],"outputs":["calibration_free_text_patch"],"contract":"skills/rensheng-youji-growth-map/references/calibration.md","output_contract":"internal/rensheng-youji-mingli-core/schemas/calibration-free-text-patch.schema.json","validator":"scripts/validate_calibration_free_text.py"},
+    {"id":"calibration_delta","producer":"deterministic","inputs":["analysis_baseline","baseline_lock","calibration_questions","user_calibration_answers","calibration_free_text_patch?"],"outputs":["calibration_delta"],"script":"scripts/compile_calibration_delta.py","validator":"scripts/apply_calibration_delta.py","gate":"CALIBRATION_GATE"},
+    {"id":"calibrated_core","producer":"deterministic","inputs":["analysis_baseline","baseline_lock","calibration_delta"],"outputs":["analysis_calibrated"],"script":"scripts/apply_calibration_delta.py","validator":"scripts/core_baseline.py"},
+    {"id":"report_sources","producer":"deterministic","inputs":["analysis_calibrated"],"outputs":["resolved_report_sources"],"script":"scripts/resolve_report_sources.py"},
+    {"id":"content_brief","producer":"deterministic","inputs":["analysis_calibrated","resolved_report_sources","user_focus"],"outputs":["report_content_brief"],"script":"internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py","validator":"internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py"},
+    {"id":"report_writing_pack","producer":"deterministic","inputs":["report_content_brief","analysis_calibrated"],"outputs":["report_writing_pack"],"script":"internal/rensheng-youji-report-writer/scripts/build_report_writing_pack.py"},
+    {"id":"report_semantics","producer":"ai_constrained","inputs":["report_writing_pack"],"outputs":["report_semantic_patch"],"contract":"internal/rensheng-youji-report-writer/SKILL.md","output_contract":"internal/rensheng-youji-report-writer/schemas/report-semantic-patch.schema.json","validator":"internal/rensheng-youji-report-writer/scripts/compile_report_draft.py"},
+    {"id":"report_draft","producer":"deterministic","inputs":["report_content_brief","report_writing_pack","report_semantic_patch"],"outputs":["report_draft"],"script":"internal/rensheng-youji-report-writer/scripts/compile_report_draft.py","validator":"internal/rensheng-youji-report-writer/scripts/validate_report_draft.py"},
+    {"id":"editorial_scan","producer":"deterministic","inputs":["report_draft","report_semantic_patch"],"outputs":["editorial_scan"],"script":"internal/rensheng-youji-chinese-editor/scripts/scan_report_language.py"},
+    {"id":"editorial_repair","producer":"ai_constrained_optional","condition":"editorial_scan.status=repair_required","inputs":["report_draft","editorial_scan"],"outputs":["editorial_repair_patch"],"contract":"internal/rensheng-youji-chinese-editor/SKILL.md","output_contract":"internal/rensheng-youji-chinese-editor/schemas/editorial-repair-patch.schema.json","validator":"internal/rensheng-youji-chinese-editor/scripts/apply_editorial_patch.py"},
+    {"id":"editorial_apply","producer":"deterministic","inputs":["report_draft","report_semantic_patch","editorial_scan","editorial_repair_patch?"],"outputs":["edited_report_draft","edited_report_semantic","editorial_review"],"script":"internal/rensheng-youji-chinese-editor/scripts/apply_editorial_patch.py"},
+    {"id":"free_card_content","producer":"deterministic","inputs":["profile","analysis_baseline","analysis_calibrated","resolved_report_sources"],"outputs":["card_content"],"script":"internal/rensheng-youji-free-card-output/scripts/build_card_content.py"},
+    {"id":"free_card_visual_pack","producer":"deterministic","inputs":["analysis_baseline"],"outputs":["card_visual_pack"],"script":"internal/rensheng-youji-free-card-output/scripts/build_card_visual_pack.py"},
+    {"id":"free_card_semantics","producer":"ai_constrained","inputs":["card_visual_pack"],"outputs":["visual_signals"],"contract":"internal/rensheng-youji-free-card-output/references/visual-algorithm.md","output_contract":"internal/rensheng-youji-free-card-output/schemas/visual-signals.schema.json","validator":"internal/rensheng-youji-free-card-output/scripts/validate_visual_signals.py"},
+    {"id":"free_card_visual_series","producer":"deterministic","inputs":["visual_signals"],"outputs":["visual_series"],"script":"internal/rensheng-youji-free-card-output/scripts/build_visual_series.py"},
+    {"id":"free_card_output","producer":"deterministic","inputs":["analysis_baseline","baseline_lock","analysis_calibrated","resolved_report_sources","card_content","visual_series"],"outputs":["free_card_output"],"script":"scripts/assemble_free_card.py","validator":"internal/rensheng-youji-free-card-output/scripts/validate_free_card_output.py"},
+    {"id":"report_compile","producer":"deterministic","inputs":["analysis_calibrated","profile","report_content_brief","edited_report_draft","edited_report_semantic","calibration_questions","calibration_delta","resolved_report_sources","free_card_output","editorial_review"],"outputs":["report","editorial_review_final"],"script":"skills/rensheng-youji-growth-map/scripts/compile_final_report.py","validator":"internal/rensheng-youji-chinese-editor/scripts/validate_editorial_review.py","gate":"REPORT_GATE"},
+    {"id":"delivery","producer":"deterministic","inputs":["analysis_calibrated","analysis_baseline","baseline_lock","calibration_delta","calibration_questions","resolved_report_sources","report_content_brief","report_draft","report","editorial_review_final","free_card_output"],"outputs":["delivery_manifest","card_png","report_markdown","report_pdf"],"script":"skills/rensheng-youji-growth-map/scripts/generate_full_report.py","gate":"DELIVERY_GATE"}
   ]
 }

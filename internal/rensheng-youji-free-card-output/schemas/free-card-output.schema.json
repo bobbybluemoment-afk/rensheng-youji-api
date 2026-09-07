@@ -5,14 +5,19 @@
   "type": "object",
   "required": ["schema_version", "source", "identity", "mingju_analysis", "trend_panel", "current_issue", "full_report_hint", "disclaimers"],
   "properties": {
-    "schema_version": {"const": "1.1.0"},
+    "schema_version": {"const": "1.2.0"},
     "source": {
       "type": "object",
-      "required": ["analysis_id", "core_version", "analysis_as_of"],
+      "required": ["analysis_id", "core_version", "analysis_as_of", "baseline_sha256", "calibrated_sha256", "resolved_source_sha256", "trend_source", "visible_selection_source"],
       "properties": {
         "analysis_id": {"type": "string"},
         "core_version": {"type": "string"},
-        "analysis_as_of": {"type": "string", "format": "date"}
+        "analysis_as_of": {"type": "string", "format": "date"},
+        "baseline_sha256": {"type": "string"},
+        "calibrated_sha256": {"type": "string"},
+        "resolved_source_sha256": {"type": ["string", "null"]},
+        "trend_source": {"const": "frozen_baseline"},
+        "visible_selection_source": {"enum": ["frozen_baseline", "post_calibration"]}
       }
     },
     "identity": {

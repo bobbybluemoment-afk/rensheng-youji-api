@@ -1,4 +1,4 @@
-# 人生有迹报告 JSON v2.13.0
+# 人生有迹报告 JSON v2.14.0
 
 ## 目录
 
@@ -18,7 +18,7 @@
 - 正式报告：`document_mode=full_calibrated`，必须完成五条现实校准、事实提纲、人物初稿和中文编辑，生成10页PDF。
 - 未校准版：`document_mode=preliminary_uncalibrated`，只生成初步Markdown与新版卡片，不生成正式PDF。
 
-正式报告使用 `schema_version=2.13.0`，当前Core使用 `core_version=0.14.0`。校准前，九个规定方法家族必须读取主题隔离输入，分别产生命理技术结论、八领域检查与现实候选并逐方法校验，再通过生产桥完成来源覆盖审计、受约束语义综合与确定性组装；单个方法最多重试3次，仍失败则排除。没有方法来源的领域按证据缺口降级，不得补造判断。只有 `delivery_decision` 为 `full` 或 `degraded` 才能冻结Core候选池；`preliminary_only` 不得进入正式报告。校准后只能通过绑定Baseline哈希的增量文件调整状态，再由确定性选材程序生成最终报告名单。
+正式报告使用 `schema_version=2.14.0`，当前Core使用 `core_version=0.15.0`。校准前，九个规定方法家族分别读取自己的主题隔离短提示，逐项检查六个报告领域并产生0—5条本领域候选；方法AI只写语义，生产字段由程序编译。Core综合使用六类判断，不设置每领域最低条数。校准后只能通过绑定Baseline哈希的增量文件调整现实确认状态，再由程序确定报告名单、事实提纲、来源映射和降级模式。
 
 ## 2. 来源链路
 
@@ -36,12 +36,12 @@
 
 ```json
 {
-  "schema_version": "2.13.0",
+  "schema_version": "2.14.0",
   "report_id": "唯一报告编号",
   "document_mode": "full_calibrated",
   "source": {
     "analysis_id": "与Core和卡片一致",
-    "core_version": "0.14.0",
+    "core_version": "0.15.0",
     "analysis_as_of": "YYYY-MM-DD",
     "calibration_status": "calibrated"
   },
@@ -49,7 +49,8 @@
     "content_brief_id": "事实提纲编号",
     "report_draft_id": "人物初稿编号",
     "editorial_review_id": "编辑记录编号",
-    "resolved_source_sha256": "校准后确定性选材哈希"
+    "resolved_source_sha256": "校准后确定性选材哈希",
+    "report_semantic_sha256": "经过语言扫描或局部修订后的报告语义哈希"
   },
   "title": "人生有迹｜完整报告",
   "subtitle": "看见你带来的能力，理解你走过的路，也寻找新的可能",
@@ -65,7 +66,7 @@
   "cross_output_consistency": {"relationship_opportunity_years": []},
   "chart": {},
   "calibration": {"responses": []},
-  "editorial_review": {"version": "2.4.0", "review_id": "与source_artifacts一致"},
+  "editorial_review": {"version": "2.5.0", "review_id": "与source_artifacts一致"},
   "executive_summary": {
     "life_overview": {"paragraphs": [], "source_claim_ids": [], "paragraph_claim_map": [], "claim_realization_map": [], "emphasis_spans": [], "coverage": []},
     "capabilities_resources": []
@@ -82,7 +83,7 @@
 }
 ```
 
-`profile`、`chart`、`calibration`、`stage_story`、`yearly_outlook`、`action_guide`、`author` 和 `boundaries` 延续2.6.0已经确认的字段；只有用户可见长文结构与编辑来源链发生变化。
+`calibration.question_schema_version=3.0.0`、`template_version=2.0.0`。报告正文由语义补丁生成，来源编号、段落映射、重点句映射和报告外壳由程序编译。
 
 ## 3. 用户可见内容
 
