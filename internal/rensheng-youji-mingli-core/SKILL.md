@@ -106,7 +106,7 @@ python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/adapter
 
 多方法一致必须按不同主要方法家族计算，不能把扶抑、病药、通关、旺衰、根透、刑冲合害等同源术语拆成多票。只有至少两个不同主要方法家族独立同向时，结构置信度才可为高。单一主要方法若新增实质信息、条件明确、可观察且没有事实冲突，可以保留为补充判断。
 
-每个完整方法先逐项检查六个报告领域。现实候选的 `domain` 只允许 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`；学习、教育、迁移和地域变化作为这些领域中的现实问题轴处理。每个领域允许0—5条候选、不设最低数；没有候选时登记 `insufficient_evidence` 或 `not_applicable`。十神动力、宫位六亲、干支动力、盲派和岁运连续性是关系锚点，必须实际检查 `love_partner`。输出错误最多进行三轮局部修复；第三轮仍失败则记录真实失败并排除计票。不得因单个部分方法失败或某个报告领域缺少候选而停止其他可靠内容，也不得让 `preliminary_only` 进入完整报告。
+每个完整方法先逐项检查六个报告领域。现实候选的 `domain` 只允许 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`；学习、教育、迁移和地域变化作为这些领域中的现实问题轴处理。每个领域允许0—5条候选、不设最低数；完整方法通常保留8—14条真正不同的候选，证据少时可以更少，总数最多18条、技术结论最多12条。没有候选时登记 `insufficient_evidence` 或 `not_applicable`。十神动力、宫位六亲、干支动力、盲派和岁运连续性是关系锚点，必须实际检查 `love_partner`。输出错误最多进行三轮局部修复；第三轮仍失败则记录真实失败并排除计票。不得因单个部分方法失败或某个报告领域缺少候选而停止其他可靠内容，也不得让 `preliminary_only` 进入完整报告。
 
 ### 6. 把命盘当作现实中的人
 
@@ -318,7 +318,7 @@ validation: []
 
 完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.15.0`。正式方法包仍符合 [method-packet.schema.json](schemas/method-packet.schema.json)，但九方法AI不再直接填写这份生产结构。AI只生成 [method-semantic-patch.schema.json](schemas/method-semantic-patch.schema.json) 约束的语义答卷，再由程序编译为正式方法包。
 
-先生成主题隔离输入和九份短提示包：
+先生成一份完整主题隔离输入和九份按方法需要裁剪的短提示包。完整输入只作为统一哈希源；AI实际只读取各自提示包中的 `method-input-view.json`：
 
 ```bash
 python scripts/run_in_env.py scripts/prepare_method_input.py analysis-input.json \
@@ -327,7 +327,7 @@ python scripts/run_in_env.py scripts/build_method_prompt_packs.py method-input.j
   --output-dir method-prompt-packs
 ```
 
-九个方法可以并行；不能并行时可以分组运行。每个方法只读取自己的 `.prompt.md`，输出 `method-semantic-patches/<method_id>.json`，并立即校验语义答卷：
+九个方法彼此独立，提示清单提供三个可并行批次；宿主支持并发时同批3个任务同时运行，不能并发时才依次运行。每个方法只读取自己的 `.prompt.md`，输出 `method-semantic-patches/<method_id>.json`，并立即校验语义答卷：
 
 ```bash
 python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_method_semantic_patch.py \
@@ -344,7 +344,7 @@ python scripts/run_in_env.py scripts/compile_method_packets.py \
   --gate-output method-gate.json
 ```
 
-九个方法完成或被合法归类后，按生产桥生成受约束综合输入。AI只生成规定的语义综合区块，随后由程序组装完整Core并自动生成报告来源：
+九个方法完成或被合法归类后，按生产桥生成受约束综合输入。AI只读取六领域判断矩阵、精简技术索引、精简证据索引与方法限制；完整方法包只留给确定性编译器和审计。AI只生成规定的语义综合区块，随后由程序组装完整Core并自动生成报告来源：
 
 ```bash
 python scripts/run_in_env.py scripts/prepare_core_synthesis.py analysis-input.json \

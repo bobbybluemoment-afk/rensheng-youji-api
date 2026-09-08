@@ -43,7 +43,7 @@ STAGES = [
     ("editorial_apply", "deterministic", ("edited-report-draft.json", "edited-report-semantic.json", "editorial-review.json"), "internal/rensheng-youji-chinese-editor/scripts/apply_editorial_patch.py"),
     ("free_card_content", "deterministic", ("card-content.json",), "internal/rensheng-youji-free-card-output/scripts/build_card_content.py"),
     ("free_card_visual_pack", "deterministic", ("card-visual-pack.json",), "internal/rensheng-youji-free-card-output/scripts/build_card_visual_pack.py"),
-    ("free_card_semantics", "ai_constrained", ("visual-signals.json",), "internal/rensheng-youji-free-card-output/schemas/visual-signals.schema.json"),
+    ("free_card_semantics", "deterministic", ("visual-signals.json",), "internal/rensheng-youji-free-card-output/scripts/build_visual_signals_from_core.py"),
     ("free_card_visual_series", "deterministic", ("visual-series.json",), "internal/rensheng-youji-free-card-output/scripts/build_visual_series.py"),
     ("free_card_output", "deterministic", ("free-card-output.json",), "scripts/assemble_free_card.py"),
     ("report_compile", "deterministic", ("report.json", "editorial-review-final.json"), "skills/rensheng-youji-growth-map/scripts/compile_final_report.py"),

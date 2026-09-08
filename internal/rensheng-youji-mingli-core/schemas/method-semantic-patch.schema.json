@@ -8,8 +8,8 @@
   "properties": {
     "schema_version": {"const": "1.0.0"},
     "result": {"enum": ["complete", "insufficient_evidence", "blocked_input", "generation_failed"]},
-    "technical_conclusions": {"type": "array", "items": {"$ref": "#/$defs/technicalConclusion"}},
-    "reality_hypotheses": {"type": "array", "items": {"$ref": "#/$defs/realityHypothesis"}},
+    "technical_conclusions": {"type": "array", "maxItems": 12, "items": {"$ref": "#/$defs/technicalConclusion"}},
+    "reality_hypotheses": {"type": "array", "maxItems": 18, "items": {"$ref": "#/$defs/realityHypothesis"}},
     "domain_limits": {"type": "array", "items": {"$ref": "#/$defs/domainLimit"}},
     "limitations": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 4}},
     "failure_reasons": {"type": "array", "items": {"type": "string", "minLength": 4}},

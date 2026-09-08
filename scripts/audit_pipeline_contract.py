@@ -11,8 +11,8 @@ from typing import Any
 
 def audit(root: Path, contract: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    if contract.get("schema_version") not in {"1.0.0", "2.0.0"}:
-        errors.append("pipeline contract schema_version 必须为1.0.0或2.0.0")
+    if contract.get("schema_version") not in {"1.0.0", "2.0.0", "2.1.0"}:
+        errors.append("pipeline contract schema_version 必须为1.0.0、2.0.0或2.1.0")
     runtime = contract.get("runtime")
     if not isinstance(runtime, dict):
         errors.append("pipeline contract 缺少runtime运行入口")
@@ -58,13 +58,17 @@ def audit(root: Path, contract: dict[str, Any]) -> list[str]:
             errors.append(f"{stage_id}是确定性阶段但没有生产脚本")
         if producer in {"ai_constrained", "ai_constrained_optional"} and not stage.get("contract"):
             errors.append(f"{stage_id}是AI阶段但没有Skill或参考契约")
-        for key in ("script", "contract", "validator", "output_contract", "scaffold"):
+        for key in ("script", "contract", "validator", "output_contract", "scaffold", "repair_contract", "repair_preparer", "repair_applier"):
             value = stage.get(key)
             if value and not str(value).startswith("dynamic:") and not (root / value).is_file():
                 errors.append(f"{stage_id}.{key}引用文件不存在：{value}")
     required_delivery = {"delivery_manifest", "card_png", "report_markdown", "report_pdf"}
     if not required_delivery.issubset(available):
         errors.append("生产链没有形成完整最终交付产物")
+    for key in ("gate_runner", "checkpoint_runner"):
+        value = contract.get(key)
+        if not isinstance(value, str) or not (root / value).is_file():
+            errors.append(f"pipeline contract缺少有效{key}")
     return errors
 
 

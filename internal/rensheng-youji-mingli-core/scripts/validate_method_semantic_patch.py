@@ -56,6 +56,10 @@ def validate(patch: Any, method_id: str) -> list[str]:
     minimum = 2 if method_id in PRIMARY else 1
     if len(conclusions) < minimum or len(hypotheses) < minimum:
         errors.append(f"{method_id}至少需要{minimum}条技术结论和{minimum}条现实候选")
+    if len(conclusions) > 12:
+        errors.append(f"{method_id}技术结论最多12条，当前{len(conclusions)}条")
+    if len(hypotheses) > 18:
+        errors.append(f"{method_id}现实候选总数最多18条，当前{len(hypotheses)}条")
 
     for index, conclusion in enumerate(conclusions, 1):
         refs = list(conclusion.get("chart_refs") or []) if isinstance(conclusion, dict) else []

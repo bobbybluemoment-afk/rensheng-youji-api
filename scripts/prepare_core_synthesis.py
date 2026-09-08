@@ -108,37 +108,83 @@ def prepare(analysis_input: dict[str, Any], packets: list[dict[str, Any]]) -> di
 
 def compact_view(source: dict[str, Any]) -> dict[str, Any]:
     """Return the only synthesis view that the AI is allowed to read."""
-    methods = []
+    technical_index = []
+    judgment_matrix = {domain: [] for domain in sorted({
+        "self_growth", "love_partner", "career", "finance_resources",
+        "body_emotion", "family_growth",
+    })}
+    method_roles = []
+    method_boundaries: dict[str, list[str]] = {}
     for method in source["independent_method_analyses"]:
-        methods.append({
-            "method_id": method["method_id"],
-            "tier": method["tier"],
-            "status": method["status"],
-            "technical_conclusions": method.get("technical_conclusions") or [],
-            "reality_hypotheses": method.get("reality_hypotheses") or [],
-            "limitations": method.get("limitations") or [],
-        })
+        method_id = method["method_id"]
+        conclusion_evidence = {
+            conclusion["conclusion_id"]: conclusion["evidence_ids"]
+            for conclusion in method.get("technical_conclusions") or []
+        }
+        method_roles.append({"method_id": method_id, "tier": method["tier"], "status": method["status"]})
+        method_boundaries[method_id] = list(method.get("limitations") or [])
+        for conclusion in method.get("technical_conclusions") or []:
+            technical_index.append({
+                "conclusion_id": conclusion["conclusion_id"],
+                "statement": conclusion["statement"],
+                "mechanism_chain": conclusion["mechanism_chain"],
+                "evidence_ids": conclusion["evidence_ids"],
+            })
+        for hypothesis in method.get("reality_hypotheses") or []:
+            evidence_ids = sorted({
+                evidence_id
+                for conclusion_id in hypothesis["derived_from_conclusion_ids"]
+                for evidence_id in conclusion_evidence.get(conclusion_id, [])
+            })
+            judgment_matrix[hypothesis["domain"]].append({
+                "hypothesis_id": hypothesis["hypothesis_id"],
+                "method_id": method_id,
+                "derived_from_conclusion_ids": hypothesis["derived_from_conclusion_ids"],
+                "evidence_ids": evidence_ids,
+                "normalized_direction": hypothesis["normalized_direction"],
+                "statement": hypothesis["statement"],
+                "observable_indicators": hypothesis["observable_indicators"],
+                "conditions": hypothesis["conditions"],
+                "counterevidence": hypothesis["counterevidence"],
+                "unsupported_extensions": hypothesis["unsupported_extensions"],
+                "time_scope": hypothesis["time_scope"],
+            })
+        unsupported = [
+                {
+                    "domain": item["domain"],
+                    "status": item["status"],
+                    "reasoning": item["reasoning"],
+                }
+                for item in method.get("domain_assessments") or []
+                if item.get("status") != "supported"
+        ]
+        if unsupported:
+            method_boundaries[method_id].extend(
+                f"{item['domain']}：{item['reasoning']}" for item in unsupported
+            )
     evidence_index = [{
         "evidence_id": item["evidence_id"],
         "method_id": item["method_id"],
         "independence_group": item["independence_group"],
         "source_layer": item["source_layer"],
-        "observation": item["observation"],
-        "interpretation": item["interpretation"],
         "confidence": item["confidence"],
     } for item in source["evidence_registry"]]
     return {
-        "schema_version": "1.1.0",
+        "schema_version": "1.2.0",
         "core_version": source["core_version"],
         "analysis_input_sha256": source["analysis_input_sha256"],
         "method_input_sha256": source["method_input_sha256"],
         "method_packets_sha256": source["method_packets_sha256"],
         "analysis_context": source["analysis_input"],
-        "method_summaries": methods,
+        "method_roles": method_roles,
+        "technical_index": technical_index,
+        "judgment_matrix": judgment_matrix,
+        "method_boundaries": method_boundaries,
         "evidence_index": evidence_index,
         "method_execution_audit": source["method_execution_audit"],
         "source_coverage_audit": source["source_coverage_audit"],
         "semantic_output_contract": source["semantic_output_contract"] | {
+            "input_view_rule": "默认只按六领域判断矩阵综合；完整方法包留在core-compiler-source.json中供确定性编译和审计，不得要求AI重复搬运。",
             "claim_class_rule": "每条报告判断只标记六类claim_class之一；report_role由编译器填写。",
             "calibration_probe_rule": "现实候选的validation_question、正向表现、替代解释和时间范围必须足以让程序生成个性化校准题。",
         },

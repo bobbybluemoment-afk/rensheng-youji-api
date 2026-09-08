@@ -14,7 +14,7 @@
 python scripts/run_in_env.py scripts/prepare_method_input.py analysis-input.json --output method-input.json
 ```
 
-九个方法只能读取 `method-input.json`，并在方法包登记其哈希。九个规定方法包全部通过单方法校验或被合法记录为失败状态后，运行：
+完整 `method-input.json` 是九个方法共同的隔离与哈希源。九个方法只能读取提示生成器从它确定性裁出的本方法 `method-input-view.json`，方法包仍登记完整输入的同一哈希。九个规定方法包全部通过单方法校验或被合法记录为失败状态后，运行：
 
 ```bash
 python scripts/run_in_env.py scripts/prepare_core_synthesis.py analysis-input.json \
@@ -34,10 +34,11 @@ python scripts/run_in_env.py scripts/prepare_core_synthesis.py analysis-input.js
 - 生成六领域 `source_coverage_audit`、六领域检查计数与关系锚点状态；没有来源的领域进入证据缺口，不停止其他内容；
 - 冻结排盘输入和方法包哈希；
 - 列出语义综合必须生成的全部区块。
+- 为AI生成按六领域排列的 `judgment_matrix`、精简 `technical_index` 和 `evidence_index`；完整方法包只写入 `core-compiler-source.json`，继续用于最终组装和来源审计。
 
 ## 第二段：受约束语义综合
 
-语言模型读取 `core-synthesis-input.json`，生成 `core-semantic-analysis.json`。生产桥已经确定性清空其中的 `questions`、`current_concerns` 和既有校准状态，但保留职业、家庭、关系等明确事实用于现实边界；因此完整人物Core不会围绕用户关注主题提前取材。这是必要的分析环节，不属于绕过或手工拼Schema。
+语言模型读取 `core-synthesis-input.json`，生成 `core-semantic-analysis.json`。默认按六领域判断矩阵做综合，不重复读取或搬运九份完整方法包；完整原件仍由哈希锁定在编译源中。生产桥已经确定性清空其中的 `questions`、`current_concerns` 和既有校准状态，但保留职业、家庭、关系等明确事实用于现实边界；因此完整人物Core不会围绕用户关注主题提前取材。这是必要的分析环节，不属于绕过或手工拼Schema。
 
 模型只能生成 `semantic_output_contract.required_sections` 中列出的区块。不得输出或改写：
 
@@ -63,7 +64,7 @@ python scripts/run_in_env.py scripts/validate_core_synthesis.py \
   core-synthesis-input.json core-semantic-analysis.json
 ```
 
-失败时只修复语义综合输出：
+失败时只修复语义综合输出。先用 `prepare_semantic_repair.py` 把错误涉及的顶层区块和错误清单做成哈希绑定的小请求，AI只返回这些区块，再由 `apply_semantic_repair.py` 合并；不得重写完整文件：
 
 1. 第一轮修复缺失区块、未知区块和无效引用；
 2. 第二轮修复方法独立性、判断角色和冲突关系；

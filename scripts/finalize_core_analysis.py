@@ -57,8 +57,8 @@ def _chart_audit(source: dict[str, Any]) -> dict[str, Any]:
 def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any], compiler_source: dict[str, Any] | None = None) -> tuple[dict[str, Any], list[str]]:
     errors: list[str] = []
     source_bundle = compiler_source or synthesis_input
-    if synthesis_input.get("schema_version") not in {SYNTHESIS_INPUT_SCHEMA_VERSION, "1.1.0"}:
-        errors.append("synthesis_input.schema_version 必须为1.0.0或1.1.0")
+    if synthesis_input.get("schema_version") not in {SYNTHESIS_INPUT_SCHEMA_VERSION, "1.1.0", "1.2.0"}:
+        errors.append("synthesis_input.schema_version 必须为1.0.0、1.1.0或1.2.0")
     if synthesis_input.get("core_version") != CORE_VERSION:
         errors.append(f"synthesis_input.core_version 必须为{CORE_VERSION}")
     source = source_bundle.get("analysis_input")

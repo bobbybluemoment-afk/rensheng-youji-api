@@ -35,7 +35,12 @@ python scripts/run_in_env.py internal/rensheng-youji-free-card-output/scripts/bu
   --output card-visual-pack.json
 ```
 
-4. AI只读取 `card-visual-pack.json` 和 [visual-algorithm.md](references/visual-algorithm.md)，只生成符合Schema的 `visual-signals.json`。必须明确窗口起点状态和20个年度信号；不得读取五题答案，不得让脚本从自然语言关键词猜分。
+4. 程序只读取 `card-visual-pack.json` 中来自校准前冻结Core的结构化逐年方向、强度、领域影响和转折点，确定性生成符合Schema的 `visual-signals.json`。不得读取五题答案，不得从自然语言关键词猜分；如果冻结Core缺少连续20年结构化资料，必须停止并修复Core，不能套用模板。
+
+```bash
+python scripts/run_in_env.py internal/rensheng-youji-free-card-output/scripts/build_visual_signals_from_core.py \
+  --pack card-visual-pack.json --output visual-signals.json
+```
 5. 校验视觉信号：
 
 ```bash
@@ -71,7 +76,7 @@ python scripts/run_in_env.py internal/rensheng-youji-free-card-output/scripts/va
   free-card-output.json
 ```
 
-确定性组装器负责从 Core 写入 `source`、把 `visual-series.json` 原样锁入 `trend_panel`，并在写盘前执行同一套最终校验。任一步失败时，文字提取错误应修复上游Core或确定性提取器；视觉语义错误只修复 `visual-signals.json`。不得手改 `card-content.json`、趋势序列或最终输出。
+确定性组装器负责从 Core 写入 `source`、把 `visual-series.json` 原样锁入 `trend_panel`，并在写盘前执行同一套最终校验。任一步失败时，文字提取错误应修复上游Core或确定性提取器；逐年视觉错误应修复冻结前Core语义或确定性映射器。不得手改 `card-content.json`、`visual-signals.json`、趋势序列或最终输出。
 
 只有校验通过后才能交给绘图层。
 

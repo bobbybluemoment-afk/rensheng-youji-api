@@ -20,6 +20,9 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 CENTER_YEAR = 2026
+sys.path.insert(0, str(ROOT / "internal/rensheng-youji-free-card-output/scripts"))
+from build_visual_signals_from_core import build as build_signals_from_core  # noqa: E402
+from validate_visual_signals import validate as validate_visual_signals  # noqa: E402
 
 
 def _baseline(value: float, confidence: str = "medium") -> dict:
@@ -143,6 +146,29 @@ def _run(*args: str) -> subprocess.CompletedProcess[str]:
 
 
 class FreeCardV2PipelineTest(unittest.TestCase):
+    def test_frozen_core_timing_builds_visual_signals_without_ai(self) -> None:
+        sample = _visual_signals()
+        annual = []
+        for item in sample["annual_visual_signals"]:
+            impacts = [
+                {"domain": "career", "direction": "support" if item["career_outcome"] == "rise" else "consolidation", "intensity": "medium", "mechanism": "固定测试"},
+                {"domain": "wealth", "direction": "pressure" if item["resource_restructure"] else "support", "intensity": "medium", "mechanism": "固定测试"},
+                {"domain": "relationships", "direction": "support" if item["relationship_opportunity"] >= 2 else "consolidation", "intensity": "medium", "mechanism": "固定测试"},
+            ]
+            annual.append({
+                "year": item["year"], "age": item["age"], "year_theme": item["theme"],
+                "direction": item["direction"], "change_intensity": item["change_intensity"],
+                "activation_mechanisms": ["固定测试"], "domain_impacts": impacts,
+                "confidence": "medium",
+            })
+        pack = {
+            "analysis_id": "fixture-v2-pipeline", "center_year": CENTER_YEAR,
+            "timing_context": {"annual_theme_activation": annual, "turning_points": []},
+        }
+        result = build_signals_from_core(pack)
+        self.assertEqual(len(result["annual_visual_signals"]), 20)
+        self.assertEqual(validate_visual_signals(result), [])
+
     def test_visual_signals_to_png(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-v2-") as temp_dir:
             work = Path(temp_dir)

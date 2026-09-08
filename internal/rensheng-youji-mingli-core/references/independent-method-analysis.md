@@ -29,7 +29,7 @@
 
 ## 方法隔离
 
-每个 `method_analysis` 只能读取 `prepare_method_input.py` 生成的主题隔离输入，并登记其 `method_input_sha256`。其中允许使用：
+每个 `method_analysis` 只能读取从 `prepare_method_input.py` 统一主题隔离输入确定性裁出的本方法视图，并登记完整输入的同一个 `method_input_sha256`。其中允许使用：
 
 - `chart_facts`；
 - `chart_audit`；
@@ -76,7 +76,7 @@
 - `insufficient_evidence`：本方法实际检查过，但不足以形成现实候选；
 - `not_applicable`：该领域超出本方法在本盘中的合理推演范围。
 
-十神动力、宫位六亲、干支动力、盲派和岁运连续性是 `love_partner` 锚点方法，必须在 `supported` 与 `insufficient_evidence` 中二选一，不得用 `not_applicable` 跳过。领域检查用于证明“分析过”，不是要求每种方法硬写六条候选。每个领域允许0—5条候选，不设最低数量。
+十神动力、宫位六亲、干支动力、盲派和岁运连续性是 `love_partner` 锚点方法，必须在 `supported` 与 `insufficient_evidence` 中二选一，不得用 `not_applicable` 跳过。领域检查用于证明“分析过”，不是要求每种方法硬写六条候选。每个领域允许0—5条候选，不设最低数量；完整方法通常保留8—14条候选，证据少时允许更少，总数最多18条、技术结论最多12条。
 
 ## 现实综合
 

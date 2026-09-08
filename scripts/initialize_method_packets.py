@@ -35,7 +35,7 @@ GROUPS = {
 def draft(method_id: str, method_input_sha256: str) -> dict[str, object]:
     return {
         "_draft_notice": (
-            "这是结构草稿，不是已完成方法包。AI只读取method-input.json独立分析，"
+            "这是结构草稿，不是已完成方法包。AI只读取由method-input.json确定性裁出的本方法视图独立分析，"
             "替换所有__AI_FILL__并删除本字段后，另存到method-packets/<method_id>.json。"
         ),
         "method_analysis": {

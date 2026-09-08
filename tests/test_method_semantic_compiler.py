@@ -8,6 +8,8 @@ from pathlib import Path
 from scripts.compile_method_packet import compile_packet
 from scripts.core_synthesis_contract import ALL_METHODS, PARTIAL_METHODS
 from scripts.audit_method_prompt_contract import audit as audit_prompts
+from scripts.build_method_prompt_packs import MANIFEST, build as build_prompt
+from scripts.method_input_contract import build_method_input_view
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -92,6 +94,63 @@ class MethodSemanticCompilerTest(unittest.TestCase):
         patch = semantic_patch("pattern_structure")
         patch["method_id"] = "climate_adjustment"
         with self.assertRaisesRegex(ValueError, "Schema"):
+            compile_packet({"chart_facts": {}}, patch, "pattern_structure")
+
+    def test_method_views_only_include_method_relevant_time_data(self) -> None:
+        method_input = {
+            "request": {"request_id": "x", "analysis_as_of": "2026-09-07", "calendar_basis": "local_civil", "target_range": {"start_year": 2021, "end_year": 2040}},
+            "person": {"name": None, "gender": "male", "birth": {"local_datetime": "1999-01-22T17:45:00+08:00", "place_name": "福建省·泉州市", "timezone": "Asia/Shanghai", "raw_input": "secret-free"}},
+            "chart": {"day_master": "甲", "pillars": {"day": {"stem": "甲", "branch": "戌"}}, "calculation_engine": "engine"},
+            "solar_terms_and_boundaries": {"boundary_flags": [], "nearest_solar_terms": [{"name": "小寒"}], "notes": ["long note"]},
+            "luck_cycles": {"direction": "forward", "cycles": [{"index": 1, "stem": "丙", "branch": "寅", "hidden_stems": [{"stem": "甲"}]}]},
+            "annual_cycles": [{"year": 2026, "stem": "丙", "branch": "午", "stem_ten_god": "食神", "luck_cycle_index": 3, "hidden_stems": [{"stem": "丁"}], "age": 27}],
+            "monthly_cycles": None,
+            "reality_context": {"facts": [], "questions": []},
+            "calibration": {"candidate_feedback": []},
+        }
+        root_view = build_method_input_view(method_input, "root_seed_flower_fruit")
+        pattern_view = build_method_input_view(method_input, "pattern_structure")
+        stem_view = build_method_input_view(method_input, "stem_branch_dynamics")
+        timing_view = build_method_input_view(method_input, "timing_continuity")
+        self.assertNotIn("luck_cycles", root_view)
+        self.assertNotIn("annual_cycles", root_view)
+        self.assertIn("luck_cycles", pattern_view)
+        self.assertNotIn("annual_cycles", pattern_view)
+        self.assertIn("hidden_stems", stem_view["annual_cycles"][0])
+        self.assertNotIn("age", stem_view["annual_cycles"][0])
+        self.assertIn("hidden_stems", timing_view["annual_cycles"][0])
+        for view in (root_view, pattern_view, stem_view, timing_view):
+            self.assertNotIn("reality_context", view)
+            self.assertNotIn("calibration", view)
+            self.assertNotIn("calculation_engine", view["chart"])
+
+    def test_prompt_views_are_materially_smaller_than_repeating_full_input(self) -> None:
+        annual = [
+            {"year": year, "stem": "丙", "branch": "午", "stem_ten_god": "食神", "luck_cycle_index": 3, "hidden_stems": [{"stem": "丁", "ten_god": "伤官"}], "age": year - 1999}
+            for year in range(2021, 2041)
+        ]
+        method_input = {
+            "request": {"analysis_as_of": "2026-09-07", "calendar_basis": "local_civil", "target_range": {"start_year": 2021, "end_year": 2040}},
+            "person": {"gender": "male", "birth": {"local_datetime": "1999-01-22T17:45:00+08:00", "place_name": "福建省·泉州市", "timezone": "Asia/Shanghai"}},
+            "chart": {"day_master": "甲", "pillars": {"day": {"stem": "甲", "branch": "戌"}}},
+            "solar_terms_and_boundaries": {"boundary_flags": [], "nearest_solar_terms": [{"name": "小寒"}]},
+            "luck_cycles": {"direction": "forward", "cycles": [{"index": index, "stem": "丙", "branch": "寅", "hidden_stems": [{"stem": "甲"}]} for index in range(1, 9)]},
+            "annual_cycles": annual,
+            "monthly_cycles": None,
+            "reality_context": {"facts": [], "questions": []},
+            "calibration": {"candidate_feedback": []},
+        }
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        receipts = [build_prompt(method_input, method_id, manifest)[1] for method_id in sorted(ALL_METHODS)]
+        projected = sum(item["input_view_bytes"] for item in receipts)
+        repeated = len(json.dumps(method_input, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) * 9
+        self.assertLess(projected, repeated * 0.65)
+
+    def test_compiler_rejects_more_than_eighteen_hypotheses(self) -> None:
+        patch = semantic_patch("pattern_structure")
+        template = patch["reality_hypotheses"][0]
+        patch["reality_hypotheses"] = [dict(template, normalized_direction=f"方向{index}") for index in range(19)]
+        with self.assertRaisesRegex(ValueError, "最多"):
             compile_packet({"chart_facts": {}}, patch, "pattern_structure")
 
 

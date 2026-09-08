@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 from core_synthesis_contract import ALL_METHODS
+from method_input_contract import METHOD_INPUT_PROFILES
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -34,12 +35,17 @@ def audit(root: Path) -> list[str]:
         errors.append("缺少九方法共同短规则")
     else:
         text = common.read_text(encoding="utf-8")
-        for required in ("不得读取用户关注问题", "不得读取", "其他方法结果", "domain_limits", "只输出 JSON"):
+        for required in (
+            "不得读取用户关注问题", "不得读取", "其他方法结果", "domain_limits",
+            "只输出 JSON", "8—14条", "最多18条", "最多12条",
+        ):
             if required not in text:
                 errors.append(f"共同短规则缺少关键边界：{required}")
         if common.stat().st_size > 7000:
             errors.append("共同短规则超过7000字节，已经失去精简作用")
     for method_id, item in methods.items():
+        if item.get("input_profile") != METHOD_INPUT_PROFILES.get(method_id):
+            errors.append(f"{method_id}输入画像与确定性投影契约不一致")
         guide = root / str(item.get("guide"))
         if not guide.is_file():
             errors.append(f"{method_id}缺少专用提示")

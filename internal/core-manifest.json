@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.20.0",
+  "version": "2.21.0",
   "visibility": "internal",
   "stages": [
     {
@@ -48,5 +48,5 @@
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "2.20.0完成AI与确定性程序职责重构：九方法读取隔离短提示并并行扫描六个报告领域；Core使用六类判断并生成可确定性选择的个性化校准候选；五题由程序选择，自由回答才调用小型语义补丁；报告选材、来源映射、局部编辑和最终组装由程序完成；卡片人生K线锁定校准前Baseline。"
+  "notes": "2.21.0继续保留九方法完整证据与六领域扫描，同时把Core综合输入压成六领域判断矩阵；新增三批并行执行清单、哈希绑定的语义局部返修、本次运行断点、统一Gate和用量账本；卡片20年视觉信号改由校准前冻结Core结构化逐年资料确定性生成，不再单独调用AI。"
 }

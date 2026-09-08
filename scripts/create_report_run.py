@@ -47,6 +47,10 @@ def create_run(run_id: str | None = None) -> dict[str, str]:
     (work_dir / "run-state.json").write_text(
         json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+    (work_dir / "run-checkpoints.json").write_text(
+        json.dumps({"schema_version": "1.0.0", "run_id": run_id, "stages": []}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     return state
 
 

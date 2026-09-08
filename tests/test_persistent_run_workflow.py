@@ -20,7 +20,7 @@ class PersistentRunWorkflowTest(unittest.TestCase):
             fake_root = Path(temp_dir)
             (fake_root / "internal").mkdir()
             manifest = {
-                "version": "2.20.0",
+                "version": "2.21.0",
                 "report_pipeline": {"core_version": "0.14.0"},
             }
             manifest_path = fake_root / "internal/core-manifest.json"
@@ -31,6 +31,7 @@ class PersistentRunWorkflowTest(unittest.TestCase):
                 state = create_report_run.create_run("resume-test")
             run_dir = Path(state["work_dir"])
             self.assertTrue((run_dir / "run-state.json").is_file())
+            self.assertTrue((run_dir / "run-checkpoints.json").is_file())
             with patch.object(report_pipeline, "ROOT", fake_root):
                 first = report_pipeline.status(run_dir)
                 second = report_pipeline.status(run_dir)
@@ -49,6 +50,12 @@ class PersistentRunWorkflowTest(unittest.TestCase):
         self.assertNotIn("调候法｜climate_adjustment", prompt)
         self.assertEqual(receipt["method_id"], "pattern_structure")
         self.assertLess(receipt["prompt_bytes"], 20_000)
+
+    def test_method_prompt_manifest_declares_three_parallel_batches(self) -> None:
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        from scripts.build_method_prompt_packs import PARALLEL_BATCHES
+        self.assertEqual(len(PARALLEL_BATCHES), 3)
+        self.assertEqual({item for batch in PARALLEL_BATCHES for item in batch}, set(manifest["methods"]))
 
     def test_exported_method_schema_matches_core_definitions(self) -> None:
         core = json.loads(

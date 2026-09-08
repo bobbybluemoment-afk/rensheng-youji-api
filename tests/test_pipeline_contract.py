@@ -39,6 +39,7 @@ class PipelineContractTest(unittest.TestCase):
         self.assertEqual(stages["free_card_content"]["producer"], "deterministic")
         self.assertEqual(stages["free_card_visual_pack"]["producer"], "deterministic")
         self.assertEqual(stages["free_card_semantics"]["inputs"], ["card_visual_pack"])
+        self.assertEqual(stages["free_card_semantics"]["producer"], "deterministic")
         self.assertEqual(stages["free_card_visual_series"]["producer"], "deterministic")
         self.assertEqual(
             stages["free_card_output"]["script"],

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a compact baseline-only input for the card visual-signal AI task."""
+"""Build a compact baseline-only input for deterministic card visual signals."""
 
 from __future__ import annotations
 
@@ -23,9 +23,9 @@ def build(baseline: dict[str, Any]) -> dict[str, Any]:
         "center_year": int(meta["analysis_as_of"][:4]),
         "evidence_mode": "birth_only",
         "rules": {
-            "output": "只输出visual-signals.schema.json规定的字段。",
+            "output": "由确定性映射器输出visual-signals.schema.json规定的字段。",
             "source": "人生K线、事业、财富和关系机会只使用本包中的校准前Core材料。",
-            "boundary": "不得使用用户校准事实，不得把候选职业、收入或关系当成已发生事实。",
+            "boundary": "不得使用用户校准事实，不得把候选职业、收入或关系当成已发生事实，不得从自然语言关键词猜分。",
         },
         "timing_context": {
             "chart_facts": baseline.get("chart_facts"),

@@ -67,6 +67,7 @@ python scripts/run_in_env.py scripts/create_report_run.py
 ```bash
 python scripts/run_in_env.py scripts/report_pipeline.py status --run-dir <work_dir>
 ```
+如果 `run-checkpoints.json` 已有记录，同时运行 `scripts/run_checkpoint.py verify`。哈希仍一致的已通过Gate不得重跑；只有最早失效的检查点及其下游需要重做。它只允许复用本次run_id中的产物，不允许跨用户、跨仓库版本或跨运行目录复用旧Core。
 4. 运行根目录确定性排盘并生成 Core 输入：
 
 ```bash
@@ -104,7 +105,7 @@ python scripts/run_in_env.py scripts/prepare_method_input.py work/core-input.jso
   --output work/method-input.json
 ```
 
-该脚本保留排盘、原局、大运和流年，清空现实资料、当前问题与校准信息。九个方法不得读取 `work/core-input.json`、`work/report-preflight.json`、用户关注方向或对话中的现实答案；每个方法包必须登记命令返回的 `method_input_sha256` 和 `input_scope=chart_only_topic_isolated`。
+该脚本保留一份完整排盘、原局、大运和流年作为统一哈希源，清空现实资料、当前问题与校准信息。九个方法不得读取 `work/core-input.json`、`work/report-preflight.json`、用户关注方向或对话中的现实答案；每个方法包必须登记命令返回的 `method_input_sha256` 和 `input_scope=chart_only_topic_isolated`。
 
 随后确定性生成九份彼此隔离的短提示包：
 
@@ -113,16 +114,16 @@ python scripts/run_in_env.py scripts/build_method_prompt_packs.py \
   work/method-input.json --output-dir work/method-prompt-packs
 ```
 
-每份提示包只包含共同短规则、本方法专用规则、规则来源回执和同一份主题隔离输入。九方法AI不得再次读取完整Core Skill、完整Core Schema、其他方法提示、校准或报告文件。
+每份提示包只包含共同短规则、本方法专用规则、规则来源回执，以及由统一 `method-input.json` 确定性裁出的本方法输入视图。原局方法不重复携带20年流年，阶段方法才取得所需大运或逐年字段；所有视图仍绑定同一个完整输入哈希。九方法AI不得再次读取完整Core Skill、完整Core Schema、其他方法提示、校准或报告文件。
 
-9. 九种方法可以并行执行；运行环境不支持时分组或依次执行。每个方法只读取 `work/method-prompt-packs/<method_id>.prompt.md`，只输出技术结论、现实候选、未支持领域理由和本方法限制，保存到 `work/method-semantic-patches/<method_id>.json`。每个方法都逐项检查六个报告领域，每个领域允许0—5条候选、不设最低数；学习和迁移作为六领域中的现实问题轴处理。编号、哈希、方法身份、证据登记与六领域候选映射不得由AI填写。每份答卷生成后立即运行：
+9. 九种方法彼此独立。提示清单中的 `parallel_batches` 把它们分为三组；运行环境支持并发时，同组3个任务同时执行，不能并发时才依次执行，不得仅凭Skill文字声称已经并行。每个方法只读取 `work/method-prompt-packs/<method_id>.prompt.md`，只输出技术结论、现实候选、未支持领域理由和本方法限制，保存到 `work/method-semantic-patches/<method_id>.json`。每个方法都逐项检查六个报告领域，每个领域允许0—5条候选、不设最低数；完整方法通常保留8—14条真正不同的候选，证据少时允许更少，总数最多18条、技术结论最多12条。学习和迁移作为六领域中的现实问题轴处理。编号、哈希、方法身份、证据登记与六领域候选映射不得由AI填写。每份答卷生成后立即运行：
 
 ```bash
 python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_method_semantic_patch.py \
   work/method-semantic-patches/<method_id>.json --expected-method <method_id>
 ```
 
-单个方法失败只修复该方法语义答卷，最多三轮；仍失败则输出合法失败答卷，不借用其他方法结论。当前固定方法为七个主要方法与两个部分独立方法，不生成或分析神煞、纳音。
+单个方法失败只修复该方法语义答卷，最多三轮；使用 `prepare_semantic_repair.py` 只打包校验器点名的顶层区块，AI返回绑定源文件哈希的局部补丁，再由 `apply_semantic_repair.py` 合并。未被点名且已经通过的区块必须保持逐字不变。仍失败则输出合法失败答卷，不借用其他方法结论。当前固定方法为七个主要方法与两个部分独立方法，不生成或分析神煞、纳音。
 
 10. 九份语义答卷全部完成或被合法归类后，确定性编译为原有正式方法包，并一次生成METHOD GATE：
 
@@ -137,6 +138,10 @@ python scripts/run_in_env.py scripts/compile_method_packets.py \
 METHOD GATE负责核对九份答卷、编译后的正式Schema、主题隔离哈希、方法身份、证据引用和六领域检查。只有Gate通过才能运行确定性汇总：
 
 ```bash
+python scripts/run_in_env.py scripts/pipeline_gate.py --gate METHOD_GATE --run-dir <work_dir>
+```
+
+```bash
 python scripts/run_in_env.py scripts/prepare_core_synthesis.py work/core-input.json \
   --method-packet-dir work/method-packets \
   --method-gate work/method-gate.json \
@@ -144,7 +149,7 @@ python scripts/run_in_env.py scripts/prepare_core_synthesis.py work/core-input.j
   --compiler-source work/core-compiler-source.json
 ```
 
-该脚本必须实际生成 `core-synthesis-input.json`；不得让模型手工复制方法、证据或方法执行审计。若汇总器报告非法领域、无效引用或跨方法重复编号，只返修错误点名的方法包并重新校验、汇总。若只报告 `source_coverage_audit.status=ready_with_gaps`，不得停止；没有来源的领域进入证据缺口并在报告中降级。
+该脚本必须实际生成 `core-synthesis-input.json`；不得让模型手工复制方法、证据或方法执行审计。AI看到的是按六领域排列的 `judgment_matrix`、精简技术索引和精简证据索引；完整方法包保存在 `core-compiler-source.json`，继续用于确定性组装、来源回查和审计，不交给AI重复搬运。若汇总器报告非法领域、无效引用或跨方法重复编号，只返修错误点名的方法包并重新校验、汇总。若只报告 `source_coverage_audit.status=ready_with_gaps`，不得停止；没有来源的领域进入证据缺口并在报告中降级。
 
 11. AI只读取 `work/core-synthesis-input.json`，生成 `work/core-semantic-analysis.json`。只允许生成其中 `semantic_output_contract.required_sections` 列出的语义区块；不得输出或改写排盘事实、方法包、证据、方法状态、校准状态或报告来源。
 
@@ -156,7 +161,7 @@ python scripts/run_in_env.py scripts/validate_core_synthesis.py \
   --compiler-source work/core-compiler-source.json
 ```
 
-失败时最多三轮局部修复：依次处理结构与引用、方法独立性与判断角色、人物覆盖与领域映射。此时方法集合已经冻结，不得重新运行方法包。第三轮仍失败才停止完整Core综合，并报告真实错误。
+失败时最多三轮局部修复：依次处理结构与引用、方法独立性与判断角色、人物覆盖与领域映射。每轮必须用 `prepare_semantic_repair.py --stage core_synthesis --targets <被点名区块>` 生成最小返修请求，再用 `apply_semantic_repair.py` 合并；不得把完整 `core-semantic-analysis.json` 交给AI重写。此时方法集合已经冻结，不得重新运行方法包。第三轮仍失败才停止完整Core综合，并报告真实错误。
 
 13. 校验通过后，由程序确定性组装完整Core并自动生成报告来源：
 
@@ -196,6 +201,12 @@ python scripts/run_in_env.py scripts/core_baseline.py freeze work/analysis-outpu
 ```
 
 没有与当前 `analysis-output-initial.json` 哈希一致的 `core-quality-audit.json` 时不得冻结，也不得进入五题校准。
+
+冻结后运行一次统一Gate并记录本次运行的哈希检查点：
+
+```bash
+python scripts/run_in_env.py scripts/pipeline_gate.py --gate CORE_GATE --run-dir <work_dir>
+```
 
 不得再读取本目录旧版 `core-method.md` 重新推命；该文件仅说明统一 Core 的使用边界。
 
@@ -249,6 +260,7 @@ python scripts/run_in_env.py scripts/core_baseline.py verify \
   --baseline work/analysis-baseline.json \
   --lock work/analysis-baseline-lock.json \
   --calibrated work/analysis-output-calibrated.json
+python scripts/run_in_env.py scripts/pipeline_gate.py --gate CALIBRATION_GATE --run-dir <work_dir>
 ```
 
 每道已回答问题必须改变对应候选状态；字母答案只能调整原有候选主次，不能产生新职业、家庭、关系、身体或收入判断。未选候选继续按关系图保留；只有事实明确否定且真正互斥时才标记为 `reject`。
@@ -271,7 +283,7 @@ python scripts/run_in_env.py scripts/core_baseline.py verify \
 5. 完整读取 `internal/rensheng-youji-chinese-editor/SKILL.md`。先运行 `scan_report_language.py`，同时检查正文段落和阶段、逐年、行动等其他用户可见文字；没有发现问题时不调用编辑AI，直接生成编辑记录。发现问题时只把被点名的小块交给AI修订，再由 `apply_editorial_patch.py` 验证锁定判断仍在原位置，并输出 `edited-report-draft.json` 与 `edited-report-semantic.json`。最终报告不得绕过编辑结果读取原始语义补丁，也不得要求编辑层为了证明工作发生而强制修改若干章节。
 6. 正式报告使用 `schema_version=2.14.0`、`document_mode=full_calibrated`。Core使用0.15.0、事实提纲和初稿使用1.6.0、中文编辑使用2.5.0、校准题使用3.0.0。Core综合把判断分为主要判断、独立补充、条件判断、阶段判断、待校准判断和证据较弱候选；不设置每领域必须几条。证据较弱候选仅内部保留，待校准判断在现实确认前不直接进入报告。报告章节再按真实可用证据决定正常、缩短、最小或证据缺口模式。
 7. 时间分析继续使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系，同时概括更长阶段。
-8. 卡片没有独立校准流程。`build_card_content.py` 从冻结Core、校准后选材和用户资料确定性提取卡面文字；AI只读取 `build_card_visual_pack.py` 生成的Baseline紧凑包，输出20年视觉语义。完整报告内卡片可以继承报告已确定的可见候选主次，但命理结构、人生K线语义和原始判断仍来自校准前冻结的同一Core。报告与卡片的分析编号、Core版本、Baseline哈希和明显关系机会年份必须一致。
+8. 卡片没有独立校准流程。`build_card_content.py` 从冻结Core、校准后选材和用户资料确定性提取卡面文字；`build_card_visual_pack.py` 只提取Baseline结构化逐年资料，`build_visual_signals_from_core.py` 再按固定映射生成20年视觉信号，不调用AI、不读取五题答案，也不从自然语言关键词猜分。完整报告内卡片可以继承报告已确定的可见候选主次，但命理结构、人生K线语义和原始判断仍来自校准前冻结的同一Core。报告与卡片的分析编号、Core版本、Baseline哈希和明显关系机会年份必须一致。
 9. 卡片与编辑结果都完成后，由程序确定性编译正式 `report.json`。这里必须使用编辑后的正文和编辑后的语义文件：
 
 ```bash
@@ -308,6 +320,10 @@ python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/generate_f
   --out-dir work/delivery \
   --keep-pages
 ```
+
+正式编译后先运行 `scripts/pipeline_gate.py --gate REPORT_GATE --run-dir <work_dir>`；交付完成后运行同一脚本的 `DELIVERY_GATE`。Gate内部仍执行原有Schema、来源、冻结、编辑和交付检查，但只向运行AI返回一份PASS或一张合并错误清单。Gate通过会自动写入本次运行检查点。
+
+如果运行平台提供真实用量数字，每次AI调用后可用 `record_ai_usage.py` 登记输入、输出（含推理Token）、耗时和返修原因。平台不提供时不得编造数字；这份账本只用于成本和速度复盘，不参与内容结论。
 
 11. 正式交付固定包含新版1242×1660卡片PNG、Markdown、恰好10页的PDF和 `report-delivery-manifest.json`。PDF第2页必须嵌入刚刚生成的同一张新版卡片；不得让用户模型自行决定版式、页数、换行、颜色或二维码位置。
 

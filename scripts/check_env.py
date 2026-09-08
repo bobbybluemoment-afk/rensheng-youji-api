@@ -87,6 +87,7 @@ def main() -> int:
         ROOT / "internal/rensheng-youji-mingli-core/scripts/validate_method_semantic_patch.py",
         ROOT / "internal/rensheng-youji-mingli-core/schemas/method-packet.schema.json",
         ROOT / "internal/rensheng-youji-mingli-core/schemas/method-semantic-patch.schema.json",
+        ROOT / "internal/rensheng-youji-mingli-core/schemas/semantic-repair-patch.schema.json",
         ROOT / "internal/rensheng-youji-mingli-core/method-prompts/manifest.json",
         ROOT / "internal/rensheng-youji-report-content-brief/SKILL.md",
         ROOT / "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py",
@@ -110,6 +111,11 @@ def main() -> int:
         ROOT / "scripts/audit_ai_stage_contracts.py",
         ROOT / "scripts/create_report_run.py",
         ROOT / "scripts/report_pipeline.py",
+        ROOT / "scripts/pipeline_gate.py",
+        ROOT / "scripts/run_checkpoint.py",
+        ROOT / "scripts/prepare_semantic_repair.py",
+        ROOT / "scripts/apply_semantic_repair.py",
+        ROOT / "scripts/record_ai_usage.py",
         ROOT / "scripts/export_method_packet_schema.py",
         ROOT / "scripts/build_method_prompt_packs.py",
         ROOT / "scripts/compile_method_packet.py",
@@ -128,6 +134,7 @@ def main() -> int:
         ROOT / "scripts/audit_claim_diversity.py",
         ROOT / "scripts/audit_report_claim_coverage.py",
         ROOT / "scripts/audit_skill_references.py",
+        ROOT / "internal/rensheng-youji-free-card-output/scripts/build_visual_signals_from_core.py",
         ROOT / "assets/wechat-contact.jpg",
         ROOT / "assets/rensheng-youji-logo.png",
         ROOT / "assets/asset-manifest.json",
@@ -168,6 +175,7 @@ def main() -> int:
             "tests.test_core_v012_production_bridge.CoreV012ProductionBridgeTest",
             "tests.test_pipeline_contract.PipelineContractTest",
             "tests.test_report_source_contract.ReportSourceContractTest",
+            "tests.test_v221_efficiency_contracts.V221EfficiencyContractsTest",
         ],
         cwd=ROOT,
         text=True,
@@ -186,7 +194,7 @@ def main() -> int:
         print("FAILED: v0.15.0 Core topic isolation, six-domain review, source coverage, synthesis validation or deterministic assembly")
         print(core_test.stdout or core_test.stderr)
         return 7
-    print("READY: dependencies, chart, v2 card, Core v0.15.0 topic isolation, six-domain method review, source coverage, semantic consensus, deterministic assembly and report sources, deterministic five-question calibration, post-calibration source resolution, optional local editing, stable fallback and fixed 10-page report pipeline passed")
+    print("READY: dependencies, chart, deterministic v2 card, Core v0.15.0 topic isolation, six-domain method review, compact synthesis matrix, hash-bound local repair, resume checkpoints, consolidated gates, deterministic five-question calibration, optional local editing, stable fallback and fixed 10-page report pipeline passed")
     return 0
 
 
