@@ -13,10 +13,11 @@ Core负责冻结完整判断候选池，不在校准前决定最终报告名单�
 ```bash
 python scripts/run_in_env.py scripts/resolve_report_sources.py \
   work/analysis-output-calibrated.json \
+  --focus "事业发展" \
   --output work/resolved-report-sources.json
 ```
 
-该程序排除 `reject`，按冻结优先级和覆盖映射选择剩余判断，再确定正式 `mandatory_claim_ids` 与 `emphasis_claim_ids`。任何模型不得手工编辑选材结果。
+该程序排除 `reject`，按冻结优先级和覆盖映射选择剩余判断，再确定正式 `mandatory_claim_ids` 与 `emphasis_claim_ids`。关注方向会确定“当前问题”的直接判断领域；其他领域不能越过该筛选变成独立回答。任何模型不得手工编辑选材结果。
 
 章节按校准后可用证据进入四种模式：
 

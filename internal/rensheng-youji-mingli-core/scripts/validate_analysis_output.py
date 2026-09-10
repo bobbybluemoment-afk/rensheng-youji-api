@@ -20,6 +20,7 @@ from report_source_contract import (  # noqa: E402
     BASE_COVERAGE,
     DIMENSIONS,
     claim_diversity_gaps,
+    evidence_retention_gaps,
     mandatory_candidate_bounds,
     required_coverage,
 )
@@ -734,6 +735,8 @@ def validate(data: Any) -> list[str]:
                     errors.append(f"{path}.{key} 必须包含实质内容")
             if isinstance(claim.get("plain_claim"), str) and not claim["plain_claim"].rstrip().endswith(("。", "！", "？")):
                 errors.append(f"{path}.plain_claim 必须是带句末标点的完整判断句")
+            if isinstance(claim.get("plain_claim"), str) and "您" in claim["plain_claim"]:
+                errors.append(f"{path}.plain_claim 必须统一使用第二人称‘你’，不得使用‘您’")
             evidence_ids = set(claim.get("evidence_ids") or [])
             unknown_evidence = sorted(evidence_ids - set(evidence_by_id))
             if unknown_evidence:
@@ -977,6 +980,12 @@ def validate(data: Any) -> list[str]:
                     errors.append(f"{path}.observable_examples 必须包含2—3条不同的可观察表现")
                 statement = candidate.get("statement")
                 alternative = candidate.get("alternative_statement")
+                for visible_key in ("statement", "alternative_statement", "validation_question"):
+                    if "您" in str(candidate.get(visible_key, "")):
+                        errors.append(f"{path}.{visible_key} 必须统一使用第二人称‘你’，不得使用‘您’")
+                for example_index, example in enumerate(candidate.get("observable_examples") or []):
+                    if "您" in str(example):
+                        errors.append(f"{path}.observable_examples[{example_index}] 必须统一使用第二人称‘你’，不得使用‘您’")
                 if isinstance(statement, str) and isinstance(alternative, str) and statement.strip() == alternative.strip():
                     errors.append(f"{path}.alternative_statement 不能重复主要候选")
                 targets = candidate.get("calibration_targets")
@@ -1013,6 +1022,7 @@ def validate(data: Any) -> list[str]:
             )
 
     candidate_ids = {item.get("candidate_id") for item in candidates or [] if isinstance(item, dict)}
+    errors.extend("九方法到Core证据保留不足：" + item for item in evidence_retention_gaps(data))
     relations = data.get("candidate_relation_map")
     relation_ids: set[str] = set()
     if not isinstance(relations, list) or len(relations) < 6:

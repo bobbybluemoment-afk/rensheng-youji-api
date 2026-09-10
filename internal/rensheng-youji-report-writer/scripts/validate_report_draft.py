@@ -171,6 +171,8 @@ def validate(data: Any, brief: Any | None = None) -> list[str]:
         third_person_found.append("他／她")
     if third_person_found:
         errors.append("用户可见初稿必须统一使用第二人称“你”，禁止出现：" + "、".join(third_person_found))
+    if "您" in visible:
+        errors.append("用户可见初稿称呼必须统一为‘你’，不得出现‘您’")
     if "校准后的现实线索" in visible or "校准确认" in visible:
         errors.append("初稿不得展示校准过程")
     if visible.count("经营") > 2:

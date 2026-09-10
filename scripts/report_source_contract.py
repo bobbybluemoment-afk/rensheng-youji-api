@@ -42,6 +42,82 @@ DELIVERY_RULES = {
 }
 MANDATORY_CANDIDATE_MAX = 2
 
+FOCUS_ALIASES = {
+    "career": ("career", "事业", "职业", "工作", "职场", "求职", "转岗", "晋升", "升职", "创业", "学习", "考试", "专业"),
+    "finance_resources": ("finance", "财务", "财富", "收入", "赚钱", "金钱", "资产", "理财"),
+    "love_partner": ("love", "relationship", "恋爱", "感情", "伴侣", "婚姻", "桃花", "亲密关系"),
+    "family_growth": ("family", "家庭", "父母", "亲友", "家人", "成长环境"),
+    "body_emotion": ("body", "health", "emotion", "身体", "健康", "情绪", "压力", "睡眠"),
+    "self_growth": ("self", "growth", "性格", "成长", "自我", "内在"),
+}
+
+
+def focus_domain(value: Any) -> str | None:
+    """Map a user-facing focus phrase to one report domain.
+
+    Longest aliases win so that phrases such as ``亲密关系`` are not reduced to
+    a shorter accidental match. Unknown or empty focuses remain unfiltered.
+    """
+    text = str(value or "").strip().lower()
+    if not text:
+        return None
+    matches = [
+        (len(alias), domain)
+        for domain, aliases in FOCUS_ALIASES.items()
+        for alias in aliases
+        if alias.lower() in text
+    ]
+    return max(matches)[1] if matches else None
+
+
+def evidence_retention_gaps(data: dict[str, Any]) -> list[str]:
+    """Find severe method-to-Core information loss without imposing quotas.
+
+    Sparse evidence is legal.  This check only activates when at least three
+    completed methods supplied four or more heterogeneous hypotheses for the
+    same domain.  In that situation one Core claim cannot carry several genuinely
+    different reality axes.  Two or more claims may still consolidate related
+    hypotheses under the ordinary source validators.  This is evidence-triggered
+    retention, not a per-domain quota.
+    """
+    upstream: dict[str, list[tuple[str, str, str]]] = {domain: [] for domain in DIMENSIONS}
+    for method in data.get("independent_method_analyses") or []:
+        if not isinstance(method, dict) or method.get("status") != "complete":
+            continue
+        method_id = str(method.get("method_id", ""))
+        for item in method.get("reality_hypotheses") or []:
+            if not isinstance(item, dict) or item.get("domain") not in upstream:
+                continue
+            upstream[item["domain"]].append((
+                str(item.get("hypothesis_id", "")),
+                method_id,
+                str(item.get("normalized_direction", "")).strip(),
+            ))
+    claims = [item for item in data.get("report_claim_ledger") or [] if isinstance(item, dict)]
+    gaps: list[str] = []
+    for domain, hypotheses in upstream.items():
+        methods = {item[1] for item in hypotheses if item[1]}
+        directions = {item[2] for item in hypotheses if item[2]}
+        domain_claims = [item for item in claims if item.get("domain") == domain]
+        if len(hypotheses) < 4 or len(methods) < 3 or len(directions) < 2:
+            continue
+        upstream_ids = {item[0] for item in hypotheses if item[0]}
+        retained_ids = {
+            str(identifier)
+            for claim in domain_claims
+            for identifier in (claim.get("method_hypothesis_ids") or [])
+            if str(identifier) in upstream_ids
+        }
+        retained_methods = {item[1] for item in hypotheses if item[0] in retained_ids}
+        if len(domain_claims) < 2:
+            gaps.append(
+                f"{domain}: {len(hypotheses)}条上游候选来自{len(methods)}个方法，"
+                f"Core仅保留{len(domain_claims)}条判断并覆盖"
+                f"{len(retained_ids)}/{len(upstream_ids)}条候选、"
+                f"{len(retained_methods)}/{len(methods)}个方法；请保留不同现实信息轴或明确完整归并"
+            )
+    return gaps
+
 
 def mandatory_candidate_bounds(claim_ids: list[str] | set[str] | tuple[str, ...]) -> tuple[int, int]:
     """Return the canonical pre-calibration candidate bounds for one source.

@@ -67,11 +67,14 @@ def main() -> int:
                 raise ValueError("正式用户报告禁止使用self_test_fixture或测试数据来源")
             temporary_patches = [
                 path.name
-                for pattern in ("fix_report*.py", "rewrite_report*.py", "patch_report*.py")
+                for pattern in (
+                    "fix_report*.py", "rewrite_report*.py", "patch_report*.py",
+                    "_build*.py", "_fix*.py", "_merge*.py", "_semantic_p*.json",
+                )
                 for path in args.report.parent.glob(pattern)
             ]
             if temporary_patches:
-                raise ValueError("正式交付目录含临时报告修补脚本，禁止据此修改正文或哈希：" + "、".join(sorted(set(temporary_patches))))
+                raise ValueError("正式交付目录含临时修补脚本或人工语义分片，禁止据此拼装正文、Core或哈希：" + "、".join(sorted(set(temporary_patches))))
             if report.get("schema_version") in {"2.12.0", "2.13.0", "2.14.0"}:
                 protected = {
                     "--analysis-baseline": args.analysis_baseline,
@@ -108,9 +111,15 @@ def main() -> int:
                     raise ValueError("2.13.0正式报告缺少--resolved-sources")
                 with tempfile.TemporaryDirectory(prefix="rensheng-youji-resolved-") as temp_dir:
                     recomputed = Path(temp_dir) / "resolved-report-sources.json"
+                    report_focus = (
+                        report.get("focus_scope", {}).get("selected_focus")
+                        or report.get("focus_scope", {}).get("user_focus")
+                        or report.get("profile", {}).get("focus")
+                        or ""
+                    )
                     run([
                         sys.executable, str(REPO_ROOT / "scripts/resolve_report_sources.py"),
-                        str(args.analysis), "--output", str(recomputed),
+                        str(args.analysis), "--focus", str(report_focus), "--output", str(recomputed),
                     ])
                     if json.loads(recomputed.read_text(encoding="utf-8")) != json.loads(args.resolved_sources.read_text(encoding="utf-8")):
                         raise ValueError("校准后报告选材不是由冻结Core和校准状态确定性生成")

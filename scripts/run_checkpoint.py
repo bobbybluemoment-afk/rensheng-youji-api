@@ -12,6 +12,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 RUN_ROOT = (ROOT / "work/runs").resolve()
+GATE_SEQUENCE = ("METHOD_GATE", "CORE_GATE", "CALIBRATION_GATE", "REPORT_GATE", "DELIVERY_GATE")
 
 
 def _allowed(run_dir: Path) -> Path:
@@ -55,6 +56,17 @@ def record(run_dir: Path, stage: str, inputs: list[Path], outputs: list[Path]) -
     data = json.loads(checkpoint_path.read_text(encoding="utf-8")) if checkpoint_path.is_file() else {
         "schema_version": "1.0.0", "run_id": json.loads((run_dir / "run-state.json").read_text(encoding="utf-8"))["run_id"], "stages": []
     }
+    if stage in GATE_SEQUENCE:
+        position = GATE_SEQUENCE.index(stage)
+        existing = [str(item.get("stage")) for item in data.get("stages") or []]
+        if position and GATE_SEQUENCE[position - 1] not in existing:
+            raise ValueError(f"{stage}不能早于{GATE_SEQUENCE[position - 1]}记录")
+        # Re-recording an earlier gate invalidates every downstream checkpoint.
+        data["stages"] = [
+            item for item in data.get("stages") or []
+            if item.get("stage") not in GATE_SEQUENCE
+            or GATE_SEQUENCE.index(str(item.get("stage"))) < position
+        ]
     entry = {
         "stage": stage,
         "inputs": _snapshot(run_dir, inputs),
@@ -72,6 +84,10 @@ def verify(run_dir: Path) -> list[str]:
         return ["尚未记录任何检查点"]
     data = json.loads(checkpoint_path.read_text(encoding="utf-8"))
     errors: list[str] = []
+    recorded_gates = [str(item.get("stage")) for item in data.get("stages") or [] if item.get("stage") in GATE_SEQUENCE]
+    expected_prefix = list(GATE_SEQUENCE[:len(recorded_gates)])
+    if recorded_gates != expected_prefix:
+        errors.append(f"正式Gate顺序无效：actual={recorded_gates} expected={expected_prefix}")
     for entry in data.get("stages") or []:
         stage = str(entry.get("stage"))
         for group in ("inputs", "outputs"):

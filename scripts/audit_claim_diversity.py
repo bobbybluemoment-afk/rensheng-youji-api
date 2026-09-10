@@ -14,7 +14,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from report_source_contract import claim_diversity_gaps, mandatory_candidate_bounds  # noqa: E402
+from report_source_contract import claim_diversity_gaps, evidence_retention_gaps, mandatory_candidate_bounds  # noqa: E402
 
 
 DOMAINS = {"self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"}
@@ -47,6 +47,8 @@ def audit(data: dict[str, Any]) -> list[str]:
             if not isinstance(claim.get(key), str) or len(normalize(claim[key])) < 4:
                 errors.append(f"{claim_id}.{key} must contain substantive text")
         plain = str(claim.get("plain_claim", ""))
+        if "您" in plain:
+            errors.append(f"{claim_id}.plain_claim必须统一使用第二人称‘你’，不得使用‘您’")
         if not re.search(r"[。！？]$", plain.strip()):
             errors.append(f"{claim_id}.plain_claim must be a complete sentence")
         if any(phrase in plain or phrase in str(claim.get("claim", "")) for phrase in FIXTURE_PHRASES):
@@ -92,6 +94,7 @@ def audit(data: dict[str, Any]) -> list[str]:
             continue
         if not set(mandatory).issubset(set(source.get("claim_ids") or [])) or any(item not in claim_index for item in mandatory):
             errors.append("mandatory_candidate_ids must be valid source candidates")
+    errors.extend("九方法到Core证据保留不足：" + item for item in evidence_retention_gaps(data))
     return errors
 
 

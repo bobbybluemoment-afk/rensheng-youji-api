@@ -187,6 +187,8 @@ def compact_view(source: dict[str, Any]) -> dict[str, Any]:
             "input_view_rule": "默认只按六领域判断矩阵综合；完整方法包留在core-compiler-source.json中供确定性编译和审计，不得要求AI重复搬运。",
             "claim_class_rule": "每条报告判断只标记六类claim_class之一；report_role由编译器填写。",
             "calibration_probe_rule": "现实候选的validation_question、正向表现、替代解释和时间范围必须足以让程序生成个性化校准题。",
+            "evidence_retention_rule": "不按领域硬凑条数；但同一领域已有至少三个方法、四条以上且方向不同的候选时，一条判断不能代替多个现实信息轴，请至少拆开被证据支持的不同方向。",
+            "user_address_rule": "plain_claim、现实候选陈述、可观察例子与validation_question统一使用第二人称‘你’，不得使用‘您’。",
         },
     }
 

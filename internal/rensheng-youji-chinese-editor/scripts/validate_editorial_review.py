@@ -121,6 +121,8 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
         third_person.append("他／她")
     if third_person:
         errors.append("终稿必须统一使用第二人称“你”，禁止出现：" + "、".join(sorted(set(third_person))))
+    if "您" in visible:
+        errors.append("终稿称呼必须统一为‘你’，不得出现‘您’")
     for section_id, section in final_map.items():
         for index, paragraph in enumerate(section.get("paragraphs") or []):
             if not isinstance(paragraph, str):

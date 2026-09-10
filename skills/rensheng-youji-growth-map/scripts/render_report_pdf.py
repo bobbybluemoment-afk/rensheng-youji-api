@@ -44,6 +44,21 @@ def normalize_display_text(value: Any) -> str:
     return re.sub(r"(\d+(?:\.\d+)?)%", r"百分之\1", text)
 
 
+def year_story(item: dict[str, Any], index: int) -> str:
+    """Join continuity fields without repeating the same label twenty times."""
+    clean = lambda value: re.sub(r"[。！？；，：\s]+$", "", str(value).strip())
+    carry = clean(item.get("carry_in", ""))
+    signal = clean(item.get("real_world_signal", ""))
+    seed = clean(item.get("seed_for_next", ""))
+    patterns = (
+        f"{carry}。这一年，{signal}。{seed}。",
+        f"带着{carry}，{signal}。随后，{seed}。",
+        f"{carry}会继续影响这一年。{signal}；{seed}。",
+        f"这一年承接{carry}，主要表现为{signal}。最终，{seed}。",
+    )
+    return patterns[index % len(patterns)]
+
+
 def canonical_wechat_asset() -> tuple[Path, str]:
     if not ASSET_MANIFEST_PATH.exists():
         raise ValueError("缺少正式资源清单 assets/asset-manifest.json")
@@ -379,13 +394,13 @@ def years_page(data: dict[str, Any], number: int, start: int) -> Image.Image:
     page = Page(number, f"逐年观察｜{start + 1}—{start + 10}", compact=True)
     if start == 0:
         page.paragraph(data["yearly_outlook"]["summary"], size=18, color=TEAL, gap=8)
-    for item in data["yearly_outlook"]["years"][start:start + 10]:
+    for local_index, item in enumerate(data["yearly_outlook"]["years"][start:start + 10]):
         page._ensure(32)
         accent = PINK if item["key_year"] else GOLD
         marker = "重点年｜" if item["key_year"] else ""
         page.draw.text((MARGIN_X, page.y), f"{item['year']}｜{marker}{item['theme']}", font=font(20, role="heading"), fill=accent)
         page.y += 30
-        story = f"上一年留下的影响：{item['carry_in']}。这一年的主要表现：{item['real_world_signal']}。之后会留下：{item['seed_for_next']}。"
+        story = year_story(item, start + local_index)
         page.paragraph(story, size=20, gap=3)
     return page.finish()
 

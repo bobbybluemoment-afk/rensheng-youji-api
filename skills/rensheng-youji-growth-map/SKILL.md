@@ -21,7 +21,7 @@ description: 根据姓名（可选）、出生年月日时、性别、出生地�
 完整读取 [production-failure-policy.md](references/production-failure-policy.md)。仓库本身必须位于当前会话持久工作区，不得克隆到 `/tmp`、`/var/tmp` 或 `/private/tmp`。探索性读文件错误不属于正式生产失败，只有该规范列出的正式阶段错误才能触发停止。
 
 - `self_test_fixture`、`--self-test` 和 `tests/fixtures` 只允许由仓库测试命令使用，严禁作为真实用户Core、事实提纲或报告的数据来源。
-- 不得现场创建 `fix_report_v*.py`、`rewrite_report*.py`、`patch_report*.py` 等临时脚本修改正式正文、来源编号或哈希；不得用全局字符串替换清除命理术语。
+- 不得现场创建 `fix_report_v*.py`、`rewrite_report*.py`、`patch_report*.py`、`_build*.py`、`_fix*.py`、`_merge*.py` 或 `_semantic_p*.json` 等临时脚本和人工分片来拼装、覆盖正式正文、Core、来源编号或哈希；不得用全局字符串替换清除命理术语。
 - Core单方法和语义综合分别遵循各自最多三轮的局部修复规则；其他正式阶段校验失败时只允许重新运行出错阶段一次。仍失败则按“交付容错”降级，不得伪造字段让校验器放行。
 
 ## 两轮收集输入
@@ -191,6 +191,8 @@ python scripts/run_in_env.py scripts/audit_claim_diversity.py \
 
 审计失败、判断家族不足或六领域语义重复时，允许只返修 `core-semantic-analysis.json` 中被点名的语义区块一次，再重新执行语义校验、完整Core组装和本审计；方法包与确定性输入仍保持冻结。第二次仍失败才停止，不得用测试样例或宽泛套话补齐数量。
 
+审计还必须比较九方法候选与Core判断的实际保留关系：当同一领域已有至少三个方法、四条以上且方向不同的现实候选时，Core不能只留一条代替多个现实信息轴，也不能只引用少数上游候选。此类情况只返修Core综合，把不同方向分别保留为主要判断、独立补充、条件判断、阶段判断、待校准判断或证据较弱候选；该规则只在上游证据丰富时触发，不按所有领域硬凑相同条数。所有将进入校准题或报告的用户可见Core文字一律使用“你”，不得使用“您”。
+
 审计通过后才冻结初始Core。此后不得重新生成或改写完整母稿：
 
 ```bash
@@ -277,10 +279,17 @@ python scripts/run_in_env.py scripts/pipeline_gate.py --gate CALIBRATION_GATE --
    - [prosperity-guide.md](references/prosperity-guide.md)：现实行动建议；
    - [brand-and-conversion.md](references/brand-and-conversion.md)：免费使用与人工服务入口；
    - [safety-language.md](references/safety-language.md)：健康、财务、关系和隐私边界。
-2. 校准完成后先运行 `scripts/resolve_report_sources.py`，从冻结候选池排除 `reject`，按稳定优先级和覆盖备用映射生成 `work/resolved-report-sources.json`。不得手工编辑该文件，也不得直接沿用校准前的最终报告名单。
+2. 校准完成后先运行 `scripts/resolve_report_sources.py`，从冻结候选池排除 `reject`，并把本次关注方向显式传给程序。当前问题只允许直接使用关注领域的判断；其他领域只能在后续正文中作为已有联动链支持的影响因素，不能替代当前问题。不得手工编辑该文件，也不得直接沿用校准前的最终报告名单：
+
+```bash
+python scripts/run_in_env.py scripts/resolve_report_sources.py \
+  work/analysis-output-calibrated.json \
+  --focus "事业发展" \
+  --output work/resolved-report-sources.json
+```
 3. 完整读取 `internal/rensheng-youji-report-content-brief/SKILL.md`。`materialize_content_brief.py` 直接从校准后Core与 `resolved-report-sources.json` 生成实体化 `report-content-brief.json`；不再调用AI做第二次选材，也不生成 `report-content-selection.json`。
-4. 完整读取 `internal/rensheng-youji-report-writer/SKILL.md`。先由 `build_report_writing_pack.py` 把事实提纲拆成段落任务槽；AI只返回正文和摘要、阶段、年度、行动等语义文字，不填写来源编号、段落映射、哈希或审计字段。再由 `compile_report_draft.py` 确定性补齐 `source_claim_ids`、`paragraph_claim_map`、`claim_realization_map` 和重点句映射。
-5. 完整读取 `internal/rensheng-youji-chinese-editor/SKILL.md`。先运行 `scan_report_language.py`，同时检查正文段落和阶段、逐年、行动等其他用户可见文字；没有发现问题时不调用编辑AI，直接生成编辑记录。发现问题时只把被点名的小块交给AI修订，再由 `apply_editorial_patch.py` 验证锁定判断仍在原位置，并输出 `edited-report-draft.json` 与 `edited-report-semantic.json`。最终报告不得绕过编辑结果读取原始语义补丁，也不得要求编辑层为了证明工作发生而强制修改若干章节。
+4. 完整读取 `internal/rensheng-youji-report-writer/SKILL.md`。先由 `build_report_writing_pack.py` 按“主要表现与行为→形成经历与现实条件→重复挑战、阶段变化与应对”的叙事顺序分组，不得把判断轮流塞入段落。写作包只保留AI写正文真正需要的字段，来源、哈希和技术机制继续由程序保管。AI只返回正文和摘要、阶段、年度、行动等语义文字，不填写来源编号、段落映射、哈希或审计字段。再由 `compile_report_draft.py` 确定性补齐 `source_claim_ids`、`paragraph_claim_map`、`claim_realization_map` 和重点句映射。
+5. 完整读取 `internal/rensheng-youji-chinese-editor/SKILL.md`。先运行 `scan_report_language.py`，同时检查正文段落和阶段、逐年、行动等其他用户可见文字；确定性检查包括“你/您”一致性、残句、重复标点和逐年模板化开头。没有发现问题时不调用编辑AI，直接生成编辑记录。发现问题时只把被点名的小块交给AI修订，再由 `apply_editorial_patch.py` 验证锁定判断仍在原位置，并输出 `edited-report-draft.json` 与 `edited-report-semantic.json`。不新增固定的全文通读AI调用；最终报告不得绕过编辑结果读取原始语义补丁，也不得要求编辑层为了证明工作发生而强制修改若干章节。
 6. 正式报告使用 `schema_version=2.14.0`、`document_mode=full_calibrated`。Core使用0.15.0、事实提纲和初稿使用1.6.0、中文编辑使用2.5.0、校准题使用3.0.0。Core综合把判断分为主要判断、独立补充、条件判断、阶段判断、待校准判断和证据较弱候选；不设置每领域必须几条。证据较弱候选仅内部保留，待校准判断在现实确认前不直接进入报告。报告章节再按真实可用证据决定正常、缩短、最小或证据缺口模式。
 7. 时间分析继续使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系，同时概括更长阶段。
 8. 卡片没有独立校准流程。`build_card_content.py` 从冻结Core、校准后选材和用户资料确定性提取卡面文字；`build_card_visual_pack.py` 只提取Baseline结构化逐年资料，`build_visual_signals_from_core.py` 再按固定映射生成20年视觉信号，不调用AI、不读取五题答案，也不从自然语言关键词猜分。完整报告内卡片可以继承报告已确定的可见候选主次，但命理结构、人生K线语义和原始判断仍来自校准前冻结的同一Core。报告与卡片的分析编号、Core版本、Baseline哈希和明显关系机会年份必须一致。

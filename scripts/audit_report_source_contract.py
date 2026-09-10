@@ -12,6 +12,8 @@ from build_report_source_bundle import build
 from report_source_contract import (
     MANDATORY_CANDIDATE_MAX,
     claim_diversity_gaps,
+    evidence_retention_gaps,
+    focus_domain,
     mandatory_candidate_bounds,
     report_total_cjk_bounds,
 )
@@ -66,6 +68,17 @@ def audit(root: Path) -> list[str]:
         errors.append("Normal report total bounds changed unexpectedly")
     if report_total_cjk_bounds(["evidence_gap"] * 8)[0] >= 4300:
         errors.append("Degraded sections must lower the full-report minimum length")
+    if focus_domain("事业发展") != "career" or focus_domain("财务与收入") != "finance_resources":
+        errors.append("User focus phrases are not mapped to report domains deterministically")
+    rich_but_lost = {
+        "independent_method_analyses": [{
+            "method_id": f"m{index}", "status": "complete",
+            "reality_hypotheses": [{"hypothesis_id": f"h{index}", "domain": "finance_resources", "normalized_direction": f"方向{index}"}],
+        } for index in range(4)],
+        "report_claim_ledger": [{"domain": "finance_resources", "method_hypothesis_ids": ["h0"]}],
+    }
+    if not evidence_retention_gaps(rich_but_lost):
+        errors.append("Rich multi-method evidence can still be silently collapsed in Core")
 
     one_timing_claim: dict[str, Any] = {
         "report_claim_ledger": [{
@@ -118,6 +131,17 @@ def audit(root: Path) -> list[str]:
     renderer_text = (root / "skills/rensheng-youji-growth-map/scripts/render_report.py").read_text(encoding="utf-8")
     if 'CURRENT_CALIBRATION_SCHEMA = "3.0.0"' not in delivery_text or 'CURRENT_CALIBRATION_SCHEMA = "3.0.0"' not in renderer_text:
         errors.append("Current delivery and report validation must share calibration schema 3.0.0")
+    resolver_text = (root / "scripts/resolve_report_sources.py").read_text(encoding="utf-8")
+    brief_skill_text = (root / "internal/rensheng-youji-report-content-brief/SKILL.md").read_text(encoding="utf-8")
+    if 'parser.add_argument("--focus"' not in resolver_text or '--focus "事业发展"' not in brief_skill_text:
+        errors.append("Current-question source resolution must receive the user focus explicitly")
+    diversity_text = (root / "scripts/audit_claim_diversity.py").read_text(encoding="utf-8")
+    core_validator_text = (root / "internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py").read_text(encoding="utf-8")
+    if "evidence_retention_gaps" not in diversity_text or "evidence_retention_gaps" not in core_validator_text:
+        errors.append("Core validator and quality audit must share the evidence-retention contract")
+    writing_pack_text = (root / "internal/rensheng-youji-report-writer/scripts/build_report_writing_pack.py").read_text(encoding="utf-8")
+    if "narrative_role" not in writing_pack_text or "index % count" in writing_pack_text:
+        errors.append("Writing pack must use narrative roles instead of round-robin claim distribution")
 
     growth_skill_text = (root / "skills/rensheng-youji-growth-map/SKILL.md").read_text(encoding="utf-8")
     card_skill_text = (root / "internal/rensheng-youji-free-card-output/SKILL.md").read_text(encoding="utf-8")

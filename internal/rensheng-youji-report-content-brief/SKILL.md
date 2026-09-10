@@ -17,6 +17,7 @@ description: 人生有迹内部报告事实整理层。接收已冻结并以校�
 ```bash
 python scripts/run_in_env.py scripts/resolve_report_sources.py \
   work/analysis-output-calibrated.json \
+  --focus "事业发展" \
   --output work/resolved-report-sources.json
 ```
 

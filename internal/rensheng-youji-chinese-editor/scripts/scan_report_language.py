@@ -30,6 +30,8 @@ def reasons_for(text: str) -> list[str]:
     if any(term in text for term in MINGLI): reasons.append("用户不可见命理术语")
     if any(term in text for term in DEFENSIVE): reasons.append("防御性或否定式开头")
     if "命主" in text or "这个人" in text: reasons.append("未使用第二人称")
+    if "您" in text: reasons.append("称呼必须统一为‘你’")
+    if re.search(r"[。！？]\s*[。！？]", text): reasons.append("重复标点或空句")
     if any(len(re.findall(r"[\u3400-\u9fff]", sentence)) > 70 for sentence in re.split(r"[。！？]", text)): reasons.append("句子过长")
     return reasons
 
@@ -72,6 +74,26 @@ def scan(draft: dict[str, Any], semantic: dict[str, Any] | None = None) -> dict[
         reasons = reasons_for(text)
         if reasons:
             issues.append({"slot_id": slot_id, "reasons": reasons, "text": text})
+    yearly = (semantic or {}).get("yearly_outlook", {}).get("years") or []
+    opening_slots: dict[str, list[tuple[str, str]]] = {}
+    for index, year in enumerate(yearly):
+        if not isinstance(year, dict):
+            continue
+        for key in ("carry_in", "real_world_signal", "seed_for_next"):
+            value = year.get(key)
+            if not isinstance(value, str):
+                continue
+            opening = "".join(re.findall(r"[\u3400-\u9fff]", value))[:10]
+            if len(opening) >= 6:
+                opening_slots.setdefault(opening, []).append((f"semantic.yearly_outlook.years.{index}.{key}", value))
+    issue_ids = {item["slot_id"] for item in issues}
+    for repeated in opening_slots.values():
+        if len(repeated) < 4:
+            continue
+        for slot_id, value in repeated:
+            if slot_id not in issue_ids:
+                issues.append({"slot_id": slot_id, "reasons": ["逐年文字重复使用同一模板开头"], "text": value})
+                issue_ids.add(slot_id)
     return {
         "schema_version": "1.1.0",
         "draft_id": draft["draft_id"],

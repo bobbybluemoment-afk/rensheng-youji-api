@@ -13,7 +13,7 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
-from report_source_contract import BASE_COVERAGE, DIMENSIONS, delivery_rule, required_coverage  # noqa: E402
+from report_source_contract import BASE_COVERAGE, DIMENSIONS, delivery_rule, focus_domain, required_coverage  # noqa: E402
 
 
 def digest(value: Any) -> str:
@@ -42,6 +42,10 @@ def validate(data: Any, analysis: Any | None = None, resolved: Any | None = None
         errors.append(f"事实提纲必须来自core_version={sorted(expected_cores)}")
     if data.get("focus_scope", {}).get("protected_sections") != ["life_overview", "dimensions"]:
         errors.append("完整人生主线和六个领域必须免受关注方向改写")
+    focus = data.get("focus_scope", {}).get("user_focus", "")
+    selected_focus_domain = focus_domain(focus)
+    if data.get("focus_scope", {}).get("selected_domain") not in {None, selected_focus_domain}:
+        errors.append("事实提纲记录的关注领域与用户关注问题不一致")
     sections = [data.get("life_overview"), data.get("current_question")]
     dimensions = data.get("dimensions")
     if not isinstance(dimensions, list) or [item.get("id") for item in dimensions if isinstance(item, dict)] != list(DIMENSIONS):
@@ -166,6 +170,19 @@ def validate(data: Any, analysis: Any | None = None, resolved: Any | None = None
                     errors.append("校准后确定性选材文件与当前Core不一致")
                 if source.get("resolved_source_sha256") != resolved.get("resolved_sha256"):
                     errors.append("事实提纲与校准后确定性选材来源不一致")
+                resolved_focus = resolved.get("focus_scope") or {}
+                if resolved_focus and (
+                    resolved_focus.get("user_focus") != focus
+                    or resolved_focus.get("selected_domain") != selected_focus_domain
+                ):
+                    errors.append("校准后选材与事实提纲的关注方向不一致")
+                current_claims = data.get("current_question", {}).get("selected_claims") or []
+                wrong_focus = sorted({
+                    str(item.get("domain")) for item in current_claims
+                    if isinstance(item, dict) and selected_focus_domain and item.get("domain") != selected_focus_domain
+                })
+                if wrong_focus:
+                    errors.append(f"当前问题混入关注领域之外的直接判断：{wrong_focus}")
                 source_pairs = [
                     (data.get("life_overview"), resolved.get("life_overview"), "life_overview"),
                     (data.get("current_question"), resolved.get("current_question"), "current_question"),

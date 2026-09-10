@@ -6,8 +6,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from pathlib import Path
 from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from report_source_contract import focus_domain  # noqa: E402
 
 
 def canonical_digest(value: Any) -> str:
@@ -53,7 +58,7 @@ def deterministic_selection(analysis: dict[str, Any], resolved: dict[str, Any], 
         "schema_version": "1.6.0",
         "brief_id": "brief-" + canonical_digest({"analysis": analysis["analysis_meta"]["analysis_id"], "resolved": resolved["resolved_sha256"], "focus": focus})[:16],
         "source": {},
-        "focus_scope": {"user_focus": focus, "protected_sections": ["life_overview", "dimensions"], "focused_sections": ["current_question"]},
+        "focus_scope": {"user_focus": focus, "selected_domain": focus_domain(focus), "protected_sections": ["life_overview", "dimensions"], "focused_sections": ["current_question"]},
         "life_overview": section(resolved["life_overview"], "life_overview", "你带来的能力与走过的路"),
         "dimensions": dimensions,
         "current_question": section(resolved["current_question"], "current_question", "当前问题回应"),
@@ -142,6 +147,17 @@ def materialize(selection: dict[str, Any], analysis: dict[str, Any], resolved: d
         expected_resolved_hash = canonical_digest({key: value for key, value in resolved.items() if key != "resolved_sha256"})
         if resolved.get("resolved_sha256") != expected_resolved_hash:
             raise ValueError("校准后选材文件哈希无效")
+        resolved_focus = resolved.get("focus_scope") or {}
+        brief_focus = result.get("focus_scope") or {}
+        if resolved_focus:
+            brief_focus.setdefault("user_focus", resolved_focus.get("user_focus", ""))
+            brief_focus.setdefault("selected_domain", resolved_focus.get("selected_domain"))
+            result["focus_scope"] = brief_focus
+        if resolved_focus and (
+            resolved_focus.get("selected_domain") != brief_focus.get("selected_domain")
+            or resolved_focus.get("user_focus") != brief_focus.get("user_focus")
+        ):
+            raise ValueError("事实提纲关注方向与确定性选材不一致")
         result["source"]["resolved_source_sha256"] = resolved["resolved_sha256"]
         source_pairs = [
             (result["life_overview"], resolved["life_overview"]),

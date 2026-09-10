@@ -15,7 +15,7 @@ python scripts/run_in_env.py internal/rensheng-youji-chinese-editor/scripts/scan
   --output work/editorial-scan.json
 ```
 
-3. `status=pass` 时不调用编辑AI，直接进入确定性组装；`status=repair_required` 时，只把扫描器点名的段落交给AI，补全主体和动作，拆分长句，消除名词堆叠、翻译腔、命理术语泄露和固定模板。
+3. 扫描器同时检查“你/您”混用、重复标点和逐年文字连续四次以上使用同一模板开头。`status=pass` 时不调用编辑AI，直接进入确定性组装；`status=repair_required` 时，只把扫描器点名的段落或逐年字段交给AI，补全主体和动作，拆分长句，消除名词堆叠、翻译腔、命理术语泄露和固定模板。
 4. 保留初稿使用的所有判断编号、`paragraph_claim_map`、`claim_realization_map`、领域独立性字段、`delivery_mode` 与 `missing_coverage`，不得增加新编号或改变逐段来源。`claim_realization_map.exact_span` 及其所在段落中的完整原句不得改写；如确需修改判断，退回Core而不是在编辑层偷换。
 5. 用户可见文字全部使用第二人称“你”，删除“这个人、他、她、命主、本人”等第三人称或内部称呼。
 6. 检查“经营”等高频抽象词的实际语境，并检查章节之间是否重复整句或固定模板。

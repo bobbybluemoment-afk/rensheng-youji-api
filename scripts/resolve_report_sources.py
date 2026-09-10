@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from report_source_contract import BASE_COVERAGE, DIMENSIONS, delivery_mode, delivery_rule, required_coverage
+from report_source_contract import BASE_COVERAGE, DIMENSIONS, delivery_mode, delivery_rule, focus_domain, required_coverage
 
 
 def digest(value: Any) -> str:
@@ -27,6 +27,7 @@ def _resolve_section(
     domain: str | None,
     emphasis_limit: int = 1,
     promote_confirmed_pending: bool = False,
+    strict_domain: bool = False,
 ) -> dict[str, Any]:
     priority = list(source.get("claim_priority") or source.get("claim_ids") or [])
     pool = set(source.get("claim_ids") or [])
@@ -52,7 +53,11 @@ def _resolve_section(
         if ledger.get(claim_id, {}).get("claim_class") not in reportable
         and claim_id not in promoted_pending
     ]
-    available = [claim_id for claim_id in priority if claim_id in pool and claim_id in ledger and claim_id not in rejected and claim_id not in ineligible]
+    available = [
+        claim_id for claim_id in priority
+        if claim_id in pool and claim_id in ledger and claim_id not in rejected and claim_id not in ineligible
+        and (not strict_domain or domain is None or ledger[claim_id].get("domain") == domain)
+    ]
     specific_pool = set(source.get("domain_specific_claim_ids") or []) | set(promoted_pending)
     mainline_pool = set(source.get("mainline_claim_ids") or [])
     coverage_map = {key: list(value) for key, value in (source.get("coverage_claim_map") or {}).items()}
@@ -152,7 +157,41 @@ def _resolve_section(
     }
 
 
-def resolve(analysis: dict[str, Any]) -> dict[str, Any]:
+def _focused_current_source(
+    source_bundle: dict[str, Any], ledger: dict[str, dict[str, Any]], domain: str | None,
+) -> dict[str, Any]:
+    current = source_bundle.get("current_stage_source") or {}
+    if domain is None:
+        return current
+    dimension = (source_bundle.get("dimensions") or {}).get(domain) or {}
+    current_ids = [item for item in current.get("claim_priority") or current.get("claim_ids") or [] if ledger.get(item, {}).get("domain") == domain]
+    dimension_ids = [item for item in dimension.get("claim_priority") or dimension.get("claim_ids") or [] if ledger.get(item, {}).get("domain") == domain]
+    ordered = _ordered_unique(current_ids + dimension_ids)
+    coverage_map: dict[str, list[str]] = {}
+    for claim_id in ordered:
+        for tag in ledger.get(claim_id, {}).get("coverage_tags") or []:
+            coverage_map[tag] = _ordered_unique(coverage_map.get(tag, []) + [claim_id])
+    return {
+        "claim_ids": ordered,
+        "claim_priority": ordered,
+        "domain_specific_claim_ids": ordered,
+        "mainline_claim_ids": [],
+        "mandatory_candidate_ids": _ordered_unique([
+            *[item for item in current.get("mandatory_candidate_ids") or [] if item in ordered],
+            *[item for item in dimension.get("mandatory_candidate_ids") or [] if item in ordered],
+        ]),
+        "emphasis_candidate_ids": _ordered_unique([
+            *[item for item in current.get("emphasis_candidate_ids") or [] if item in ordered],
+            *[item for item in dimension.get("emphasis_candidate_ids") or [] if item in ordered],
+        ]),
+        "formation_chain_ids": _ordered_unique((current.get("formation_chain_ids") or []) + (dimension.get("formation_chain_ids") or [])),
+        "linkage_chain_ids": _ordered_unique((current.get("linkage_chain_ids") or []) + (dimension.get("linkage_chain_ids") or [])),
+        "coverage_claim_map": coverage_map,
+        "evidence_gaps": _ordered_unique((current.get("evidence_gaps") or []) + (dimension.get("evidence_gaps") or [])),
+    }
+
+
+def resolve(analysis: dict[str, Any], focus: str = "") -> dict[str, Any]:
     meta = analysis.get("analysis_meta") or {}
     if meta.get("core_version") not in {"0.14.0", "0.15.0"}:
         raise ValueError("Post-calibration source resolution requires core_version=0.14.0 or 0.15.0")
@@ -161,6 +200,8 @@ def resolve(analysis: dict[str, Any]) -> dict[str, Any]:
     ledger = {item.get("claim_id"): item for item in analysis.get("report_claim_ledger") or [] if isinstance(item, dict)}
     source_bundle = analysis.get("report_source_bundle") or {}
     dimensions = source_bundle.get("dimensions") or {}
+    selected_domain = focus_domain(focus)
+    focused_current = _focused_current_source(source_bundle, ledger, selected_domain)
     result = {
         "schema_version": "1.0.0",
         "source": {
@@ -168,9 +209,10 @@ def resolve(analysis: dict[str, Any]) -> dict[str, Any]:
             "core_version": meta.get("core_version"),
             "analysis_sha256": digest(analysis),
         },
+        "focus_scope": {"user_focus": focus, "selected_domain": selected_domain},
         "life_overview": _resolve_section(source_bundle.get("life_narrative_source") or {}, ledger, None, 2, True),
         "dimensions": {domain: _resolve_section(dimensions.get(domain) or {}, ledger, domain, 1, True) for domain in DIMENSIONS},
-        "current_question": _resolve_section(source_bundle.get("current_stage_source") or {}, ledger, None, 1),
+        "current_question": _resolve_section(focused_current, ledger, selected_domain, 1, False, True),
     }
     result["resolved_sha256"] = digest({key: value for key, value in result.items() if key != "resolved_sha256"})
     return result
@@ -179,10 +221,11 @@ def resolve(analysis: dict[str, Any]) -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("analysis", type=Path)
+    parser.add_argument("--focus", default="")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
-        result = resolve(json.loads(args.analysis.read_text(encoding="utf-8")))
+        result = resolve(json.loads(args.analysis.read_text(encoding="utf-8")), args.focus)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
