@@ -23,6 +23,8 @@ Core中的每个可校准候选已经包含个人化材料：
 - `related_claim_ids`：会影响哪些报告判断；
 - `candidate_kind`、`domain`、`reality_dimension`：用于覆盖与去重。
 
+其中用户可见的A/B选项使用专门的 `answerable_observation` 和 `answerable_alternative`，不直接照搬内部判断。它们必须描述过去或当前可以回想的一件事，不能把建议写成答案，也不能在同一道题里捆绑多个变化。明确起止年份最多跨六年。去掉标题以后仍应看得出领域：财富题直接谈收入、工资、奖金、存钱、消费、预算、负债或资产；身体与情绪题直接谈睡眠、疲劳、紧绷、烦躁、注意力、休息或身体感受。
+
 `build_calibration_questions.py` 对候选确定性评分，优先顺序为待校准判断、条件判断、独立补充、阶段判断、主要判断，并对用户关注领域适度加分。程序枚举满足覆盖条件的五题组合，再选总分最高的一组；相同输入永远得到相同五题。
 
 每题统一为：
@@ -48,7 +50,7 @@ python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/validate_c
   --visible-out work/calibration-visible.md
 ```
 
-问题文件使用 `schema_version=3.0.0`、`template_version=2.0.0`，并由程序写入 `source.analysis_id` 和 `source.baseline_sha256`。校验器会重新从同一个Core计算哈希、显示内容、候选绑定、答案影响、领域覆盖和时间题覆盖。内部候选编号、判断编号、命理证据和置信度不得进入 `calibration-visible.md`。
+问题文件使用 `schema_version=3.0.0`、`template_version=2.0.0`，并由程序写入 `source.analysis_id` 和 `source.baseline_sha256`。Core冻结前、选择候选时和问题生成后共用同一份现实可回答性契约，检查未来年份、建议型答案、过长时间窗、多问题捆绑和领域漂移。校验器还会重新从同一个Core计算哈希、显示内容、候选绑定、答案影响、领域覆盖和时间题覆盖。内部候选编号、判断编号、命理证据和置信度不得进入 `calibration-visible.md`。
 
 ## 自由回答
 

@@ -1981,9 +1981,9 @@
           "type": "string",
           "minLength": 1
         },
-        "answerable_time_scope": {"type": "string", "minLength": 2},
-        "answerable_observation": {"type": "string", "minLength": 8},
-        "answerable_alternative": {"type": "string", "minLength": 8},
+        "answerable_time_scope": {"type": "string", "minLength": 2, "description": "只写过去或当前可回想范围；明确起止年份跨度不超过六年"},
+        "answerable_observation": {"type": "string", "minLength": 8, "description": "A项：只写本领域一个已发生或当前可观察的事实轴，不写建议、效果测试或多个阶段的组合"},
+        "answerable_alternative": {"type": "string", "minLength": 8, "description": "B项：与A项可区分的本领域现实表现，同样只核对一个事实轴"},
         "status": {
           "type": "string",
           "enum": [

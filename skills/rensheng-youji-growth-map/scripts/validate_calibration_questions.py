@@ -7,10 +7,14 @@ import argparse
 from collections import Counter
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
 from build_calibration_questions import DOMAINS, digest, expected_display
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from calibration_question_contract import quality_errors  # noqa: E402
 
 
 VISIBLE_BANNED = {"日主", "身强", "身弱", "印旺", "比肩", "劫财", "食神", "伤官", "正印", "偏印", "正财", "偏财", "正官", "七杀", "格局", "喜用", "忌神", "天干", "地支", "藏干", "大运", "流年", "刑冲合害", "根苗花果", "候选编号", "置信度"}
@@ -36,6 +40,7 @@ def validate(data: Any, analysis: Any) -> list[str]:
     candidates = {item["candidate_id"]: item for item in analysis.get("reality_candidate_pool") or [] if isinstance(item, dict)}
     claims = {item["claim_id"]: item for item in analysis.get("report_claim_ledger") or [] if isinstance(item, dict)}
     analysis_year = int(str(analysis.get("analysis_meta", {}).get("analysis_as_of", "0000"))[:4])
+    strict_semantics = analysis.get("analysis_meta", {}).get("core_version") == "0.16.0"
     domains: list[str] = []
     kinds: list[str] = []
     axes: list[tuple[str, str]] = []
@@ -46,6 +51,8 @@ def validate(data: Any, analysis: Any) -> list[str]:
             errors.append(f"第{index}题必须绑定一个冻结Core现实候选")
             continue
         candidate = candidates[ids[0]]
+        for reason in quality_errors(candidate, analysis_year, strict_semantics=strict_semantics):
+            errors.append(f"第{index}题不适合用于校准：{reason}")
         if display != expected_display(candidate, index, analysis_year):
             errors.append(f"第{index}题没有由冻结Core候选确定性生成")
         visible = json.dumps(display, ensure_ascii=False)

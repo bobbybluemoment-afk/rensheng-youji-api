@@ -200,7 +200,7 @@ def compact_view(source: dict[str, Any]) -> dict[str, Any]:
         "semantic_output_contract": source["semantic_output_contract"] | {
             "input_view_rule": "默认只按六领域判断矩阵综合；完整方法包留在core-compiler-source.json中供确定性编译和审计，不得要求AI重复搬运。",
             "claim_class_rule": "每条报告判断只标记六类claim_class之一；report_role由编译器填写。",
-            "calibration_probe_rule": "现实候选的validation_question、正向表现、替代解释和时间范围必须足以让程序生成个性化校准题。",
+            "calibration_probe_rule": "现实候选的answerable_*必须只写过去或当前可观察事实：A/B各核对一个现实问题轴，不写建议或解决办法，不跨多个行为与阶段；明确年份跨度不超过六年。去掉领域标题后仍须看得出本领域，财富必须直接谈收入、工资、奖金、存钱、消费、预算或资产，身体情绪必须直接谈睡眠、疲劳、紧绷、烦躁、注意力、休息或身体感受。",
             "evidence_retention_rule": "不按领域硬凑条数；但同一领域已有至少三个方法、四条以上且方向不同的候选时，一条判断不能代替多个现实信息轴，请至少拆开被证据支持的不同方向。",
             "detail_retention_rule": "report_claim_ledger每条判断必须引用1—6个属于其method_hypothesis_ids的source_detail_atom_ids。程序会从这些编号恢复具体生活表现并覆盖allowed_examples；不得用‘可通过具体任务核对’等通用占位句代替。",
             "interpretive_spine_rule": "interpretive_spine提炼1—4条真正跨领域的核心模式。每条必须区分原有能力、后来形成的做法、当前可能付出的代价和发展方向，并引用真实判断与生活细节；不能把全部人生压成工作方式，也不能吞掉领域独有信息。",

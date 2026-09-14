@@ -8,10 +8,13 @@ from collections import Counter
 import hashlib
 from itertools import combinations
 import json
-import re
+import sys
 from pathlib import Path
 from typing import Any
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from calibration_question_contract import quality_errors, years_in  # noqa: E402
 
 DOMAINS = {"self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"}
 DOMAIN_LABELS = {
@@ -65,18 +68,9 @@ def candidate_score(candidate: dict[str, Any], source_class: str, wanted_domain:
     return score
 
 
-def years_in(value: Any) -> list[int]:
-    return [int(item) for item in re.findall(r"(?<!\d)(20\d{2})(?!\d)", str(value or ""))]
-
-
 def answerable(candidate: dict[str, Any], analysis_year: int) -> bool:
     """Calibration can only ask about evidence already observable today."""
-    values = [
-        candidate.get("answerable_time_scope", candidate.get("time_scope")),
-        candidate.get("answerable_observation", (candidate.get("observable_examples") or [""])[0]),
-        candidate.get("answerable_alternative", candidate.get("alternative_statement")),
-    ]
-    if any(year > analysis_year for value in values for year in years_in(value)):
+    if quality_errors(candidate, analysis_year):
         return False
     if candidate.get("candidate_kind") == "timed_event":
         scope = candidate.get("answerable_time_scope", candidate.get("time_scope"))
@@ -96,6 +90,7 @@ def select_candidates(analysis: dict[str, Any], focus: str = "") -> list[dict[st
     claims = {item["claim_id"]: item for item in analysis.get("report_claim_ledger") or [] if isinstance(item, dict)}
     wanted_domain = focus_domain(focus)
     analysis_year = int(str(analysis.get("analysis_meta", {}).get("analysis_as_of", "0000"))[:4])
+    strict_semantics = analysis.get("analysis_meta", {}).get("core_version") == "0.16.0"
     eligible = []
     for candidate in analysis.get("reality_candidate_pool") or []:
         if not isinstance(candidate, dict) or candidate.get("domain") not in DOMAINS:
@@ -105,7 +100,15 @@ def select_candidates(analysis: dict[str, Any], focus: str = "") -> list[dict[st
             continue
         if not candidate.get("validation_question") or len(candidate.get("observable_examples") or []) < 2:
             continue
-        if not answerable(candidate, analysis_year):
+        if strict_semantics:
+            candidate_is_answerable = answerable(candidate, analysis_year)
+        else:
+            candidate_is_answerable = not quality_errors(candidate, analysis_year, strict_semantics=False)
+            if candidate.get("candidate_kind") == "timed_event":
+                scope = candidate.get("answerable_time_scope", candidate.get("time_scope"))
+                window = years_in(scope)
+                candidate_is_answerable = candidate_is_answerable and ((bool(window) and min(window) <= analysis_year) or (not window and any(term in str(scope) for term in ("过去", "当前", "至今"))))
+        if not candidate_is_answerable:
             continue
         item = dict(candidate)
         item["source_class"] = source_class

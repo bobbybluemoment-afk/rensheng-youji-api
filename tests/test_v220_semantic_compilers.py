@@ -21,9 +21,18 @@ from core_baseline import digest  # noqa: E402
 from scan_report_language import scan  # noqa: E402
 from apply_editorial_patch import apply as apply_editorial, apply_all as apply_all_editorial  # noqa: E402
 from validate_calibration_free_text import validate as validate_free_text  # noqa: E402
+from calibration_question_contract import quality_errors  # noqa: E402
 
 
 DOMAINS = ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]
+CALIBRATION_CHOICES = {
+    "self_growth": ("你做重要选择前常会反复比较。", "你做重要选择时通常很快决定。"),
+    "love_partner": ("关系出现分歧时，你常会晚些再说明感受。", "关系出现分歧时，你通常当场说明感受。"),
+    "career": ("工作要求清楚时，你通常更快开始行动。", "工作要求是否清楚，很少影响你开始行动。"),
+    "finance_resources": ("收入增加后，你通常会先存下一部分钱。", "收入增加后，你通常会优先安排消费。"),
+    "body_emotion": ("压力持续时，你的睡眠通常会先受影响。", "压力持续时，你的睡眠通常没有明显变化。"),
+    "family_growth": ("家人提出期待时，你常会先承担下来。", "家人提出期待时，你通常会直接说明做不到的部分。"),
+}
 
 
 def calibration_baseline() -> dict:
@@ -54,6 +63,9 @@ def calibration_baseline() -> dict:
             "related_claim_ids": [claim_id],
             "confidence": "to_verify",
             "validation_question": f"第{index}个现实侧面，哪一种更接近你？",
+            "answerable_time_scope": "过去五年" if kind == "timed_event" else "当前及过去",
+            "answerable_observation": CALIBRATION_CHOICES[domain][0],
+            "answerable_alternative": CALIBRATION_CHOICES[domain][1],
             "status": "unverified",
         })
     return {
@@ -127,6 +139,35 @@ class V220SemanticCompilerTest(unittest.TestCase):
         self.assertNotIn("2030", visible)
         self.assertNotIn("future_2030", {item["audit"]["candidate_ids"][0] for item in questions["questions"]})
 
+    def test_calibration_rejects_advice_long_windows_bundled_axes_and_domain_drift(self) -> None:
+        samples = [
+            {
+                "domain": "body_emotion", "answerable_time_scope": "过去几年",
+                "answerable_observation": "任务拆短和清楚结束标准会明显帮助你恢复。",
+                "answerable_alternative": "无论任务是否拆分，你的恢复速度都差不多。",
+            },
+            {
+                "domain": "career", "answerable_time_scope": "2023年至2026年",
+                "answerable_observation": "你先重排过方向、岗位或责任，随后面试、汇报、作品或项目交付增多。",
+                "answerable_alternative": "你的工作方向和任务类型基本没变。",
+            },
+            {
+                "domain": "self_growth", "answerable_time_scope": "2013年至2026年",
+                "answerable_observation": "你在学习选择、同伴比较或表达试错中逐步形成自己的标准。",
+                "answerable_alternative": "你的选择方式一直比较稳定。",
+            },
+            {
+                "domain": "finance_resources", "answerable_time_scope": "当前",
+                "answerable_observation": "作品、面试或岗位表现更直接影响机会和回报。",
+                "answerable_alternative": "机会和回报主要由其他因素决定。",
+            },
+        ]
+        reasons = [quality_errors(sample, 2026) for sample in samples]
+        self.assertTrue(any("建议" in reason for reason in reasons[0]))
+        self.assertTrue(any("多个" in reason for reason in reasons[1]))
+        self.assertTrue(any("六年" in reason for reason in reasons[2]))
+        self.assertTrue(any("本领域" in reason for reason in reasons[3]))
+
     def test_question_selector_does_not_hide_a_needed_lower_ranked_domain(self) -> None:
         baseline = calibration_baseline()
         candidates = []
@@ -140,8 +181,8 @@ class V220SemanticCompilerTest(unittest.TestCase):
                 "reality_dimension": f"pool_axis_{index}", "related_claim_ids": [f"pool_claim_{index:02d}"],
                 "confidence": "high" if index < 19 else "to_verify",
                 "answerable_time_scope": "过去五年" if kind == "timed_event" else "当前及过去",
-                "answerable_observation": f"第{index}种已经发生的表现。",
-                "answerable_alternative": f"第{index}种表现并不常见。",
+                "answerable_observation": CALIBRATION_CHOICES[domain][0],
+                "answerable_alternative": CALIBRATION_CHOICES[domain][1],
             })
             candidates.append(candidate)
             claims.append({
@@ -209,6 +250,13 @@ class V220SemanticCompilerTest(unittest.TestCase):
         self.assertIn("AI黑话或生造表达", issue["reasons"])
         self.assertIn("高频防御性或先否定后解释句式", issue["reasons"])
 
+    def test_normal_promise_wording_is_allowed_but_ai_realization_phrase_is_flagged(self) -> None:
+        draft = editorial_draft()
+        draft["dimensions"][1]["paragraphs"] = ["在关系里，你通常很在意对方能不能兑现承诺。"]
+        self.assertEqual(scan(draft)["status"], "pass")
+        draft["dimensions"][1]["paragraphs"] = ["在关系里，你会等待条件成熟后兑现能力。"]
+        self.assertEqual(scan(draft)["status"], "repair_required")
+
     def test_report_semantic_summary_has_no_unused_duplicate_fields(self) -> None:
         schema = json.loads((ROOT / "internal/rensheng-youji-report-writer/schemas/report-semantic-patch.schema.json").read_text(encoding="utf-8"))
         summary = schema["properties"]["summary"]
@@ -263,7 +311,9 @@ class V220SemanticCompilerTest(unittest.TestCase):
         }
         draft = {
             "brief_id": "brief-v220", "draft_id": "draft-v220",
-            "life_overview": {}, "dimensions": [], "current_question": {},
+            "life_overview": {},
+            "dimensions": [{"id": domain, "paragraphs": ["这是本领域的测试段落。"]} for domain in DOMAINS],
+            "current_question": {},
         }
         semantic = {
             "brief_id": "brief-v220",
@@ -283,8 +333,12 @@ class V220SemanticCompilerTest(unittest.TestCase):
         }
         profile = {"gender": "男", "birthplace": "泉州", "time": {"input_local_time": "1999-01-22 17:45"}, "bazi": {"pillars": ["甲戌"] * 4, "da_yun": []}}
 
+        original_draft = copy.deepcopy(draft)
         report, _ = compile_report(analysis, profile, brief, draft, semantic, questions, delta, resolved, free_card, review)
         self.assertEqual(report["source_artifacts"]["report_semantic_sha256"], report_digest(semantic))
+        body = next(item for item in report["dimensions"] if item["id"] == "body_emotion")
+        self.assertIn("不构成疾病诊断", body["paragraphs"][-1])
+        self.assertEqual(draft, original_draft)
         changed = copy.deepcopy(semantic)
         changed["summary"]["capabilities_resources"][0] = "这段文字绕过了编辑记录。"
         with self.assertRaisesRegex(ValueError, "没有绑定最终使用"):

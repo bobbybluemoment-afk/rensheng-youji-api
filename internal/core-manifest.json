@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.22.0",
+  "version": "2.22.1",
   "visibility": "internal",
   "stages": [
     {
@@ -48,5 +48,5 @@
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "2.22.0建立Core解释主线与现实细节登记表，让原有能力、后来做法、当前代价、领域表现和发展方向可追溯传递到报告与卡片；校准题只问过去或当前，自然中文标准覆盖Draft、编辑、阶段和卡片。正常运行不新增AI调用。"
+  "notes": "2.22.1统一Core、校准题、中文编辑和终稿语言契约；拒绝建议型、跨领域、跨度过长或捆绑多问题的校准候选；由程序固定补入身体安全提示，并允许自然的‘兑现承诺’。正常运行不新增AI调用。"
 }

@@ -26,6 +26,8 @@ from report_source_contract import (  # noqa: E402
     required_coverage,
 )
 from core_synthesis_contract import LOVE_PARTNER_ANCHORS, build_source_coverage_audit  # noqa: E402
+from calibration_question_contract import quality_errors as calibration_question_quality_errors  # noqa: E402
+from user_language_contract import unnatural_realization_phrases  # noqa: E402
 
 SCHEMA_PATH = ROOT / "schemas" / "analysis-output.schema.json"
 REQUIRED_SECTIONS = {
@@ -768,6 +770,10 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"{path}.plain_claim 必须是带句末标点的完整判断句")
             if isinstance(claim.get("plain_claim"), str) and "您" in claim["plain_claim"]:
                 errors.append(f"{path}.plain_claim 必须统一使用第二人称‘你’，不得使用‘您’")
+            visible_claim = " ".join(str(claim.get(key, "")) for key in ("plain_claim", "human_explanation"))
+            bad_phrases = unnatural_realization_phrases(visible_claim)
+            if bad_phrases:
+                errors.append(f"{path} 含用户正文禁用的AI式组合词：{'、'.join(bad_phrases)}")
             if not isinstance(claim.get("human_explanation"), str) or len(claim.get("human_explanation", "").strip()) < 20:
                 errors.append(f"{path}.human_explanation 必须把判断解释成普通人能认出的现实中文")
             if any(token in str(claim.get("new_information", "")) for token in ("补充具体表现", "补充本领域", "成立条件", "新增信息")):
@@ -1080,10 +1086,12 @@ def validate(data: Any) -> list[str]:
                     if "是否当前" in value or "是否的" in value or value.rstrip().endswith(("以及", "并且", "另一面是")):
                         errors.append(f"{path}.{visible_key} 不是完整自然的中文")
                 analysis_year = int(str(meta.get("analysis_as_of", "0000"))[:4]) if isinstance(meta, dict) else 0
-                answerable_text = " ".join(str(candidate.get(key, "")) for key in ("answerable_time_scope", "answerable_observation", "answerable_alternative"))
-                future_years = [int(value) for value in re.findall(r"(?<!\d)(20\d{2})(?!\d)", answerable_text) if int(value) > analysis_year]
-                if future_years:
-                    errors.append(f"{path} 的校准专用内容包含尚未发生的年份：{sorted(set(future_years))}")
+                for reason in calibration_question_quality_errors(candidate, analysis_year):
+                    errors.append(f"{path} 的校准专用内容不合格：{reason}")
+                visible_candidate = " ".join(str(candidate.get(key, "")) for key in ("statement", "alternative_statement", "validation_question", "answerable_observation", "answerable_alternative"))
+                bad_phrases = unnatural_realization_phrases(visible_candidate)
+                if bad_phrases:
+                    errors.append(f"{path} 含用户正文禁用的AI式组合词：{'、'.join(bad_phrases)}")
                 for example_index, example in enumerate(candidate.get("observable_examples") or []):
                     if "您" in str(example):
                         errors.append(f"{path}.observable_examples[{example_index}] 必须统一使用第二人称‘你’，不得使用‘您’")
@@ -1217,7 +1225,17 @@ def self_test_fixture() -> dict[str, Any]:
     resource = {"acquire": [], "preserve": [], "exchange": [], "amplify": [], "loss_risks": [], "findings": []}
     annual = {"year": 2026, "age": 36, "luck_cycle_index": 0, "year_theme": "自检", "luck_theme_link": "自检", "activation_mechanisms": [], "natal_reactions": [], "change_intensity": "low", "direction": "consolidation", "domain_impacts": [], "domain_connections": [], "human_actions": [], "social_feedback": [], "carry_in": [], "carry_out": [], "seed_for_next": [], "confidence": "to_verify", "alternatives": [], "validation": []}
     candidate_domains = ["career", "finance_resources", "love_partner", "family_growth", "body_emotion", "self_growth", "career", "finance_resources", "love_partner", "family_growth", "body_emotion", "self_growth", "career", "finance_resources", "love_partner", "family_growth", "body_emotion", "self_growth"]
-    candidate = lambda number: {"candidate_id": f"c{number}", "domain": candidate_domains[number - 1], "reality_dimension": f"candidate_axis_{number}", "parent_category": f"candidate_group_{number}", "label": f"候选侧面{number}", "attributes": [f"属性{number}"], "candidate_kind": "timed_event" if number == 6 else "objective_state" if number == 2 else "current_stage" if number == 12 else "stable_pattern", "time_scope": "过去五年" if number == 6 else "当前阶段" if number == 12 else "原局长期", "calibration_targets": ["reality_domains"], "statement": f"用于验证第{number}个现实侧面的自检陈述", "observable_examples": [f"第{number}个可观察例子甲", f"第{number}个可观察例子乙"], "alternative_statement": f"第{number}个候选也可能有另一种解释", "counterevidence": [], "unsupported_extensions": ["不能据此断定具体职业"], "source_layers": ["annual", "cross_method"] if number == 6 else ["chart", "cross_method"], "evidence_ids": [f"evidence_{number}", f"evidence_{1 if number == 24 else number + 1}"], "related_claim_ids": [f"claim_self_{number}"], "relation_ids": [f"relation_{(number - 1) // 3 + 1}"], "confidence": "to_verify", "validation_question": "哪个现实侧面更接近实际？", "answerable_time_scope": "2022年至2026年" if number == 6 else "当前或长期", "answerable_observation": f"过去或现在出现第{number}种可以回想的现实表现", "answerable_alternative": f"过去或现在更接近第{number}种相反表现", "status": "unverified"}
+    candidate_choices = {
+        "career": ("工作要求清楚时，你通常更快开始行动。", "工作要求是否清楚，很少影响你开始行动。"),
+        "finance_resources": ("收入增加后，你通常会先存下一部分钱。", "收入增加后，你通常会优先安排消费。"),
+        "love_partner": ("关系出现分歧时，你常会晚些再说明感受。", "关系出现分歧时，你通常当场说明感受。"),
+        "family_growth": ("家人提出期待时，你常会先承担下来。", "家人提出期待时，你通常会直接说明做不到的部分。"),
+        "body_emotion": ("压力持续时，你的睡眠通常会先受影响。", "压力持续时，你的睡眠通常没有明显变化。"),
+        "self_growth": ("你做重要选择前常会反复比较。", "你做重要选择时通常很快决定。"),
+    }
+    def candidate(number: int) -> dict[str, Any]:
+        domain = candidate_domains[number - 1]
+        return {"candidate_id": f"c{number}", "domain": domain, "reality_dimension": f"candidate_axis_{number}", "parent_category": f"candidate_group_{number}", "label": f"候选侧面{number}", "attributes": [f"属性{number}"], "candidate_kind": "timed_event" if number == 6 else "objective_state" if number == 2 else "current_stage" if number == 12 else "stable_pattern", "time_scope": "过去五年" if number == 6 else "当前阶段" if number == 12 else "原局长期", "calibration_targets": ["reality_domains"], "statement": f"用于验证第{number}个现实侧面的自检陈述", "observable_examples": [f"第{number}个可观察例子甲", f"第{number}个可观察例子乙"], "alternative_statement": f"第{number}个候选也可能有另一种解释", "counterevidence": [], "unsupported_extensions": ["不能据此断定具体职业"], "source_layers": ["annual", "cross_method"] if number == 6 else ["chart", "cross_method"], "evidence_ids": [f"evidence_{number}", f"evidence_{1 if number == 24 else number + 1}"], "related_claim_ids": [f"claim_self_{number}"], "relation_ids": [f"relation_{(number - 1) // 3 + 1}"], "confidence": "to_verify", "validation_question": "哪个现实侧面更接近实际？", "answerable_time_scope": "2022年至2026年" if number == 6 else "当前或长期", "answerable_observation": candidate_choices[domain][0], "answerable_alternative": candidate_choices[domain][1], "status": "unverified"}
     partner_profile = {"summary": "自检", "traits": [], "mechanism": [], "benefits": [], "costs": [], "evidence_strength": "insufficient", "alternatives": [], "validation": [], "findings": []}
     complete_self_portrait = {
         "summary": "自检",

@@ -15,6 +15,11 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 from report_source_contract import BASE_COVERAGE, delivery_rule, report_total_cjk_bounds, required_coverage  # noqa: E402
+from user_language_contract import (  # noqa: E402
+    BODY_EMOTION_SAFETY_NOTE,
+    BODY_EMOTION_SAFETY_MARKERS,
+    UNNATURAL_REALIZATION_PHRASES,
+)
 
 DIMENSION_IDS = ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]
 CURRENT_CALIBRATION_SCHEMA = "3.0.0"
@@ -54,7 +59,8 @@ FOCUS_TERMS = {
 }
 CONFIDENCE = {"高置信", "中等置信", "待验证"}
 BANNED = {"百分之百准确", "保证发财", "保证复合", "必然离婚", "命中注定", "改命消灾", "克夫", "克妻", "婚灾", "大凶"}
-AI_JARGON = {"卡点", "卡住", "换轨", "兑现", "承接", "赛道", "抓手", "底层逻辑", "显化", "能量场"}
+AI_JARGON = {"卡点", "卡住", "换轨", "承接", "赛道", "抓手", "底层逻辑", "显化", "能量场"}
+AI_JARGON_PHRASES = UNNATURAL_REALIZATION_PHRASES
 EDITORIAL_BANNED = {"现实落点", "核对点", "好处是", "代价是", "资源持续", "平台节奏", "稳定位置", "能力变现", "组织化过劳型", "先扎根后显声", "表达窗口", "能力输出", "可见度", "物质与经营底色", "资源伴随期待", "表达被规训", "花不显"}
 MINGLI_TERMS = {
     "命盘", "命局", "原局", "年柱", "月柱", "日柱", "时柱", "天干", "地支", "干支",
@@ -314,7 +320,7 @@ def _validate_v26(data: dict[str, Any]) -> None:
         section_count = cjk_count(visible_text)
         if not 270 <= section_count <= 500:
             raise ValueError(f"{where} 可见正文应为270—500个汉字，当前{section_count}")
-        if section["id"] == "body_emotion" and not any(term in visible_text for term in ("不能据此诊断", "不构成疾病诊断", "应以正规医疗评估为准")):
+        if section["id"] == "body_emotion" and not any(term in visible_text for term in BODY_EMOTION_SAFETY_MARKERS):
             raise ValueError(f"{where} 必须明确身体与情绪判断不构成疾病诊断")
         audit = section["audit"]
         for key in ("core_sections", "evidence_lenses", "verdict_sources", "reality_anchor_terms", "reality_anchor_sources", "anchor_precision", "user_facts", "social_priors", "needs_validation"):
@@ -444,7 +450,7 @@ def _validate_v26(data: dict[str, Any]) -> None:
     found = sorted(term for term in BANNED if term in visible)
     if found:
         raise ValueError("Banned language found: " + "、".join(found))
-    jargon = sorted(term for term in AI_JARGON if term in visible)
+    jargon = sorted(term for term in AI_JARGON | AI_JARGON_PHRASES if term in visible)
     if jargon:
         raise ValueError("AI-style jargon found: " + "、".join(jargon))
     editorial_terms = sorted(term for term in EDITORIAL_BANNED if term in visible)
@@ -489,6 +495,8 @@ def _validate_narrative(section: Any, minimum: int, maximum: int, where: str, er
         errors.append(f"{where}.delivery_mode 无效")
     if rule:
         minimum, maximum = rule["cjk"]
+        if where == "dimensions.body_emotion":
+            maximum += cjk_count(BODY_EMOTION_SAFETY_NOTE)
         minimum_paragraphs, maximum_paragraphs = rule["paragraphs"]
     else:
         minimum_paragraphs, maximum_paragraphs = 2, 4
@@ -656,7 +664,7 @@ def _validate_v27(data: dict[str, Any]) -> None:
                 errors.append(f"{where}.coverage 缺少完整人物描述要素")
             if item.get("confidence") not in CONFIDENCE:
                 errors.append(f"{where}.confidence 值无效")
-            if item.get("id") == "body_emotion" and not any(term in "".join(item.get("paragraphs") or []) for term in ("不构成疾病诊断", "不能据此诊断", "应以正规医疗评估为准")):
+            if item.get("id") == "body_emotion" and not any(term in "".join(item.get("paragraphs") or []) for term in BODY_EMOTION_SAFETY_MARKERS):
                 errors.append("身体与情绪章节必须说明不构成疾病诊断")
             if data.get("schema_version") in {"2.10.0", "2.11.0", "2.12.0", "2.13.0", "2.14.0"}:
                 source_ids = set(item.get("source_claim_ids") or [])
@@ -751,7 +759,7 @@ def _validate_v27(data: dict[str, Any]) -> None:
         "boundaries": data.get("boundaries"),
     }
     visible = json.dumps(visible_data, ensure_ascii=False)
-    for term in BANNED | AI_JARGON | EDITORIAL_BANNED:
+    for term in BANNED | AI_JARGON | AI_JARGON_PHRASES | EDITORIAL_BANNED:
         if term in visible:
             errors.append(f"用户可见正文含禁用表达：{term}")
     if re.search(r"校准后的现实线索|校准确认|符合.{0,10}判断", visible):

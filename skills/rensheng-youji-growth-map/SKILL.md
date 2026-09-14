@@ -215,7 +215,7 @@ python scripts/run_in_env.py scripts/pipeline_gate.py --gate CORE_GATE --run-dir
 ## 五条现实校准
 
 1. 完整读取 [calibration.md](references/calibration.md)。
-2. 由程序直接从冻结Core的 `reality_candidate_pool` 选择五个最有区分度的待核对点，并生成 `schema_version=3.0.0` 的个性化问题。没有独立的AI选题计划，也不生成 `calibration-plan.json`。固定五题至少覆盖四个报告领域，同一领域最多两题；至少两题核对客观状态或已发生事件，至少一题带已经过去或截至当前的明确时间范围。题干、A项和B项来自Core专门提供的 `answerable_*` 字段；禁止询问用户未来几年会发生什么，也不得直接展示Core内部生硬问句。
+2. 由程序直接从冻结Core的 `reality_candidate_pool` 选择五个最有区分度的待核对点，并生成 `schema_version=3.0.0` 的个性化问题。没有独立的AI选题计划，也不生成 `calibration-plan.json`。固定五题至少覆盖四个报告领域，同一领域最多两题；至少两题核对客观状态或已发生事件，至少一题带已经过去或截至当前的明确时间范围。题干、A项和B项来自Core专门提供的 `answerable_*` 字段；禁止询问用户未来几年会发生什么。A/B必须描述已经发生或当前可观察的一件事，不能询问某个建议是否有效，不能在一道题里捆绑多个行为或阶段；明确年份跨度不得超过六年。去掉领域标题后仍须看得出所属生活领域，财富题必须直接谈钱，身体情绪题必须直接谈身体感受、情绪或恢复。Core冻结前与出题后都执行同一份确定性检查。
 3. 运行确定性构建器：
 
 ```bash
@@ -235,6 +235,7 @@ python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/validate_c
 ```
 
 不得自行把 `audit`、候选编号、盘面支持、置信度、替代解释或任何命理证据附在问题后面。
+身体与情绪章节的固定安全提示由 `compile_final_report.py` 确定性补入，不占用AI生成任务，也不依赖编辑模型记住模板。终稿校验负责确认该提示存在。普通中文“兑现承诺”允许出现；只有“兑现能力、兑现价值、成果兑现、兑现条件、判断兑现、价值兑现”等生硬组合会被Core、编辑和终稿共同拒绝。
 5. 让用户回复五个题号和A/B/C/D。A/B/C由程序直接映射为匹配、排除或条件成立；只有选择D并填写自由文字时，才调用一次小型AI，把用户原文整理为“事实＋当前题已绑定候选的状态补丁”。AI不得新建候选、改写题目或读取命理结构来迎合答案。
 6. 自由文字补丁必须符合 `calibration-free-text-patch.schema.json`，并先运行 `scripts/validate_calibration_free_text.py`。没有D答案时跳过该AI阶段，不创建占位内容。
 7. 由程序把五个固定选择和可选自由文字补丁编译为 `work/calibration-delta.json`：

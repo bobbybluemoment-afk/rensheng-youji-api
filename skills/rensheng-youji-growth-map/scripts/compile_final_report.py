@@ -6,12 +6,32 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from pathlib import Path
 from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from user_language_contract import (  # noqa: E402
+    BODY_EMOTION_SAFETY_NOTE,
+    has_body_emotion_safety_note,
+)
 
 
 def digest(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def with_body_emotion_safety_note(dimensions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Add the required health boundary without asking AI to remember boilerplate."""
+    result = json.loads(json.dumps(dimensions, ensure_ascii=False))
+    body = next((item for item in result if item.get("id") == "body_emotion"), None)
+    if not isinstance(body, dict) or not isinstance(body.get("paragraphs"), list) or not body["paragraphs"]:
+        raise ValueError("身体与情绪章节缺失，无法加入固定安全提示")
+    text = "".join(str(item) for item in body["paragraphs"])
+    if not has_body_emotion_safety_note(text):
+        body["paragraphs"][-1] = str(body["paragraphs"][-1]).rstrip() + BODY_EMOTION_SAFETY_NOTE
+    return result
 
 
 def compile_report(analysis: dict[str, Any], profile: dict[str, Any], brief: dict[str, Any], draft: dict[str, Any], semantic: dict[str, Any], questions: dict[str, Any], delta: dict[str, Any], resolved: dict[str, Any], free_card: dict[str, Any], review: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -72,7 +92,7 @@ def compile_report(analysis: dict[str, Any], profile: dict[str, Any], brief: dic
         "calibration": {"question_schema_version": questions["schema_version"], "template_version": questions["template_version"], "summary": "五道校准题已用于确认现实候选的主次。", "birth_time_status": "稳定", "responses": delta.get("responses") or [], **calibrated_text},
         "editorial_review": {"version": "2.5.0", "review_id": review["review_id"]},
         "executive_summary": summary, "current_question_narrative": draft["current_question"],
-        "stage_story": semantic["stage_story"], "dimensions": draft["dimensions"],
+        "stage_story": semantic["stage_story"], "dimensions": with_body_emotion_safety_note(draft["dimensions"]),
         "yearly_outlook": semantic["yearly_outlook"], "action_guide": semantic["action_guide"],
         "open_questions": semantic["open_questions"],
         "assisted_service_note": "本Skill可免费自行生成；如果你的AI无法运行Skill，或希望获得人工校准、PDF整理和问题解释，可以联系景行。",

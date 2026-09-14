@@ -7,14 +7,19 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from user_language_contract import UNNATURAL_REALIZATION_PHRASES  # noqa: E402
 
 BANNED = {
     "换轨", "能量场", "底层逻辑", "现实落点", "核对点", "组织化过劳型", "先扎根后显声",
     "赋能", "抓手", "价值闭环", "价值沉淀", "成果悬置", "评价结算", "重新归档",
     "长期承接", "价值留存",
-}
+} | UNNATURAL_REALIZATION_PHRASES
 MINGLI = {"日主", "身强", "身弱", "格局", "调候", "喜用", "忌神", "大运", "流年", "天干", "地支", "藏干", "根苗花果"}
 ABSTRACT_WATCH = {"成果", "责任", "边界", "归属", "流程", "标准", "评价", "路径", "稳定", "长期", "资源", "承接", "沉淀", "定型", "映射"}
 DEFENSIVE_PATTERNS = (

@@ -164,8 +164,20 @@ def audit(root: Path) -> list[str]:
         errors.append("Content brief can still drop Core explanation or reality-detail fields")
 
     calibration_text = (root / "skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py").read_text(encoding="utf-8")
-    if not all(field in calibration_text for field in ("answerable_time_scope", "answerable_observation", "answerable_alternative", "year > analysis_year")):
+    calibration_contract_text = (root / "scripts/calibration_question_contract.py").read_text(encoding="utf-8")
+    if not all(field in calibration_text for field in ("answerable_time_scope", "answerable_observation", "answerable_alternative")) or "year > analysis_year" not in calibration_contract_text:
         errors.append("Calibration generator can still ask users to verify future events")
+    calibration_validator_text = (root / "skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py").read_text(encoding="utf-8")
+    if "calibration_question_contract" not in calibration_text or "calibration_question_contract" not in calibration_validator_text or "calibration_question_contract" not in core_validator_text:
+        errors.append("Core, calibration selection and calibration validation must share one answerability contract")
+    final_compiler_text = (root / "skills/rensheng-youji-growth-map/scripts/compile_final_report.py").read_text(encoding="utf-8")
+    language_scanner_text = (root / "internal/rensheng-youji-chinese-editor/scripts/scan_report_language.py").read_text(encoding="utf-8")
+    if "BODY_EMOTION_SAFETY_NOTE" not in final_compiler_text or "BODY_EMOTION_SAFETY_MARKERS" not in renderer_text:
+        errors.append("The deterministic final compiler must produce the body-emotion safety note checked by the renderer")
+    if "user_language_contract" not in core_validator_text or "user_language_contract" not in language_scanner_text or "user_language_contract" not in renderer_text:
+        errors.append("Core, editor and final report must share the user-language phrase contract")
+    if 'AI_JARGON = {"卡点", "卡住", "换轨", "兑现"' in renderer_text:
+        errors.append("The renderer must not ban the natural phrase 兑现承诺 through a bare-word rule")
     natural_text = (root / "internal/rensheng-youji-chinese-editor/references/natural-chinese.md").read_text(encoding="utf-8")
     scanner_text = (root / "internal/rensheng-youji-chinese-editor/scripts/scan_report_language.py").read_text(encoding="utf-8")
     if "不要总结用户，要解释用户" not in natural_text or "AI黑话或生造表达" not in scanner_text or "本领域没有使用" not in scanner_text:

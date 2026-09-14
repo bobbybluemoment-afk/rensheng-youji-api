@@ -340,6 +340,23 @@ class FullReportPipelineTest(unittest.TestCase):
             self.assertEqual(result.returncode, 1)
             self.assertIn("受支持的确定性校准链路", result.stdout)
 
+    def test_report_gate_allows_promise_wording_but_rejects_ai_realization_phrase(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rensheng-youji-realization-word-") as temp_dir:
+            source = Path(temp_dir) / "report.json"
+            output = Path(temp_dir) / "report.md"
+            report = _report()
+            love = report["dimensions"][1]["paragraphs"]
+            love["attraction_and_needs"] = love["attraction_and_needs"].replace("能否守约", "能否兑现承诺")
+            source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+            allowed = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(output)], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(allowed.returncode, 0, allowed.stdout)
+
+            love["attraction_and_needs"] = love["attraction_and_needs"].replace("兑现承诺", "兑现能力")
+            source.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+            rejected = subprocess.run([sys.executable, str(REPORT_RENDERER), str(source), "--out", str(output)], cwd=ROOT, text=True, capture_output=True, check=False)
+            self.assertEqual(rejected.returncode, 1)
+            self.assertIn("AI-style jargon", rejected.stdout)
+
     def test_boundary_preflight_blocks_formal_report(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-preflight-") as temp_dir:
             source = Path(temp_dir) / "core-input.json"

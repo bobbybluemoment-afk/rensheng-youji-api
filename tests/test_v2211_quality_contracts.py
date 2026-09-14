@@ -21,9 +21,14 @@ from run_checkpoint import record  # noqa: E402
 from scan_report_language import scan  # noqa: E402
 from validate_analysis_output import self_test_fixture  # noqa: E402
 from render_report_pdf import year_story  # noqa: E402
+from render_report import AI_JARGON, AI_JARGON_PHRASES  # noqa: E402
 
 
 class V2211QualityContractsTest(unittest.TestCase):
+    def test_report_language_contract_allows_promises_but_rejects_ai_combinations(self) -> None:
+        self.assertNotIn("兑现", AI_JARGON)
+        self.assertIn("兑现能力", AI_JARGON_PHRASES)
+
     def test_focus_domain_and_current_question_are_career_only(self) -> None:
         analysis = self_test_fixture()
         resolved = resolve(analysis, "我最关心事业发展和工作选择")
