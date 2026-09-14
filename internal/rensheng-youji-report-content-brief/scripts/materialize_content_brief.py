@@ -21,9 +21,15 @@ def canonical_digest(value: Any) -> str:
 
 
 def snapshot(claim: dict[str, Any]) -> dict[str, Any]:
-    base_keys = ("claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family", "claim", "plain_claim", "new_information", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin")
+    base_keys = (
+        "claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family",
+        "claim", "plain_claim", "human_explanation", "new_information", "mechanism_chain",
+        "evidence_ids", "supporting_methods", "source_detail_atom_ids", "observable_scenes",
+        "helpful_effects", "possible_costs", "allowed_examples", "counterevidence",
+        "confidence", "unsupported_extensions", "calibration_status", "origin",
+    )
     trace_keys = ("synthesis_ids", "method_hypothesis_ids", "claim_class", "report_role", "coverage_tags", "applicable_conditions", "reality_confirmation")
-    keys = base_keys + tuple(key for key in trace_keys if key in claim)
+    keys = tuple(key for key in base_keys + trace_keys if key in claim)
     body = {key: claim[key] for key in keys}
     return {**body, "source_sha256": canonical_digest(body)}
 
@@ -131,16 +137,16 @@ def enrich_section(section: dict[str, Any], analysis: dict[str, Any], ledger: di
 def materialize(selection: dict[str, Any], analysis: dict[str, Any], resolved: dict[str, Any] | None = None) -> dict[str, Any]:
     result = json.loads(json.dumps(selection, ensure_ascii=False))
     meta = analysis["analysis_meta"]
-    is_v09 = meta.get("core_version") in {"0.9.0", "0.10.0", "0.11.0", "0.12.0", "0.13.0", "0.14.0", "0.15.0"}
+    is_v09 = meta.get("core_version") in {"0.9.0", "0.10.0", "0.11.0", "0.12.0", "0.13.0", "0.14.0", "0.15.0", "0.16.0"}
     is_v081 = meta.get("core_version") == "0.8.1"
     is_v08 = meta.get("core_version") == "0.8.0"
-    result["schema_version"] = "1.6.0" if meta.get("core_version") == "0.15.0" else "1.5.0" if is_v09 else "1.4.0" if is_v081 else "1.3.0" if is_v08 else "1.2.0"
+    result["schema_version"] = "1.6.0" if meta.get("core_version") in {"0.15.0", "0.16.0"} else "1.5.0" if is_v09 else "1.4.0" if is_v081 else "1.3.0" if is_v08 else "1.2.0"
     result.setdefault("source", {}).update({"analysis_id": meta["analysis_id"], "core_version": meta["core_version"], "analysis_sha256": canonical_digest(analysis)})
     ledger = {item["claim_id"]: item for item in analysis["report_claim_ledger"]}
     sections = [result["life_overview"], *result["dimensions"], result["current_question"]]
     if is_v09:
         if not isinstance(resolved, dict):
-            raise ValueError("core_version=0.9.0—0.15.0 必须先提供校准后确定性选材文件")
+            raise ValueError("core_version=0.9.0—0.16.0 必须先提供校准后确定性选材文件")
         resolved_source = resolved.get("source") or {}
         if resolved_source.get("analysis_id") != meta.get("analysis_id") or resolved_source.get("analysis_sha256") != canonical_digest(analysis):
             raise ValueError("校准后选材文件与当前Core不一致")
@@ -201,7 +207,7 @@ def main() -> int:
         resolved = json.loads(args.resolved_sources.read_text(encoding="utf-8")) if args.resolved_sources else None
         if args.selection:
             selection = json.loads(args.selection.read_text(encoding="utf-8"))
-        elif analysis.get("analysis_meta", {}).get("core_version") == "0.15.0" and resolved:
+        elif analysis.get("analysis_meta", {}).get("core_version") in {"0.15.0", "0.16.0"} and resolved:
             selection = deterministic_selection(analysis, resolved, args.focus)
         else:
             raise ValueError("当前版本缺少可用的确定性选材来源")

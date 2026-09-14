@@ -50,19 +50,20 @@ def build(profile: dict[str, Any], baseline: dict[str, Any], calibrated: dict[st
     domain = str(primary.get("domain") or "self_growth")
     card_domain, title = DOMAIN_MAP.get(domain, DOMAIN_MAP["self_growth"])
     body = str(primary.get("plain_claim") or "当前最值得观察的是，你怎样把已经形成的能力放进真实选择。")
-    examples = list(primary.get("allowed_examples") or [])
+    examples = list(primary.get("observable_scenes") or primary.get("allowed_examples") or [])
     if not examples and len(claims) > 1:
-        examples = list(claims[1].get("allowed_examples") or [])
-    example = str(examples[0] if examples else "例如先比较投入、责任和长期结果，再决定是否继续推进。")
+        examples = list(claims[1].get("observable_scenes") or claims[1].get("allowed_examples") or [])
+    example = str(examples[0] if examples else "可以留意这件事在你日常选择中的具体表现。")
 
-    structure = _summary(
+    card_copy = baseline.get("interpretive_spine", {}).get("card_copy", {})
+    structure = str(card_copy.get("structure_text") or _summary(
         baseline.get("natal_portrait"),
-        _summary(baseline.get("method_synthesis"), "你的能力由多种结构共同形成，做事时会同时考虑方向、条件与结果。"),
-    )
-    life_theme = _summary(
+        _summary(baseline.get("method_synthesis"), "你会先理解复杂事情，再找到适合自己的行动顺序。"),
+    )).strip()
+    life_theme = str(card_copy.get("life_theme_text") or _summary(
         baseline.get("portrait_thesis"),
-        "你反复需要把已有能力放进现实关系和长期选择，并让投入逐步形成可以留下的结果。",
-    )
+        "你需要把原有能力带进真实选择，也要逐渐看清哪些习惯已经让自己感到疲惫。",
+    )).strip()
     boundary = baseline.get("chart_audit", {}).get("boundary_dependencies") or []
     return {
         "identity": {
@@ -76,7 +77,12 @@ def build(profile: dict[str, Any], baseline: dict[str, Any], calibrated: dict[st
             "pillars": _pillars(profile, baseline),
             "structure_text": structure,
             "life_theme_text": life_theme,
-            "time_dependency_note": "出生时间接近关键边界，部分现实落点需要结合时间复核。" if boundary else None,
+            "time_dependency_note": (
+                "出生时间接近可能改变排盘结果的边界，部分判断需要结合时间复核。"
+                if any(item in {"near_hour_boundary", "near_day_boundary", "near_solar_term_boundary"} for item in boundary)
+                else "真太阳时口径可能影响部分细节，但当前报告仍按用户提供的钟表时间生成。"
+                if "true_solar_time_sensitive" in boundary else None
+            ),
             "confidence": "medium",
             "basis": ["analysis-baseline.portrait_thesis", "analysis-baseline.method_synthesis"],
         },

@@ -18,7 +18,7 @@
 - 正式报告：`document_mode=full_calibrated`，必须完成五条现实校准、事实提纲、人物初稿和中文编辑，生成10页PDF。
 - 未校准版：`document_mode=preliminary_uncalibrated`，只生成初步Markdown与新版卡片，不生成正式PDF。
 
-正式报告使用 `schema_version=2.14.0`，当前Core使用 `core_version=0.15.0`。校准前，九个规定方法家族分别读取从统一冻结命盘裁出的本方法主题隔离短提示，逐项检查六个报告领域并产生0—5条本领域候选；每方法现实候选总数最多18条、技术结论最多12条。方法AI只写语义，生产字段由程序编译。Core综合使用六类判断，不设置每领域最低条数。校准后只能通过绑定Baseline哈希的增量文件调整现实确认状态，再由程序确定报告名单、事实提纲、来源映射和降级模式。
+正式报告使用 `schema_version=2.14.0`，当前Core使用 `core_version=0.16.0`。校准前，九个规定方法家族分别读取从统一冻结命盘裁出的本方法主题隔离短提示，逐项检查六个报告领域并产生0—5条本领域候选；每方法现实候选总数最多18条、技术结论最多12条。方法AI只写语义，生产字段由程序编译。Core综合使用六类判断，不设置每领域最低或最高条数，并用解释主线连接原有能力、后来做法、当前代价、领域表现和发展方向。方法现实细节由程序登记，不能在综合时压成抽象标签。校准后只能通过绑定Baseline哈希的增量文件调整现实确认状态，再由程序确定报告名单、事实提纲、来源映射和降级模式。
 
 ## 2. 来源链路
 
@@ -41,7 +41,7 @@
   "document_mode": "full_calibrated",
   "source": {
     "analysis_id": "与Core和卡片一致",
-    "core_version": "0.15.0",
+    "core_version": "0.16.0",
     "analysis_as_of": "YYYY-MM-DD",
     "calibration_status": "calibrated"
   },
@@ -164,7 +164,7 @@
 
 ## 8. 中文编辑
 
-`editorial_review` 只保存 `review_id` 和 `version=2.4.0`；完整记录放在独立 `editorial-review.json`。
+`editorial_review` 只保存 `review_id` 和 `version=2.5.0`；完整记录放在独立 `editorial-review.json`。
 
 `life_overview`、`current_question_narrative` 和六个领域都保留 `emphasis_spans` 字段，允许空数组。每项保存 `paragraph_index`、正文中带句末标点的完整 `text` 和支撑它的 `claim_ids`；正文自身保持纯文本，由渲染器将重点判断独立成行。不得截取半句或为满足数量扩写。
 
@@ -173,7 +173,7 @@
 - 初稿和终稿哈希；
 - 判断来源一致；
 - 必须兑现判断的原句、段落位置和映射完全一致；
-- 至少三个内容区发生实际编辑；
+- 语言扫描发现问题时，只修改被点名的内容区；扫描通过时允许零处修改；
 - 没有新增判断；
 - 没有展示校准过程；
 - 没有固定模板和禁用表达。

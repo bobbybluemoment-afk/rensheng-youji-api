@@ -191,7 +191,7 @@ python scripts/run_in_env.py scripts/audit_claim_diversity.py \
 
 审计失败、判断家族不足或六领域语义重复时，允许只返修 `core-semantic-analysis.json` 中被点名的语义区块一次，再重新执行语义校验、完整Core组装和本审计；方法包与确定性输入仍保持冻结。第二次仍失败才停止，不得用测试样例或宽泛套话补齐数量。
 
-审计还必须比较九方法候选与Core判断的实际保留关系：当同一领域已有至少三个方法、四条以上且方向不同的现实候选时，Core不能只留一条代替多个现实信息轴，也不能只引用少数上游候选。此类情况只返修Core综合，把不同方向分别保留为主要判断、独立补充、条件判断、阶段判断、待校准判断或证据较弱候选；该规则只在上游证据丰富时触发，不按所有领域硬凑相同条数。所有将进入校准题或报告的用户可见Core文字一律使用“你”，不得使用“您”。
+审计还必须比较九方法候选与Core判断的实际保留关系：当同一领域已有至少三个方法、四条以上且方向不同的现实候选时，Core不能只留一条代替多个现实信息轴，也不能只引用少数上游候选。此类情况只返修Core综合，把不同方向分别保留为主要判断、独立补充、条件判断、阶段判断、待校准判断或证据较弱候选；不为任何领域设置必须条数或最多条数。Core同时必须生成跨领域解释主线，区分原有能力、后来做法、当前代价、领域表现和发展方向，并把方法中的具体可观察表现逐条保留到报告判断。所有将进入校准题或报告的用户可见Core文字一律使用“你”，不得使用“您”。
 
 审计通过后才冻结初始Core。此后不得重新生成或改写完整母稿：
 
@@ -215,7 +215,7 @@ python scripts/run_in_env.py scripts/pipeline_gate.py --gate CORE_GATE --run-dir
 ## 五条现实校准
 
 1. 完整读取 [calibration.md](references/calibration.md)。
-2. 由程序直接从冻结Core的 `reality_candidate_pool` 选择五个最有区分度的待核对点，并生成 `schema_version=3.0.0` 的个性化问题。没有独立的AI选题计划，也不生成 `calibration-plan.json`。五题至少覆盖四个报告领域，同一领域最多两题；至少两题核对客观状态或已发生事件，至少一题带明确时间范围。题干、A项和B项来自当前Core候选，不从全局通用题库硬套。
+2. 由程序直接从冻结Core的 `reality_candidate_pool` 选择五个最有区分度的待核对点，并生成 `schema_version=3.0.0` 的个性化问题。没有独立的AI选题计划，也不生成 `calibration-plan.json`。固定五题至少覆盖四个报告领域，同一领域最多两题；至少两题核对客观状态或已发生事件，至少一题带已经过去或截至当前的明确时间范围。题干、A项和B项来自Core专门提供的 `answerable_*` 字段；禁止询问用户未来几年会发生什么，也不得直接展示Core内部生硬问句。
 3. 运行确定性构建器：
 
 ```bash
@@ -289,8 +289,8 @@ python scripts/run_in_env.py scripts/resolve_report_sources.py \
 ```
 3. 完整读取 `internal/rensheng-youji-report-content-brief/SKILL.md`。`materialize_content_brief.py` 直接从校准后Core与 `resolved-report-sources.json` 生成实体化 `report-content-brief.json`；不再调用AI做第二次选材，也不生成 `report-content-selection.json`。
 4. 完整读取 `internal/rensheng-youji-report-writer/SKILL.md`。先由 `build_report_writing_pack.py` 按“主要表现与行为→形成经历与现实条件→重复挑战、阶段变化与应对”的叙事顺序分组，不得把判断轮流塞入段落。写作包只保留AI写正文真正需要的字段，来源、哈希和技术机制继续由程序保管。AI只返回正文和摘要、阶段、年度、行动等语义文字，不填写来源编号、段落映射、哈希或审计字段。再由 `compile_report_draft.py` 确定性补齐 `source_claim_ids`、`paragraph_claim_map`、`claim_realization_map` 和重点句映射。
-5. 完整读取 `internal/rensheng-youji-chinese-editor/SKILL.md`。先运行 `scan_report_language.py`，同时检查正文段落和阶段、逐年、行动等其他用户可见文字；确定性检查包括“你/您”一致性、残句、重复标点和逐年模板化开头。没有发现问题时不调用编辑AI，直接生成编辑记录。发现问题时只把被点名的小块交给AI修订，再由 `apply_editorial_patch.py` 验证锁定判断仍在原位置，并输出 `edited-report-draft.json` 与 `edited-report-semantic.json`。不新增固定的全文通读AI调用；最终报告不得绕过编辑结果读取原始语义补丁，也不得要求编辑层为了证明工作发生而强制修改若干章节。
-6. 正式报告使用 `schema_version=2.14.0`、`document_mode=full_calibrated`。Core使用0.15.0、事实提纲和初稿使用1.6.0、中文编辑使用2.5.0、校准题使用3.0.0。Core综合把判断分为主要判断、独立补充、条件判断、阶段判断、待校准判断和证据较弱候选；不设置每领域必须几条。证据较弱候选仅内部保留，待校准判断在现实确认前不直接进入报告。报告章节再按真实可用证据决定正常、缩短、最小或证据缺口模式。
+5. 完整读取 `internal/rensheng-youji-chinese-editor/SKILL.md` 和其中的《人生有迹自然中文写作标准》。Draft从源头按该标准生成，扫描器再检查AI造词、防御句式、抽象名词、长句多动作、六领域语言错位、“你/您”、残句、重复标点和逐年模板化。没有发现问题时不调用编辑AI，直接生成编辑记录；发现问题时只把被点名的小块交给AI修订。不新增固定的全文通读AI调用，也不得要求编辑层为了证明工作发生而强制修改若干章节。
+6. 正式报告使用 `schema_version=2.14.0`、`document_mode=full_calibrated`。Core使用0.16.0、事实提纲和初稿使用1.6.0、中文编辑使用2.5.0、校准题使用3.0.0。Core综合把判断分为主要判断、独立补充、条件判断、阶段判断、待校准判断和证据较弱候选；不设置每领域必须或最多几条。证据较弱候选仅内部保留，待校准判断在现实确认前不直接进入报告。报告章节再按真实可用证据决定正常、缩短、最小或证据缺口模式。
 7. 时间分析继续使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系，同时概括更长阶段。
 8. 卡片没有独立校准流程。`build_card_content.py` 从冻结Core、校准后选材和用户资料确定性提取卡面文字；`build_card_visual_pack.py` 只提取Baseline结构化逐年资料，`build_visual_signals_from_core.py` 再按固定映射生成20年视觉信号，不调用AI、不读取五题答案，也不从自然语言关键词猜分。完整报告内卡片可以继承报告已确定的可见候选主次，但命理结构、人生K线语义和原始判断仍来自校准前冻结的同一Core。报告与卡片的分析编号、Core版本、Baseline哈希和明显关系机会年份必须一致。
 9. 卡片与编辑结果都完成后，由程序确定性编译正式 `report.json`。这里必须使用编辑后的正文和编辑后的语义文件：
@@ -370,7 +370,7 @@ python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/generate_f
 8. 财务与资源；
 9. 身体与情绪；
 10. 家庭与成长环境；
-11. 阶段与逐年观察；
+11. 阶段观察与重点年份；完整20年仍保留在K线数据中；
 12. 现实行动、仍需验证、关于景行与阅读边界。
 
 ## 完成检查
@@ -400,7 +400,7 @@ python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/generate_f
 - 完整人生主线与能力形成部分至少覆盖六个现实领域，不能围绕用户关注方向集中取材；
 - 用户关注方向只在第4页、逐年回应与行动优先级中加重，不改变其他领域篇幅与基础结论；
 - 用户可见正文不得出现命盘、命局、原局、四柱名称、日主、十神、天干地支、透干、身强身弱、大运流年等内部命理术语，也不得出现“组织化过劳型、先扎根后显声、表达窗口、物质与经营底色”等生造或压缩表达；发现术语必须整句退回中文编辑，不得词语级替换；
-- 逐年字段 `theme`、`carry_in`、`real_world_signal`、`seed_for_next` 必须是字符串；用户可见正文不得出现Python数组、JSON对象、孤立残字或未完成连接语；
+- 逐年字段 `theme`、`carry_in`、`real_world_signal`、`seed_for_next` 必须是字符串；K线保留完整20年，长文按阶段组织并只单独展开显著年份；用户可见正文不得出现Python数组、JSON对象、AI造词标题、孤立残字或未完成连接语；
 - “现在最值得做的三件事”、当前重点与未来方向不得把过去年份写成尚待执行的建议；
 - 报告明显关系机会年份与卡片桃花年份完全一致；百分号等常用符号渲染后不得出现缺字方框；
 - 校准答案选择了哪个现实候选，相关章节就引用哪个候选或用户补充事实，不得只提高置信度；

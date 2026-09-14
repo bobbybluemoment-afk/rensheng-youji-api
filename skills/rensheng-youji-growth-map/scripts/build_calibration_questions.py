@@ -8,6 +8,7 @@ from collections import Counter
 import hashlib
 from itertools import combinations
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -64,6 +65,26 @@ def candidate_score(candidate: dict[str, Any], source_class: str, wanted_domain:
     return score
 
 
+def years_in(value: Any) -> list[int]:
+    return [int(item) for item in re.findall(r"(?<!\d)(20\d{2})(?!\d)", str(value or ""))]
+
+
+def answerable(candidate: dict[str, Any], analysis_year: int) -> bool:
+    """Calibration can only ask about evidence already observable today."""
+    values = [
+        candidate.get("answerable_time_scope", candidate.get("time_scope")),
+        candidate.get("answerable_observation", (candidate.get("observable_examples") or [""])[0]),
+        candidate.get("answerable_alternative", candidate.get("alternative_statement")),
+    ]
+    if any(year > analysis_year for value in values for year in years_in(value)):
+        return False
+    if candidate.get("candidate_kind") == "timed_event":
+        scope = candidate.get("answerable_time_scope", candidate.get("time_scope"))
+        window = years_in(scope)
+        return (bool(window) and min(window) <= analysis_year) or (not window and any(term in str(scope) for term in ("过去", "当前", "至今")))
+    return True
+
+
 def _valid_set(items: tuple[dict[str, Any], ...]) -> bool:
     counts = Counter(item["domain"] for item in items)
     kinds = [item["candidate_kind"] for item in items]
@@ -74,6 +95,7 @@ def _valid_set(items: tuple[dict[str, Any], ...]) -> bool:
 def select_candidates(analysis: dict[str, Any], focus: str = "") -> list[dict[str, Any]]:
     claims = {item["claim_id"]: item for item in analysis.get("report_claim_ledger") or [] if isinstance(item, dict)}
     wanted_domain = focus_domain(focus)
+    analysis_year = int(str(analysis.get("analysis_meta", {}).get("analysis_as_of", "0000"))[:4])
     eligible = []
     for candidate in analysis.get("reality_candidate_pool") or []:
         if not isinstance(candidate, dict) or candidate.get("domain") not in DOMAINS:
@@ -82,6 +104,8 @@ def select_candidates(analysis: dict[str, Any], focus: str = "") -> list[dict[st
         if source_class is None or source_class == "weak_candidate":
             continue
         if not candidate.get("validation_question") or len(candidate.get("observable_examples") or []) < 2:
+            continue
+        if not answerable(candidate, analysis_year):
             continue
         item = dict(candidate)
         item["source_class"] = source_class
@@ -99,14 +123,30 @@ def select_candidates(analysis: dict[str, Any], focus: str = "") -> list[dict[st
     return list(max(valid, key=lambda items: (sum(item["selection_score"] for item in items), tuple(item["candidate_id"] for item in items))))
 
 
-def expected_display(candidate: dict[str, Any], number: int) -> dict[str, Any]:
+def expected_display(candidate: dict[str, Any], number: int, analysis_year: int) -> dict[str, Any]:
+    kind = candidate["candidate_kind"]
+    if kind == "timed_event":
+        source_scope = candidate.get("answerable_time_scope", candidate.get("time_scope"))
+        source_years = years_in(source_scope)
+        if source_years:
+            start_year = min(source_years)
+            prompt = f"从{start_year}年到现在，下面哪种情况更接近你的实际经历？"
+            time_scope = f"{start_year}年至{analysis_year}年"
+        else:
+            prompt, time_scope = "回看已经发生的这段时间，下面哪种变化更接近你的实际经历？", str(source_scope)
+    elif kind == "current_stage":
+        prompt, time_scope = "就你现在的情况来说，下面哪种描述更接近你？", "当前"
+    elif kind == "objective_state":
+        prompt, time_scope = "回看过去几年的实际经历，下面哪种情况更接近你？", "过去几年"
+    else:
+        prompt, time_scope = "遇到类似情况时，你通常更接近下面哪一种？", "长期表现"
     return {
         "number": number, "domain": DOMAIN_LABELS[candidate["domain"]],
-        "prompt": candidate["validation_question"], "time_scope": candidate["time_scope"],
+        "prompt": prompt, "time_scope": time_scope,
         "choices": [
-            {"key": "A", "text": candidate["statement"]},
-            {"key": "B", "text": candidate["alternative_statement"]},
-            {"key": "C", "text": "两种情况都出现过，具体取决于当时的环境、关系或阶段。"},
+            {"key": "A", "text": candidate.get("answerable_observation", candidate["statement"])},
+            {"key": "B", "text": candidate.get("answerable_alternative", candidate["alternative_statement"])},
+            {"key": "C", "text": "两种情况都出现过，通常会随着环境或阶段改变。"},
             {"key": "D", "text": "自己描述（可以补充具体经历或年份）。"},
         ],
     }
@@ -117,10 +157,11 @@ def build(analysis: dict[str, Any], focus: str = "") -> dict[str, Any]:
     if not analysis_id:
         raise ValueError("冻结Core缺少analysis_id，不能生成可追溯校准题")
     questions = []
+    analysis_year = int(str(analysis.get("analysis_meta", {}).get("analysis_as_of", "0000"))[:4])
     for number, candidate in enumerate(select_candidates(analysis, focus), 1):
         candidate_id = candidate["candidate_id"]
         questions.append({
-            "display": expected_display(candidate, number),
+            "display": expected_display(candidate, number, analysis_year),
             "audit": {
                 "template_id": TEMPLATE_BY_KIND[candidate["candidate_kind"]], "candidate_kind": candidate["candidate_kind"],
                 "candidate_ids": [candidate_id], "related_claim_ids": candidate["related_claim_ids"],

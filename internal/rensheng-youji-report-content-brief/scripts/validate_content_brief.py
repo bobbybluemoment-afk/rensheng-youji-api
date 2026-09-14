@@ -21,6 +21,38 @@ def digest(value: Any) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def report_prose_text(data: dict[str, Any]) -> str:
+    """Return only wording the prose writer may surface to the user.
+
+    Materialized evidence snapshots intentionally preserve Core-internal method
+    and mechanism labels for traceability.  Those labels are not included in
+    the compact writing pack, so user-language checks must not reject them.
+    """
+    prose_keys = {
+        "claim", "plain_claim", "new_information", "allowed_examples",
+        "applicable_conditions", "counterevidence", "unsupported_extensions",
+        "evidence_gap", "prohibited_claims",
+    }
+    values: list[str] = []
+
+    def visit(value: Any, key: str | None = None) -> None:
+        if key in prose_keys:
+            if isinstance(value, str):
+                values.append(value)
+            elif isinstance(value, list):
+                values.extend(item for item in value if isinstance(item, str))
+            return
+        if isinstance(value, dict):
+            for child_key, child in value.items():
+                visit(child, child_key)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child, key)
+
+    visit(data)
+    return "\n".join(values)
+
+
 def validate(data: Any, analysis: Any | None = None, resolved: Any | None = None) -> list[str]:
     errors: list[str] = []
     if not isinstance(data, dict):
@@ -37,7 +69,7 @@ def validate(data: Any, analysis: Any | None = None, resolved: Any | None = None
     if data.get("schema_version") not in {"1.0.0", "1.1.0", "1.2.0", "1.3.0", "1.4.0", "1.5.0", "1.6.0"}:
         errors.append("schema_version 必须为1.0.0—1.6.0中的受支持版本")
     source = data.get("source", {})
-    expected_cores = {"0.9.0", "0.10.0", "0.11.0", "0.12.0", "0.13.0", "0.14.0", "0.15.0"} if is_v15 else {"0.8.1"} if is_v14 else {"0.8.0"} if is_v13 else {"0.7.0"} if is_v12 else {"0.6.0"} if is_v11 else {"0.5.0"}
+    expected_cores = {"0.9.0", "0.10.0", "0.11.0", "0.12.0", "0.13.0", "0.14.0", "0.15.0", "0.16.0"} if is_v15 else {"0.8.1"} if is_v14 else {"0.8.0"} if is_v13 else {"0.7.0"} if is_v12 else {"0.6.0"} if is_v11 else {"0.5.0"}
     if source.get("core_version") not in expected_cores:
         errors.append(f"事实提纲必须来自core_version={sorted(expected_cores)}")
     if data.get("focus_scope", {}).get("protected_sections") != ["life_overview", "dimensions"]:
@@ -103,6 +135,14 @@ def validate(data: Any, analysis: Any | None = None, resolved: Any | None = None
             selected = section.get("selected_claims")
             if not isinstance(selected, list) or [item.get("claim_id") for item in selected if isinstance(item, dict)] != claim_ids:
                 errors.append(f"第{index + 1}个内容区必须按claim_ids顺序携带Core判断实体")
+            if source.get("core_version") == "0.16.0" and isinstance(selected, list):
+                required_explanation = {
+                    "human_explanation", "source_detail_atom_ids", "observable_scenes",
+                    "helpful_effects", "possible_costs",
+                }
+                for claim_index, selected_claim in enumerate(selected):
+                    if not isinstance(selected_claim, dict) or not required_explanation.issubset(selected_claim):
+                        errors.append(f"第{index + 1}个内容区selected_claims[{claim_index}]缺少Core 0.16解释与现实细节字段")
             balance = section.get("source_balance")
             if not isinstance(balance, dict):
                 errors.append(f"第{index + 1}个内容区缺少来源比例审计")
@@ -204,7 +244,9 @@ def validate(data: Any, analysis: Any | None = None, resolved: Any | None = None
                     if section.get(key) != core_source.get(key):
                         errors.append(f"{where}.{key} 已偏离Core报告素材")
         snapshot_keys = ("claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family", "claim", "plain_claim", "new_information", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin") if is_v14 or is_v15 else ("claim_id", "domain", "reality_dimension", "claim", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin")
-        if is_v15 and source.get("core_version") in {"0.10.0", "0.11.0", "0.12.0", "0.13.0", "0.14.0", "0.15.0"}:
+        if source.get("core_version") == "0.16.0":
+            snapshot_keys += ("human_explanation", "source_detail_atom_ids", "observable_scenes", "helpful_effects", "possible_costs")
+        if is_v15 and source.get("core_version") in {"0.10.0", "0.11.0", "0.12.0", "0.13.0", "0.14.0", "0.15.0", "0.16.0"}:
             snapshot_keys += ("synthesis_ids", "method_hypothesis_ids", "claim_class", "report_role", "coverage_tags", "applicable_conditions", "reality_confirmation")
         for section in sections if is_materialized else []:
             if not isinstance(section, dict):
@@ -271,7 +313,7 @@ def validate(data: Any, analysis: Any | None = None, resolved: Any | None = None
                 selected_statuses = {wrapped["value"].get("status") for wrapped in section.get("selected_reality_candidates") or [] if isinstance(wrapped, dict) and isinstance(wrapped.get("value"), dict)}
                 if "reject" in selected_statuses:
                     errors.append(where + " 使用了Core中已排除的现实候选")
-    if re.search(r"组织化过劳型|先扎根后显声|表达窗口|花不显", json.dumps(data, ensure_ascii=False)):
+    if re.search(r"组织化过劳型|先扎根后显声|表达窗口|花不显", report_prose_text(data)):
         errors.append("事实提纲含有禁止进入报告链路的生造或技术短语")
     return errors
 

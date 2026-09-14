@@ -18,8 +18,8 @@ def compile_report(analysis: dict[str, Any], profile: dict[str, Any], brief: dic
     if semantic.get("brief_id") != brief.get("brief_id") or draft.get("brief_id") != brief.get("brief_id"):
         raise ValueError("最终报告输入没有绑定同一份事实提纲")
     meta = analysis["analysis_meta"]
-    if meta.get("core_version") != "0.15.0":
-        raise ValueError("2.14.0报告只能由0.15.0 Core编译")
+    if meta.get("core_version") != "0.16.0":
+        raise ValueError("2.14.0报告只能由0.16.0 Core编译")
     if brief.get("source", {}).get("analysis_id") != meta.get("analysis_id") or resolved.get("source", {}).get("analysis_id") != meta.get("analysis_id"):
         raise ValueError("事实提纲或报告选材没有绑定当前Core")
     analysis_hash = digest(analysis)

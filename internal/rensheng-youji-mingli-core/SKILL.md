@@ -66,6 +66,7 @@ python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/adapter
 11. [independent-method-analysis.md](references/independent-method-analysis.md)：强制九种方法隔离推演、分别生成技术结论和现实候选，再按方法家族独立性综合；规定单方法补充和冲突处理。
 12. [method-failure-and-recovery.md](references/method-failure-and-recovery.md)：规定逐方法校验、三轮局部修复、失败状态、最低方法覆盖和降级交付。
 13. [core-production-bridge.md](references/core-production-bridge.md)：把已校验方法包确定性汇总为综合输入，约束AI语义综合，再由程序组装完整Core与报告来源。
+14. [interpretive-spine-and-detail-retention.md](references/interpretive-spine-and-detail-retention.md)：解释主线、方法现实细节保留、判断分类和下游传递边界。
 14. [calibration-confidence.md](references/calibration-confidence.md)：生成现实候选，吸收用户反馈并标注置信度。
 15. [candidate-relations-and-calibrated-synthesis.md](references/candidate-relations-and-calibrated-synthesis.md)：校准前建立候选关系并冻结完整人物，校准后只以增量调整现实候选状态。
 16. [domain-independent-analysis.md](references/domain-independent-analysis.md)：先完成六个领域各自的判断、机制与覆盖，再限制共享主线比例和跨章复用。
@@ -165,7 +166,7 @@ python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/adapter
 - 3—6条人物形成链；
 - 3—6条跨领域联动链；
 - 完整人生主线素材；
-- 六个现实领域优先各4—6条真正不同的报告级判断；证据较少时允许2—3条或明确证据缺口；
+- 六个现实领域按真实证据形成数量不等的报告级判断，不设必须条数或最多条数；
 - 可以使用的具体例子与禁止外推范围。
 
 这些内容用于约束报告写作，不是用户可见文章。Core中的技术短语必须紧接现实解释；不得用“底色、表达窗口、输出、可见度、先扎根后显声”等抽象词代替事实。
@@ -178,6 +179,10 @@ python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/adapter
 - `mechanism_family`：主要来自哪条结构或时运路径；
 - `new_information`：相对同领域其他判断新增了什么；
 - `plain_claim`：不含命理术语、可以原句进入报告的完整判断句。
+- `human_explanation`：解释为什么会这样，不能只换词重复结论；
+- `source_detail_atom_ids`：来自九方法现实候选的具体表现编号；
+- `observable_scenes`：程序从上述编号恢复的现实场景；
+- `helpful_effects` 与 `possible_costs`：同一模式在不同环境中的帮助与代价。
 
 判断充足的领域优先覆盖三个判断家族、两个机制家族和三个现实问题轴；判断较少时按证据缩短。不同编号但语义高度相似的句子视为重复，不得用换词满足数量。`report_source_bundle` 必须由脚本根据判断台账生成稳定优先级、0—2条必进候选和实际覆盖映射；有可用判断时至少提供1条，稀疏的当前阶段来源允许只有1条。不得让模型手工复制ID，也不得在校准前锁定最终 `mandatory_claim_ids`。校准后由确定性程序按交付模式从仍有效的候选中选出0—2条必进判断；证据缺口模式允许0条。
 
@@ -316,7 +321,7 @@ validation: []
 
 不要省略没有明显结论的栏目。使用空数组、`null` 或“证据不足”保留结构，不得补造内容。
 
-完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.15.0`。正式方法包仍符合 [method-packet.schema.json](schemas/method-packet.schema.json)，但九方法AI不再直接填写这份生产结构。AI只生成 [method-semantic-patch.schema.json](schemas/method-semantic-patch.schema.json) 约束的语义答卷，再由程序编译为正式方法包。
+完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.16.0`。正式方法包仍符合 [method-packet.schema.json](schemas/method-packet.schema.json)，但九方法AI不再直接填写这份生产结构。AI只生成 [method-semantic-patch.schema.json](schemas/method-semantic-patch.schema.json) 约束的语义答卷，再由程序编译为正式方法包。
 
 先生成一份完整主题隔离输入和九份按方法需要裁剪的短提示包。完整输入只作为统一哈希源；AI实际只读取各自提示包中的 `method-input-view.json`：
 

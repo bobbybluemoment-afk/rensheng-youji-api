@@ -19,6 +19,8 @@ from report_source_contract import claim_diversity_gaps, evidence_retention_gaps
 
 DOMAINS = {"self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"}
 FIXTURE_PHRASES = {"遇到模糊任务时先整理信息再开始", "先整理再行动", "规则明确的平台"}
+PLACEHOLDER_INFORMATION = ("补充具体表现", "补充本领域", "成立条件", "新增信息")
+GENERIC_EXAMPLES = ("可通过具体任务", "可通过具体经历", "结合现实核对", "阶段经历核对")
 
 
 def normalize(value: str) -> str:
@@ -39,6 +41,7 @@ def similarity(left: str, right: str) -> float:
 
 def audit(data: dict[str, Any]) -> list[str]:
     errors: list[str] = []
+    strict_detail_contract = data.get("analysis_meta", {}).get("core_version") == "0.16.0"
     claims = [item for item in data.get("report_claim_ledger", []) if isinstance(item, dict)]
     claim_index = {item.get("claim_id"): item for item in claims}
     for claim in claims:
@@ -53,6 +56,14 @@ def audit(data: dict[str, Any]) -> list[str]:
             errors.append(f"{claim_id}.plain_claim must be a complete sentence")
         if any(phrase in plain or phrase in str(claim.get("claim", "")) for phrase in FIXTURE_PHRASES):
             errors.append(f"{claim_id} contains production-forbidden self-test wording")
+        if any(phrase in str(claim.get("new_information", "")) for phrase in PLACEHOLDER_INFORMATION):
+            errors.append(f"{claim_id}.new_information使用了机械占位说明")
+        if strict_detail_contract:
+            examples = claim.get("allowed_examples") or []
+            if not examples or any(any(phrase in str(example) for phrase in GENERIC_EXAMPLES) for example in examples):
+                errors.append(f"{claim_id}.allowed_examples必须保留具体生活表现，不能使用通用核对提示")
+            if claim.get("allowed_examples") != claim.get("observable_scenes"):
+                errors.append(f"{claim_id}.allowed_examples没有从冻结现实细节确定性传递")
     for domain in DOMAINS:
         items = [item for item in claims if item.get("domain") == domain]
         gaps = claim_diversity_gaps(items)
@@ -67,6 +78,9 @@ def audit(data: dict[str, Any]) -> list[str]:
         information = [normalize(str(item.get("new_information", ""))) for item in items]
         if len(information) != len(set(information)):
             errors.append(f"{domain} repeats new_information labels")
+        example_sets = [tuple(normalize(str(value)) for value in item.get("allowed_examples") or []) for item in items]
+        if strict_detail_contract and len(example_sets) >= 3 and len(set(example_sets)) < max(2, len(example_sets) // 2):
+            errors.append(f"{domain}过多判断重复使用同一组现实例子")
     for index, left in enumerate(claims):
         for right in claims[index + 1:]:
             if left.get("claim_id") == right.get("claim_id"):

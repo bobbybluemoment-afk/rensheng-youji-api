@@ -35,6 +35,7 @@ def validate(data: Any, analysis: Any) -> list[str]:
         return ["questions必须恰好包含五道题"]
     candidates = {item["candidate_id"]: item for item in analysis.get("reality_candidate_pool") or [] if isinstance(item, dict)}
     claims = {item["claim_id"]: item for item in analysis.get("report_claim_ledger") or [] if isinstance(item, dict)}
+    analysis_year = int(str(analysis.get("analysis_meta", {}).get("analysis_as_of", "0000"))[:4])
     domains: list[str] = []
     kinds: list[str] = []
     axes: list[tuple[str, str]] = []
@@ -45,7 +46,7 @@ def validate(data: Any, analysis: Any) -> list[str]:
             errors.append(f"第{index}题必须绑定一个冻结Core现实候选")
             continue
         candidate = candidates[ids[0]]
-        if display != expected_display(candidate, index):
+        if display != expected_display(candidate, index, analysis_year):
             errors.append(f"第{index}题没有由冻结Core候选确定性生成")
         visible = json.dumps(display, ensure_ascii=False)
         leaked = sorted(term for term in VISIBLE_BANNED if term in visible)

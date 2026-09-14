@@ -28,6 +28,17 @@ def validate(data: dict) -> list[str]:
     pillars = data["mingju_analysis"].get("pillars", [])
     if len(pillars) != 4 or any(not isinstance(value, str) or len(value) != 2 for value in pillars):
         errors.append("mingju_analysis.pillars 必须是按年、月、日、时排列的四个干支")
+    card_texts = [
+        str(data["mingju_analysis"].get("structure_text", "")).strip(),
+        str(data["mingju_analysis"].get("life_theme_text", "")).strip(),
+    ]
+    for label, text in zip(("structure_text", "life_theme_text"), card_texts):
+        if not text.endswith(("。", "！", "？")):
+            errors.append(f"mingju_analysis.{label} 必须把意思完整说完")
+        if text.rstrip("。！？").endswith(("另一面是", "因为", "但", "并且", "以及")):
+            errors.append(f"mingju_analysis.{label} 不能以未完成连接语结束")
+    if card_texts[0] == card_texts[1]:
+        errors.append("命局分析和人生主线不能重复同一句话")
 
     start_state = data["trend_panel"].get("window_start_state")
     if not isinstance(start_state, dict):
@@ -117,7 +128,7 @@ def validate(data: dict) -> list[str]:
         errors.append("current_issue.title 应为4—20字")
     if issue.get("domain") not in {"career", "wealth", "relationships", "family", "learning", "mobility", "growth"}:
         errors.append("current_issue.domain 无效")
-    forbidden = ("换轨", "抓手", "赋能", "内耗", "能量场", "人生副本", "显化")
+    forbidden = ("换轨", "抓手", "赋能", "内耗", "能量场", "人生副本", "显化", "可通过", "核对", "成果悬置", "评价结算", "重新归档")
     rendered_text = json.dumps({"mingju": data["mingju_analysis"], "issue": issue}, ensure_ascii=False)
     for word in forbidden:
         if word in rendered_text:

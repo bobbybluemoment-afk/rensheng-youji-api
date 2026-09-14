@@ -115,6 +115,7 @@ def compact_view(source: dict[str, Any]) -> dict[str, Any]:
     })}
     method_roles = []
     method_boundaries: dict[str, list[str]] = {}
+    detail_atom_index: list[dict[str, Any]] = []
     for method in source["independent_method_analyses"]:
         method_id = method["method_id"]
         conclusion_evidence = {
@@ -136,6 +137,17 @@ def compact_view(source: dict[str, Any]) -> dict[str, Any]:
                 for conclusion_id in hypothesis["derived_from_conclusion_ids"]
                 for evidence_id in conclusion_evidence.get(conclusion_id, [])
             })
+            detail_atom_ids = []
+            for indicator_index, indicator in enumerate(hypothesis.get("observable_indicators") or [], 1):
+                atom_id = f"detail_{hypothesis['hypothesis_id']}_{indicator_index}"
+                detail_atom_ids.append(atom_id)
+                detail_atom_index.append({
+                    "detail_atom_id": atom_id,
+                    "hypothesis_id": hypothesis["hypothesis_id"],
+                    "method_id": method_id,
+                    "domain": hypothesis["domain"],
+                    "text": indicator,
+                })
             judgment_matrix[hypothesis["domain"]].append({
                 "hypothesis_id": hypothesis["hypothesis_id"],
                 "method_id": method_id,
@@ -144,6 +156,7 @@ def compact_view(source: dict[str, Any]) -> dict[str, Any]:
                 "normalized_direction": hypothesis["normalized_direction"],
                 "statement": hypothesis["statement"],
                 "observable_indicators": hypothesis["observable_indicators"],
+                "detail_atom_ids": detail_atom_ids,
                 "conditions": hypothesis["conditions"],
                 "counterevidence": hypothesis["counterevidence"],
                 "unsupported_extensions": hypothesis["unsupported_extensions"],
@@ -170,7 +183,7 @@ def compact_view(source: dict[str, Any]) -> dict[str, Any]:
         "confidence": item["confidence"],
     } for item in source["evidence_registry"]]
     return {
-        "schema_version": "1.2.0",
+        "schema_version": "1.3.0",
         "core_version": source["core_version"],
         "analysis_input_sha256": source["analysis_input_sha256"],
         "method_input_sha256": source["method_input_sha256"],
@@ -179,6 +192,7 @@ def compact_view(source: dict[str, Any]) -> dict[str, Any]:
         "method_roles": method_roles,
         "technical_index": technical_index,
         "judgment_matrix": judgment_matrix,
+        "detail_atom_index": detail_atom_index,
         "method_boundaries": method_boundaries,
         "evidence_index": evidence_index,
         "method_execution_audit": source["method_execution_audit"],
@@ -188,6 +202,9 @@ def compact_view(source: dict[str, Any]) -> dict[str, Any]:
             "claim_class_rule": "每条报告判断只标记六类claim_class之一；report_role由编译器填写。",
             "calibration_probe_rule": "现实候选的validation_question、正向表现、替代解释和时间范围必须足以让程序生成个性化校准题。",
             "evidence_retention_rule": "不按领域硬凑条数；但同一领域已有至少三个方法、四条以上且方向不同的候选时，一条判断不能代替多个现实信息轴，请至少拆开被证据支持的不同方向。",
+            "detail_retention_rule": "report_claim_ledger每条判断必须引用1—6个属于其method_hypothesis_ids的source_detail_atom_ids。程序会从这些编号恢复具体生活表现并覆盖allowed_examples；不得用‘可通过具体任务核对’等通用占位句代替。",
+            "interpretive_spine_rule": "interpretive_spine提炼1—4条真正跨领域的核心模式。每条必须区分原有能力、后来形成的做法、当前可能付出的代价和发展方向，并引用真实判断与生活细节；不能把全部人生压成工作方式，也不能吞掉领域独有信息。",
+            "natural_chinese_rule": "所有用户表达使用自然、成熟、可保存的中文：直接判断、现实场景、形成解释。一句只承担一个主要意思，不用抽象名词替代生活中实际发生的动作。",
             "user_address_rule": "plain_claim、现实候选陈述、可观察例子与validation_question统一使用第二人称‘你’，不得使用‘您’。",
         },
     }

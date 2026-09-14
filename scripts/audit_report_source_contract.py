@@ -32,6 +32,8 @@ STALE_RULES = (
     "证据缺口模式0条",
     "写作前先为每段选择至少两个 `selected_claims`",
     "六个领域保持相同篇幅范围",
+    "`editorial_review` 只保存 `review_id` 和 `version=2.4.0`",
+    "至少三个内容区发生实际编辑",
 )
 
 MAINTAINED_TEXTS = (
@@ -45,10 +47,12 @@ MAINTAINED_TEXTS = (
     "internal/rensheng-youji-mingli-core/references/method-failure-and-recovery.md",
     "internal/rensheng-youji-mingli-core/references/post-calibration-report-selection.md",
     "internal/rensheng-youji-mingli-core/references/report-grade-reality-mapping.md",
+    "internal/rensheng-youji-mingli-core/references/interpretive-spine-and-detail-retention.md",
     "internal/rensheng-youji-report-content-brief/SKILL.md",
     "internal/rensheng-youji-report-content-brief/references/content-brief.md",
     "internal/rensheng-youji-report-writer/SKILL.md",
     "internal/rensheng-youji-report-writer/references/portrait-writing.md",
+    "internal/rensheng-youji-chinese-editor/references/natural-chinese.md",
 )
 
 
@@ -59,6 +63,15 @@ def audit(root: Path) -> list[str]:
     mandatory_schema = schema["$defs"]["domainSource"]["properties"]["mandatory_candidate_ids"]
     if mandatory_schema.get("maxItems") != MANDATORY_CANDIDATE_MAX:
         errors.append("Core Schema and report_source_contract disagree on mandatory candidate maximum")
+    top_required = set(schema.get("required") or [])
+    claim_required = set(schema["$defs"]["reportClaim"].get("required") or [])
+    if not {"reality_detail_registry", "interpretive_spine"}.issubset(top_required):
+        errors.append("Core Schema must require both reality-detail retention and the interpretive spine")
+    if not {"human_explanation", "source_detail_atom_ids", "observable_scenes", "helpful_effects", "possible_costs"}.issubset(claim_required):
+        errors.append("Report claims can still lose explanation, reality scenes or two-sided effects")
+    candidate_required = set(schema["$defs"]["realityCandidate"].get("required") or [])
+    if not {"answerable_time_scope", "answerable_observation", "answerable_alternative"}.issubset(candidate_required):
+        errors.append("Calibration candidates must provide past/current answerable text")
 
     if mandatory_candidate_bounds([]) != (0, 0) or mandatory_candidate_bounds(["claim-1"]) != (1, 2):
         errors.append("Canonical mandatory candidate bounds are invalid")
@@ -142,6 +155,21 @@ def audit(root: Path) -> list[str]:
     writing_pack_text = (root / "internal/rensheng-youji-report-writer/scripts/build_report_writing_pack.py").read_text(encoding="utf-8")
     if "narrative_role" not in writing_pack_text or "index % count" in writing_pack_text:
         errors.append("Writing pack must use narrative roles instead of round-robin claim distribution")
+    if not all(field in writing_pack_text for field in ("interpretive_spine", "human_explanation", "observable_scenes", "helpful_effects", "possible_costs")):
+        errors.append("Writing pack does not carry the complete Core explanation contract downstream")
+    brief_materializer_text = (root / "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py").read_text(encoding="utf-8")
+    brief_validator_text = (root / "internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py").read_text(encoding="utf-8")
+    explanation_fields = ("human_explanation", "source_detail_atom_ids", "observable_scenes", "helpful_effects", "possible_costs")
+    if not all(field in brief_materializer_text and field in brief_validator_text for field in explanation_fields):
+        errors.append("Content brief can still drop Core explanation or reality-detail fields")
+
+    calibration_text = (root / "skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py").read_text(encoding="utf-8")
+    if not all(field in calibration_text for field in ("answerable_time_scope", "answerable_observation", "answerable_alternative", "year > analysis_year")):
+        errors.append("Calibration generator can still ask users to verify future events")
+    natural_text = (root / "internal/rensheng-youji-chinese-editor/references/natural-chinese.md").read_text(encoding="utf-8")
+    scanner_text = (root / "internal/rensheng-youji-chinese-editor/scripts/scan_report_language.py").read_text(encoding="utf-8")
+    if "不要总结用户，要解释用户" not in natural_text or "AI黑话或生造表达" not in scanner_text or "本领域没有使用" not in scanner_text:
+        errors.append("Natural-Chinese generation rules and deterministic language QA are incomplete")
 
     growth_skill_text = (root / "skills/rensheng-youji-growth-map/SKILL.md").read_text(encoding="utf-8")
     card_skill_text = (root / "internal/rensheng-youji-free-card-output/SKILL.md").read_text(encoding="utf-8")

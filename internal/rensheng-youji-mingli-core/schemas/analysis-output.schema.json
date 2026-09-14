@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rensheng-youji.local/schemas/analysis-output.schema.json",
-  "title": "人生有迹完整命理分析母稿 v0.15.0",
+  "title": "人生有迹完整命理分析母稿 v0.16.0",
   "description": "内置分析核心返回的统一 analysis_bundle。包含各方法独立命理推演、独立现实候选、现实综合、完整人物画像、实体证据台账、开放现实候选、形成链、领域联动与校准审计。",
   "type": "object",
   "additionalProperties": false,
@@ -21,9 +21,11 @@
     "cross_method_analysis",
     "blind_school_cross_analysis",
     "evidence_registry",
+    "reality_detail_registry",
     "root_seed_flower_fruit_map",
     "natal_portrait",
     "portrait_thesis",
+    "interpretive_spine",
     "complete_self_portrait",
     "family_system",
     "resource_relationship",
@@ -387,6 +389,11 @@
       "minItems": 1,
       "items": {"$ref": "#/$defs/registeredEvidence"}
     },
+    "reality_detail_registry": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/realityDetailAtom"}
+    },
     "root_seed_flower_fruit_map": {
       "type": "object",
       "additionalProperties": false,
@@ -436,6 +443,9 @@
     },
     "portrait_thesis": {
       "$ref": "#/$defs/portraitThesis"
+    },
+    "interpretive_spine": {
+      "$ref": "#/$defs/interpretiveSpine"
     },
     "natal_portrait": {
       "$ref": "#/$defs/analysisSection"
@@ -1682,9 +1692,10 @@
       "additionalProperties": false,
       "required": [
         "claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family",
-        "claim", "plain_claim", "new_information", "mechanism_chain",
+        "claim", "plain_claim", "human_explanation", "new_information", "mechanism_chain",
         "evidence_ids", "supporting_methods", "synthesis_ids", "method_hypothesis_ids",
         "claim_class", "report_role", "coverage_tags", "applicable_conditions", "reality_confirmation",
+        "source_detail_atom_ids", "observable_scenes", "helpful_effects", "possible_costs",
         "allowed_examples", "counterevidence", "confidence", "unsupported_extensions",
         "calibration_status", "origin"
       ],
@@ -1696,6 +1707,7 @@
         "mechanism_family": {"type": "string", "minLength": 3},
         "claim": {"type": "string", "minLength": 8},
         "plain_claim": {"type": "string", "minLength": 12},
+        "human_explanation": {"type": "string", "minLength": 20},
         "new_information": {"type": "string", "minLength": 4},
         "mechanism_chain": {"type": "array", "minItems": 2, "items": {"type": "string"}},
         "evidence_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
@@ -1707,6 +1719,10 @@
         "coverage_tags": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "enum": ["feature", "behavior", "formation", "challenge", "current_change", "response", "parent_kin_interaction", "support_and_constraint", "independence_and_reciprocity", "baseline_signals", "stress_sequence", "recovery_pattern"]}},
         "applicable_conditions": {"type": "array", "minItems": 1, "items": {"type": "string"}},
         "reality_confirmation": {"type": "string", "enum": ["unverified", "supported", "confirmed", "contradicted"]},
+        "source_detail_atom_ids": {"type": "array", "minItems": 1, "maxItems": 6, "uniqueItems": true, "items": {"type": "string", "pattern": "^detail_[a-z0-9_]+_[1-9][0-9]*$"}},
+        "observable_scenes": {"type": "array", "minItems": 1, "maxItems": 6, "uniqueItems": true, "items": {"type": "string", "minLength": 6}},
+        "helpful_effects": {"type": "array", "maxItems": 3, "uniqueItems": true, "items": {"type": "string", "minLength": 6}},
+        "possible_costs": {"type": "array", "maxItems": 3, "uniqueItems": true, "items": {"type": "string", "minLength": 6}},
         "allowed_examples": {"type": "array", "items": {"type": "string"}},
         "counterevidence": {"type": "array", "items": {"type": "string"}},
         "confidence": {"$ref": "#/$defs/confidence"},
@@ -1841,6 +1857,9 @@
         "relation_ids",
         "confidence",
         "validation_question",
+        "answerable_time_scope",
+        "answerable_observation",
+        "answerable_alternative",
         "status"
       ],
       "properties": {
@@ -1962,6 +1981,9 @@
           "type": "string",
           "minLength": 1
         },
+        "answerable_time_scope": {"type": "string", "minLength": 2},
+        "answerable_observation": {"type": "string", "minLength": 8},
+        "answerable_alternative": {"type": "string", "minLength": 8},
         "status": {
           "type": "string",
           "enum": [
@@ -2006,6 +2028,69 @@
         "continuity": {"type": "string", "minLength": 8},
         "evidence_ids": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
         "confidence": {"$ref": "#/$defs/confidence"}
+      }
+    },
+    "realityDetailAtom": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["detail_atom_id", "hypothesis_id", "method_id", "domain", "text"],
+      "properties": {
+        "detail_atom_id": {"type": "string", "pattern": "^detail_[a-z0-9_]+_[1-9][0-9]*$"},
+        "hypothesis_id": {"type": "string", "minLength": 3},
+        "method_id": {"type": "string", "minLength": 3},
+        "domain": {"type": "string", "enum": ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]},
+        "text": {"type": "string", "minLength": 6}
+      }
+    },
+    "interpretiveSpine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "core_patterns", "card_copy"],
+      "properties": {
+        "summary": {"type": "string", "minLength": 30},
+        "core_patterns": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["pattern_id", "headline", "user_explanation", "innate_capabilities", "learned_strategies", "current_costs", "development_direction", "domain_manifestations", "claim_ids", "source_detail_atom_ids", "confidence"],
+            "properties": {
+              "pattern_id": {"type": "string", "pattern": "^pattern_[a-z0-9_]+$"},
+              "headline": {"type": "string", "minLength": 8},
+              "user_explanation": {"type": "string", "minLength": 30},
+              "innate_capabilities": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": {"type": "string", "minLength": 6}},
+              "learned_strategies": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": {"type": "string", "minLength": 6}},
+              "current_costs": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": {"type": "string", "minLength": 6}},
+              "development_direction": {"type": "string", "minLength": 12},
+              "domain_manifestations": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "self_growth": {"type": "array", "items": {"type": "string", "minLength": 6}},
+                  "love_partner": {"type": "array", "items": {"type": "string", "minLength": 6}},
+                  "career": {"type": "array", "items": {"type": "string", "minLength": 6}},
+                  "finance_resources": {"type": "array", "items": {"type": "string", "minLength": 6}},
+                  "body_emotion": {"type": "array", "items": {"type": "string", "minLength": 6}},
+                  "family_growth": {"type": "array", "items": {"type": "string", "minLength": 6}}
+                }
+              },
+              "claim_ids": {"type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": {"type": "string"}},
+              "source_detail_atom_ids": {"type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": {"type": "string"}},
+              "confidence": {"$ref": "#/$defs/confidence"}
+            }
+          }
+        },
+        "card_copy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["structure_text", "life_theme_text"],
+          "properties": {
+            "structure_text": {"type": "string", "minLength": 24, "maxLength": 150},
+            "life_theme_text": {"type": "string", "minLength": 24, "maxLength": 130}
+          }
+        }
       }
     },
     "portraitThesis": {

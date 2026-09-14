@@ -54,11 +54,30 @@ def _chart_audit(source: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _reality_detail_registry(methods: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Compile method observable indicators into stable, addressable detail atoms."""
+    atoms: list[dict[str, Any]] = []
+    for method in methods:
+        method_id = str(method.get("method_id", ""))
+        for hypothesis in method.get("reality_hypotheses") or []:
+            hypothesis_id = str(hypothesis.get("hypothesis_id", ""))
+            domain = str(hypothesis.get("domain", ""))
+            for index, text in enumerate(hypothesis.get("observable_indicators") or [], 1):
+                atoms.append({
+                    "detail_atom_id": f"detail_{hypothesis_id}_{index}",
+                    "hypothesis_id": hypothesis_id,
+                    "method_id": method_id,
+                    "domain": domain,
+                    "text": str(text),
+                })
+    return atoms
+
+
 def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any], compiler_source: dict[str, Any] | None = None) -> tuple[dict[str, Any], list[str]]:
     errors: list[str] = []
     source_bundle = compiler_source or synthesis_input
-    if synthesis_input.get("schema_version") not in {SYNTHESIS_INPUT_SCHEMA_VERSION, "1.1.0", "1.2.0"}:
-        errors.append("synthesis_input.schema_version 必须为1.0.0、1.1.0或1.2.0")
+    if synthesis_input.get("schema_version") != SYNTHESIS_INPUT_SCHEMA_VERSION:
+        errors.append(f"synthesis_input.schema_version 必须为{SYNTHESIS_INPUT_SCHEMA_VERSION}")
     if synthesis_input.get("core_version") != CORE_VERSION:
         errors.append(f"synthesis_input.core_version 必须为{CORE_VERSION}")
     source = source_bundle.get("analysis_input")
@@ -86,6 +105,13 @@ def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any], compiler
     audit = source_bundle["method_execution_audit"]
     request = source["request"]
     candidates = semantic.get("reality_candidate_pool") or []
+    detail_registry = _reality_detail_registry(source_bundle["independent_method_analyses"])
+    compact_detail_registry = synthesis_input.get("detail_atom_index")
+    # Direct library callers may pass the full compiler source as both inputs;
+    # the production CLI always supplies the compact index and is checked.
+    if compact_detail_registry is not None and compact_detail_registry != detail_registry:
+        errors.append("detail_atom_index与冻结方法候选中的可观察表现不一致")
+    detail_by_id = {item["detail_atom_id"]: item for item in detail_registry}
     role_by_class = {
         "primary_judgment": "primary",
         "independent_supplement": "supplemental",
@@ -97,6 +123,23 @@ def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any], compiler
     for claim in semantic.get("report_claim_ledger") or []:
         if isinstance(claim, dict) and claim.get("claim_class") in role_by_class:
             claim["report_role"] = role_by_class[claim["claim_class"]]
+        if not isinstance(claim, dict):
+            continue
+        detail_ids = claim.get("source_detail_atom_ids") or []
+        hypothesis_ids = set(claim.get("method_hypothesis_ids") or [])
+        invalid = [
+            item for item in detail_ids
+            if item not in detail_by_id or detail_by_id[item]["hypothesis_id"] not in hypothesis_ids
+        ]
+        if invalid:
+            errors.append(f"{claim.get('claim_id', '<unknown>')}.source_detail_atom_ids包含不属于本判断来源的现实细节：{invalid}")
+        scenes = list(dict.fromkeys(
+            detail_by_id[item]["text"] for item in detail_ids if item in detail_by_id
+        ))
+        claim["observable_scenes"] = scenes
+        # Downstream examples come from frozen method observations.  The AI may
+        # select the atoms, but cannot replace them with generic audit wording.
+        claim["allowed_examples"] = scenes
     candidate_ids = [str(item.get("candidate_id")) for item in candidates if isinstance(item, dict)]
     result: dict[str, Any] = {
         "analysis_meta": {
@@ -115,6 +158,7 @@ def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any], compiler
         "method_execution_audit": audit,
         "source_coverage_audit": source_bundle["source_coverage_audit"],
         "evidence_registry": source_bundle["evidence_registry"],
+        "reality_detail_registry": detail_registry,
         **semantic,
         "calibration_state": {"confirmed": [], "partial": [], "rejected": [], "uncertain": [], "updates": []},
         "calibration_delta": {

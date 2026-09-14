@@ -8,8 +8,8 @@ import json
 from typing import Any
 
 
-CORE_VERSION = "0.15.0"
-SYNTHESIS_INPUT_SCHEMA_VERSION = "1.0.0"
+CORE_VERSION = "0.16.0"
+SYNTHESIS_INPUT_SCHEMA_VERSION = "1.3.0"
 PRIMARY_METHODS = {
     "pattern_structure",
     "momentum_configuration",
@@ -43,6 +43,7 @@ DETERMINISTIC_CORE_SECTIONS = {
     "method_execution_audit",
     "source_coverage_audit",
     "evidence_registry",
+    "reality_detail_registry",
     "report_source_bundle",
     "calibration_state",
     "calibration_delta",
@@ -60,6 +61,7 @@ SEMANTIC_SECTIONS = {
     "root_seed_flower_fruit_map",
     "natal_portrait",
     "portrait_thesis",
+    "interpretive_spine",
     "complete_self_portrait",
     "family_system",
     "resource_relationship",

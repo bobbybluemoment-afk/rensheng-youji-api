@@ -80,7 +80,7 @@ def evidence_retention_gaps(data: dict[str, Any]) -> list[str]:
     hypotheses under the ordinary source validators.  This is evidence-triggered
     retention, not a per-domain quota.
     """
-    upstream: dict[str, list[tuple[str, str, str]]] = {domain: [] for domain in DIMENSIONS}
+    upstream: dict[str, list[tuple[str, str, str, set[str]]]] = {domain: [] for domain in DIMENSIONS}
     for method in data.get("independent_method_analyses") or []:
         if not isinstance(method, dict) or method.get("status") != "complete":
             continue
@@ -88,10 +88,15 @@ def evidence_retention_gaps(data: dict[str, Any]) -> list[str]:
         for item in method.get("reality_hypotheses") or []:
             if not isinstance(item, dict) or item.get("domain") not in upstream:
                 continue
+            detail_ids = {
+                f"detail_{item.get('hypothesis_id')}_{index}"
+                for index, _ in enumerate(item.get("observable_indicators") or [], 1)
+            }
             upstream[item["domain"]].append((
                 str(item.get("hypothesis_id", "")),
                 method_id,
                 str(item.get("normalized_direction", "")).strip(),
+                detail_ids,
             ))
     claims = [item for item in data.get("report_claim_ledger") or [] if isinstance(item, dict)]
     gaps: list[str] = []
@@ -109,6 +114,13 @@ def evidence_retention_gaps(data: dict[str, Any]) -> list[str]:
             if str(identifier) in upstream_ids
         }
         retained_methods = {item[1] for item in hypotheses if item[0] in retained_ids}
+        available_details = set().union(*(item[3] for item in hypotheses)) if hypotheses else set()
+        retained_details = {
+            str(identifier)
+            for claim in domain_claims
+            for identifier in (claim.get("source_detail_atom_ids") or [])
+            if str(identifier) in available_details
+        }
         if len(domain_claims) < 2:
             gaps.append(
                 f"{domain}: {len(hypotheses)}条上游候选来自{len(methods)}个方法，"
@@ -116,6 +128,8 @@ def evidence_retention_gaps(data: dict[str, Any]) -> list[str]:
                 f"{len(retained_ids)}/{len(upstream_ids)}条候选、"
                 f"{len(retained_methods)}/{len(methods)}个方法；请保留不同现实信息轴或明确完整归并"
             )
+        elif available_details and not retained_details:
+            gaps.append(f"{domain}: Core判断没有保留任何来自九方法的可观察现实细节")
     return gaps
 
 

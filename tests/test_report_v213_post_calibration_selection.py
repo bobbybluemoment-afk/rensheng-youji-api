@@ -17,7 +17,7 @@ from core_baseline import digest, protected_projection  # noqa: E402
 from materialize_content_brief import materialize  # noqa: E402
 from resolve_report_sources import resolve  # noqa: E402
 from validate_analysis_output import self_test_fixture, validate as validate_analysis  # noqa: E402
-from validate_content_brief import validate as validate_brief  # noqa: E402
+from validate_content_brief import report_prose_text, validate as validate_brief  # noqa: E402
 from validate_report_draft import check_section  # noqa: E402
 
 
@@ -50,6 +50,44 @@ def selection_fixture() -> dict:
 
 
 class ReportV213PostCalibrationSelectionTest(unittest.TestCase):
+    def test_content_brief_language_scan_ignores_internal_mechanism_labels(self) -> None:
+        brief = {
+            "dimensions": [{
+                "domain_mechanisms": ["表达窗口到经验沉淀"],
+                "selected_claims": [{
+                    "mechanism_chain": ["表达窗口", "经验沉淀"],
+                    "plain_claim": "你可以通过汇报、展示和完成具体成果积累经验。",
+                }],
+            }],
+        }
+
+        self.assertNotIn("表达窗口", report_prose_text(brief))
+        brief["dimensions"][0]["selected_claims"][0]["plain_claim"] = "你的表达窗口正在打开。"
+        self.assertIn("表达窗口", report_prose_text(brief))
+
+    def test_calibration_responses_compile_to_schema_valid_core_summaries(self) -> None:
+        baseline, lock = locked_fixture()
+        delta = {
+            "schema_version": "1.0.0",
+            "analysis_id": lock["analysis_id"],
+            "baseline_sha256": lock["baseline_sha256"],
+            "candidate_updates": [],
+            "claim_updates": [],
+            "user_fact_evidence": [],
+            "responses": [
+                {"question_number": number, "choice": choice}
+                for number, choice in enumerate("AAAAC", 1)
+            ],
+        }
+
+        calibrated = apply_patch(baseline, lock, delta)
+
+        self.assertEqual(
+            calibrated["calibration_state"]["updates"],
+            ["第1题选择A", "第2题选择A", "第3题选择A", "第4题选择A", "第5题选择C"],
+        )
+        self.assertFalse(validate_analysis(calibrated))
+
     def test_core_requires_an_explicit_gap_when_shared_coverage_is_missing(self) -> None:
         analysis = self_test_fixture()
         source = analysis["report_source_bundle"]["dimensions"]["career"]

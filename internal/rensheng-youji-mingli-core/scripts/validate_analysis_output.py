@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -43,9 +44,11 @@ REQUIRED_SECTIONS = {
     "cross_method_analysis",
     "blind_school_cross_analysis",
     "evidence_registry",
+    "reality_detail_registry",
     "root_seed_flower_fruit_map",
     "natal_portrait",
     "portrait_thesis",
+    "interpretive_spine",
     "complete_self_portrait",
     "family_system",
     "resource_relationship",
@@ -288,8 +291,8 @@ def validate(data: Any) -> list[str]:
     meta = data.get("analysis_meta")
     require_keys(meta, {"analysis_id", "request_id", "core_version", "generated_at", "analysis_as_of", "target_range", "input_completeness", "status"}, "analysis_meta", errors)
     if isinstance(meta, dict):
-        if meta.get("core_version") != "0.15.0":
-            errors.append("analysis_meta.core_version 必须为 0.15.0")
+        if meta.get("core_version") != "0.16.0":
+            errors.append("analysis_meta.core_version 必须为 0.16.0")
         if meta.get("status") not in {"complete", "pass_with_flags"}:
             errors.append("analysis_meta.status 必须是 complete 或 pass_with_flags")
         try:
@@ -517,6 +520,34 @@ def validate(data: Any) -> list[str]:
             errors.append("九个方法必须来自同一份主题隔离输入哈希")
 
     completed_methods = {method_id for method_id, item in method_by_id.items() if item.get("status") == "complete"}
+    detail_registry = data.get("reality_detail_registry")
+    detail_by_id: dict[str, dict[str, Any]] = {}
+    expected_detail_ids: set[str] = set()
+    for hypothesis_id, hypothesis in hypothesis_by_id.items():
+        for detail_index, _ in enumerate(hypothesis.get("observable_indicators") or [], 1):
+            expected_detail_ids.add(f"detail_{hypothesis_id}_{detail_index}")
+    if not isinstance(detail_registry, list) or not detail_registry:
+        errors.append("reality_detail_registry 必须保留九方法中的可观察现实细节")
+    else:
+        for index, detail in enumerate(detail_registry):
+            path = f"reality_detail_registry[{index}]"
+            require_keys(detail, {"detail_atom_id", "hypothesis_id", "method_id", "domain", "text"}, path, errors)
+            if not isinstance(detail, dict):
+                continue
+            detail_id = str(detail.get("detail_atom_id", ""))
+            hypothesis_id = str(detail.get("hypothesis_id", ""))
+            source_hypothesis = hypothesis_by_id.get(hypothesis_id)
+            if detail_id in detail_by_id:
+                errors.append(f"{path}.detail_atom_id 不能重复")
+            detail_by_id[detail_id] = detail
+            if not source_hypothesis:
+                errors.append(f"{path}.hypothesis_id 不存在")
+            elif detail.get("method_id") != hypothesis_to_method.get(hypothesis_id) or detail.get("domain") != source_hypothesis.get("domain"):
+                errors.append(f"{path} 的方法或领域与来源候选不一致")
+            elif detail.get("text") not in (source_hypothesis.get("observable_indicators") or []):
+                errors.append(f"{path}.text 必须逐字来自来源候选的可观察表现")
+        if set(detail_by_id) != expected_detail_ids:
+            errors.append("reality_detail_registry 必须完整且仅包含九方法可观察表现")
     excluded_methods = set(method_by_id) - completed_methods
     failed_methods = {method_id for method_id, item in method_by_id.items() if item.get("status") in {"blocked_input", "generation_failed"}}
     completed_primary = completed_methods & PRIMARY_METHODS
@@ -717,7 +748,7 @@ def validate(data: Any) -> list[str]:
     else:
         for index, claim in enumerate(claims):
             path = f"report_claim_ledger[{index}]"
-            require_keys(claim, {"claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family", "claim", "plain_claim", "new_information", "mechanism_chain", "evidence_ids", "supporting_methods", "synthesis_ids", "method_hypothesis_ids", "claim_class", "report_role", "coverage_tags", "applicable_conditions", "reality_confirmation", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin"}, path, errors)
+            require_keys(claim, {"claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family", "claim", "plain_claim", "human_explanation", "new_information", "mechanism_chain", "evidence_ids", "supporting_methods", "synthesis_ids", "method_hypothesis_ids", "claim_class", "report_role", "coverage_tags", "applicable_conditions", "reality_confirmation", "source_detail_atom_ids", "observable_scenes", "helpful_effects", "possible_costs", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin"}, path, errors)
             if not isinstance(claim, dict):
                 continue
             claim_id = claim.get("claim_id")
@@ -737,6 +768,30 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"{path}.plain_claim 必须是带句末标点的完整判断句")
             if isinstance(claim.get("plain_claim"), str) and "您" in claim["plain_claim"]:
                 errors.append(f"{path}.plain_claim 必须统一使用第二人称‘你’，不得使用‘您’")
+            if not isinstance(claim.get("human_explanation"), str) or len(claim.get("human_explanation", "").strip()) < 20:
+                errors.append(f"{path}.human_explanation 必须把判断解释成普通人能认出的现实中文")
+            if any(token in str(claim.get("new_information", "")) for token in ("补充具体表现", "补充本领域", "成立条件", "新增信息")):
+                errors.append(f"{path}.new_information 不能使用机械占位说明")
+            detail_ids = claim.get("source_detail_atom_ids")
+            if not isinstance(detail_ids, list) or not 1 <= len(detail_ids) <= 6 or len(detail_ids) != len(set(detail_ids)):
+                errors.append(f"{path}.source_detail_atom_ids 必须包含1—6个不同的现实细节")
+            scenes = claim.get("observable_scenes")
+            if not isinstance(scenes, list) or not scenes:
+                errors.append(f"{path}.observable_scenes 至少保留一个来自方法候选的生活场景")
+            if claim.get("allowed_examples") != scenes:
+                errors.append(f"{path}.allowed_examples 必须由冻结现实细节确定性生成")
+            if isinstance(detail_ids, list):
+                unknown_details = sorted(set(detail_ids) - set(detail_by_id))
+                if unknown_details:
+                    errors.append(f"{path}.source_detail_atom_ids 引用了不存在的现实细节：{unknown_details}")
+                for detail_id in set(detail_ids) & set(detail_by_id):
+                    detail = detail_by_id[detail_id]
+                    if detail.get("hypothesis_id") not in set(claim.get("method_hypothesis_ids") or []):
+                        errors.append(f"{path}.{detail_id} 不属于本判断引用的方法候选")
+                    if detail.get("domain") != claim.get("domain"):
+                        errors.append(f"{path}.{detail_id} 与判断领域不一致")
+            if not (claim.get("helpful_effects") or claim.get("possible_costs")):
+                errors.append(f"{path} 至少说明这项特点带来的帮助或代价")
             evidence_ids = set(claim.get("evidence_ids") or [])
             unknown_evidence = sorted(evidence_ids - set(evidence_by_id))
             if unknown_evidence:
@@ -858,6 +913,43 @@ def validate(data: Any) -> list[str]:
         if not (thesis_layers & {"annual", "luck_cycle"}) or len(thesis_layers - {"user_fact", "social_prior"}) < 2:
             errors.append("portrait_thesis 必须同时包含原局/交叉方法与大运流年证据")
 
+    spine = data.get("interpretive_spine")
+    require_keys(spine, {"summary", "core_patterns", "card_copy"}, "interpretive_spine", errors)
+    if isinstance(spine, dict):
+        patterns = spine.get("core_patterns")
+        if not isinstance(patterns, list) or not 1 <= len(patterns) <= 4:
+            errors.append("interpretive_spine.core_patterns 必须包含1—4条有证据的人生核心模式")
+        else:
+            pattern_ids: set[str] = set()
+            for index, pattern in enumerate(patterns):
+                path = f"interpretive_spine.core_patterns[{index}]"
+                require_keys(pattern, {"pattern_id", "headline", "user_explanation", "innate_capabilities", "learned_strategies", "current_costs", "development_direction", "domain_manifestations", "claim_ids", "source_detail_atom_ids", "confidence"}, path, errors)
+                if not isinstance(pattern, dict):
+                    continue
+                pattern_id = str(pattern.get("pattern_id", ""))
+                if pattern_id in pattern_ids:
+                    errors.append(f"{path}.pattern_id 不能重复")
+                pattern_ids.add(pattern_id)
+                unknown_claims = sorted(set(pattern.get("claim_ids") or []) - claim_ids)
+                unknown_details = sorted(set(pattern.get("source_detail_atom_ids") or []) - set(detail_by_id))
+                if unknown_claims:
+                    errors.append(f"{path}.claim_ids 引用了不存在的判断：{unknown_claims}")
+                if unknown_details:
+                    errors.append(f"{path}.source_detail_atom_ids 引用了不存在的现实细节：{unknown_details}")
+                manifestations = pattern.get("domain_manifestations") or {}
+                supported_domains = [domain for domain, values in manifestations.items() if values]
+                if len(supported_domains) < 2:
+                    errors.append(f"{path} 至少说明同一模式在两个现实领域中的不同表现")
+        card_copy = spine.get("card_copy")
+        require_keys(card_copy, {"structure_text", "life_theme_text"}, "interpretive_spine.card_copy", errors)
+        if isinstance(card_copy, dict):
+            for key in ("structure_text", "life_theme_text"):
+                text = str(card_copy.get(key, "")).strip()
+                if not text.endswith(("。", "！", "？")):
+                    errors.append(f"interpretive_spine.card_copy.{key} 必须是完整句子")
+                if any(term in text for term in ("可通过", "核对", "另一面是", "成果悬置", "评价结算", "重新归档")):
+                    errors.append(f"interpretive_spine.card_copy.{key} 含内部提示或不完整的AI表达")
+
     linkage_ids: set[str] = set()
     linkages = data.get("domain_linkage_chains")
     if not isinstance(linkages, list) or not 3 <= len(linkages) <= 6:
@@ -964,7 +1056,7 @@ def validate(data: Any) -> list[str]:
         domains: set[str] = set()
         for index, candidate in enumerate(candidates):
             path = f"reality_candidate_pool[{index}]"
-            require_keys(candidate, {"candidate_id", "domain", "reality_dimension", "parent_category", "label", "attributes", "candidate_kind", "time_scope", "calibration_targets", "statement", "observable_examples", "alternative_statement", "counterevidence", "unsupported_extensions", "source_layers", "evidence_ids", "related_claim_ids", "relation_ids", "confidence", "validation_question", "status"}, path, errors)
+            require_keys(candidate, {"candidate_id", "domain", "reality_dimension", "parent_category", "label", "attributes", "candidate_kind", "time_scope", "calibration_targets", "statement", "observable_examples", "alternative_statement", "counterevidence", "unsupported_extensions", "source_layers", "evidence_ids", "related_claim_ids", "relation_ids", "confidence", "validation_question", "answerable_time_scope", "answerable_observation", "answerable_alternative", "status"}, path, errors)
             if isinstance(candidate, dict) and isinstance(candidate.get("candidate_id"), str):
                 ids.append(candidate["candidate_id"])
             if isinstance(candidate, dict) and isinstance(candidate.get("domain"), str):
@@ -980,9 +1072,18 @@ def validate(data: Any) -> list[str]:
                     errors.append(f"{path}.observable_examples 必须包含2—3条不同的可观察表现")
                 statement = candidate.get("statement")
                 alternative = candidate.get("alternative_statement")
-                for visible_key in ("statement", "alternative_statement", "validation_question"):
+                for visible_key in ("statement", "alternative_statement", "validation_question", "answerable_observation", "answerable_alternative"):
                     if "您" in str(candidate.get(visible_key, "")):
                         errors.append(f"{path}.{visible_key} 必须统一使用第二人称‘你’，不得使用‘您’")
+                for visible_key in ("validation_question", "answerable_observation", "answerable_alternative"):
+                    value = str(candidate.get(visible_key, ""))
+                    if "是否当前" in value or "是否的" in value or value.rstrip().endswith(("以及", "并且", "另一面是")):
+                        errors.append(f"{path}.{visible_key} 不是完整自然的中文")
+                analysis_year = int(str(meta.get("analysis_as_of", "0000"))[:4]) if isinstance(meta, dict) else 0
+                answerable_text = " ".join(str(candidate.get(key, "")) for key in ("answerable_time_scope", "answerable_observation", "answerable_alternative"))
+                future_years = [int(value) for value in re.findall(r"(?<!\d)(20\d{2})(?!\d)", answerable_text) if int(value) > analysis_year]
+                if future_years:
+                    errors.append(f"{path} 的校准专用内容包含尚未发生的年份：{sorted(set(future_years))}")
                 for example_index, example in enumerate(candidate.get("observable_examples") or []):
                     if "您" in str(example):
                         errors.append(f"{path}.observable_examples[{example_index}] 必须统一使用第二人称‘你’，不得使用‘您’")
@@ -1116,7 +1217,7 @@ def self_test_fixture() -> dict[str, Any]:
     resource = {"acquire": [], "preserve": [], "exchange": [], "amplify": [], "loss_risks": [], "findings": []}
     annual = {"year": 2026, "age": 36, "luck_cycle_index": 0, "year_theme": "自检", "luck_theme_link": "自检", "activation_mechanisms": [], "natal_reactions": [], "change_intensity": "low", "direction": "consolidation", "domain_impacts": [], "domain_connections": [], "human_actions": [], "social_feedback": [], "carry_in": [], "carry_out": [], "seed_for_next": [], "confidence": "to_verify", "alternatives": [], "validation": []}
     candidate_domains = ["career", "finance_resources", "love_partner", "family_growth", "body_emotion", "self_growth", "career", "finance_resources", "love_partner", "family_growth", "body_emotion", "self_growth", "career", "finance_resources", "love_partner", "family_growth", "body_emotion", "self_growth"]
-    candidate = lambda number: {"candidate_id": f"c{number}", "domain": candidate_domains[number - 1], "reality_dimension": f"candidate_axis_{number}", "parent_category": f"candidate_group_{number}", "label": f"候选侧面{number}", "attributes": [f"属性{number}"], "candidate_kind": "timed_event" if number == 6 else "objective_state" if number == 2 else "current_stage" if number == 12 else "stable_pattern", "time_scope": "过去五年" if number == 6 else "当前阶段" if number == 12 else "原局长期", "calibration_targets": ["reality_domains"], "statement": f"用于验证第{number}个现实侧面的自检陈述", "observable_examples": [f"第{number}个可观察例子甲", f"第{number}个可观察例子乙"], "alternative_statement": f"第{number}个候选也可能有另一种解释", "counterevidence": [], "unsupported_extensions": ["不能据此断定具体职业"], "source_layers": ["annual", "cross_method"] if number == 6 else ["chart", "cross_method"], "evidence_ids": [f"evidence_{number}", f"evidence_{1 if number == 24 else number + 1}"], "related_claim_ids": [f"claim_self_{number}"], "relation_ids": [f"relation_{(number - 1) // 3 + 1}"], "confidence": "to_verify", "validation_question": "哪个现实侧面更接近实际？", "status": "unverified"}
+    candidate = lambda number: {"candidate_id": f"c{number}", "domain": candidate_domains[number - 1], "reality_dimension": f"candidate_axis_{number}", "parent_category": f"candidate_group_{number}", "label": f"候选侧面{number}", "attributes": [f"属性{number}"], "candidate_kind": "timed_event" if number == 6 else "objective_state" if number == 2 else "current_stage" if number == 12 else "stable_pattern", "time_scope": "过去五年" if number == 6 else "当前阶段" if number == 12 else "原局长期", "calibration_targets": ["reality_domains"], "statement": f"用于验证第{number}个现实侧面的自检陈述", "observable_examples": [f"第{number}个可观察例子甲", f"第{number}个可观察例子乙"], "alternative_statement": f"第{number}个候选也可能有另一种解释", "counterevidence": [], "unsupported_extensions": ["不能据此断定具体职业"], "source_layers": ["annual", "cross_method"] if number == 6 else ["chart", "cross_method"], "evidence_ids": [f"evidence_{number}", f"evidence_{1 if number == 24 else number + 1}"], "related_claim_ids": [f"claim_self_{number}"], "relation_ids": [f"relation_{(number - 1) // 3 + 1}"], "confidence": "to_verify", "validation_question": "哪个现实侧面更接近实际？", "answerable_time_scope": "2022年至2026年" if number == 6 else "当前或长期", "answerable_observation": f"过去或现在出现第{number}种可以回想的现实表现", "answerable_alternative": f"过去或现在更接近第{number}种相反表现", "status": "unverified"}
     partner_profile = {"summary": "自检", "traits": [], "mechanism": [], "benefits": [], "costs": [], "evidence_strength": "insufficient", "alternatives": [], "validation": [], "findings": []}
     complete_self_portrait = {
         "summary": "自检",
@@ -1298,6 +1399,19 @@ def self_test_fixture() -> dict[str, Any]:
             "limitations": ["本方法不能单独保证具体事件"],
         })
 
+    reality_detail_registry = [
+        {
+            "detail_atom_id": f"detail_{hypothesis['hypothesis_id']}_{detail_index}",
+            "hypothesis_id": hypothesis["hypothesis_id"],
+            "method_id": method["method_id"],
+            "domain": hypothesis["domain"],
+            "text": detail,
+        }
+        for method in independent_methods
+        for hypothesis in method["reality_hypotheses"]
+        for detail_index, detail in enumerate(hypothesis["observable_indicators"], 1)
+    ]
+
     synthesis_pairs = [
         (("pattern_structure", 1), ("momentum_configuration", 1)),
         (("climate_adjustment", 1), ("ten_god_dynamics", 1)),
@@ -1382,7 +1496,8 @@ def self_test_fixture() -> dict[str, Any]:
             "mechanism_family": f"mechanism_{(number - 1) % 3 + 1}",
             "claim": f"{domain_labels[domain]}的第{local_index}项内部自检判断",
             "plain_claim": f"你在{domain_labels[domain]}方面可能呈现第{local_index}种可核对的独立表现。",
-            "new_information": f"{domain_labels[domain]}新增信息{local_index}",
+            "human_explanation": f"这一判断说明你在{domain_labels[domain]}的真实场景中可能怎样行动，以及这种做法会带来什么影响。",
+            "new_information": f"说明{domain_labels[domain]}第{local_index}种现实行为与其他侧面的区别",
             "mechanism_chain": ["读取独立方法现实候选", "经综合层形成报告判断"],
             "evidence_ids": evidence_ids,
             "supporting_methods": method_ids,
@@ -1393,7 +1508,11 @@ def self_test_fixture() -> dict[str, Any]:
             "coverage_tags": [BASE_COVERAGE[(local_index - 1) % len(BASE_COVERAGE)]],
             "applicable_conditions": ["对应现实条件成立"],
             "reality_confirmation": "unverified",
-            "allowed_examples": ["可观察行为"],
+            "source_detail_atom_ids": [f"detail_{hypothesis_ids[0]}_1"],
+            "observable_scenes": [f"{hypothesis_ids[0].removeprefix('mh_').rsplit('_', 1)[0]}表现{hypothesis_ids[0].rsplit('_', 1)[1]}A"],
+            "helpful_effects": ["帮助你把这一类事情处理得更完整"],
+            "possible_costs": ["条件不清楚时可能增加反复确认"],
+            "allowed_examples": [f"{hypothesis_ids[0].removeprefix('mh_').rsplit('_', 1)[0]}表现{hypothesis_ids[0].rsplit('_', 1)[1]}A"],
             "counterevidence": [],
             "confidence": confidence,
             "unsupported_extensions": ["不能据此断定唯一现实结果"],
@@ -1402,7 +1521,7 @@ def self_test_fixture() -> dict[str, Any]:
         }
 
     data = {
-        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.15.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
+        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.16.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
         "chart_facts": {"day_master": "甲", "pillars": {"year": pillar, "month": pillar, "day": {**pillar, "stem_ten_god": "日主"}, "hour": pillar}, "luck_cycles": [{}], "annual_cycles": [{}]},
         "chart_audit": {"status": "pass", "checks": [], "boundary_dependencies": [], "versions": []},
         "social_context_model": empty_section(),
@@ -1453,6 +1572,7 @@ def self_test_fixture() -> dict[str, Any]:
             {"evidence_id": f"evidence_{i}", "source_layer": source_layers.get(evidence_method_sequence[i - 1], "cross_method"), "method": evidence_method_sequence[i - 1], "method_id": evidence_method_sequence[i - 1], "independence_group": method_groups[evidence_method_sequence[i - 1]], "chart_refs": ["chart_facts.pillars"], "observation": f"自检结构观察{i}", "interpretation": "仅用于校验实体证据引用关系", "limitations": ["不能外推具体职业"], "confidence": "to_verify"}
             for i in range(1, 25)
         ],
+        "reality_detail_registry": reality_detail_registry,
         "root_seed_flower_fruit_map": {"summary": "自检", "root": empty_section(), "seedling": empty_section(), "flower": empty_section(), "fruit": empty_section(), "continuity": ["根与苗跨阶段连续", "花与果在当前同时作用", "成果进入下一轮传承"], "domain_lifecycles": [
             {"domain": "career", "root": "专业基础", "seedling": "技能训练", "flower": "方案呈现", "fruit": "项目成果", "continuity": "专业基础经训练转化为方案和成果", "evidence_ids": ["evidence_9", "evidence_10"], "confidence": "to_verify"},
             {"domain": "finance_resources", "root": "资源来源", "seedling": "获取能力", "flower": "收入表现", "fruit": "资产留存", "continuity": "资源来源经能力转化为收入和留存", "evidence_ids": ["evidence_9", "evidence_10"], "confidence": "to_verify"},
@@ -1480,6 +1600,29 @@ def self_test_fixture() -> dict[str, Any]:
             for i in range(1, 4)
         ],
         "portrait_thesis": {"summary": "这是用于检验完整人物主轴、另一面、矛盾和当前变化是否同时存在的自检内容。", "primary_traits": ["先确认条件再行动", "重视专业积累"], "complementary_traits": ["条件明确时也能快速推进"], "internal_tensions": ["稳定准备与主动尝试并存"], "observable_patterns": ["先列步骤", "交付前核对", "在熟悉领域主动表达"], "formation_chain_ids": ["formation_1", "formation_2"], "current_shift": "当前阶段开始增加主动表达和尝试", "evidence_ids": ["evidence_1", "evidence_3", "evidence_9", "evidence_13"], "boundaries": ["不能指定具体职业"]},
+        "interpretive_spine": {
+            "summary": "你会先把陌生事情的要求弄清楚，再形成自己的做法；这种习惯带来可靠，也可能增加反复确认。",
+            "core_patterns": [{
+                "pattern_id": "pattern_clarity_before_action",
+                "headline": "先弄清楚怎样做好，再开始行动",
+                "user_explanation": "面对陌生事情时，你会先看清要求和容易出错的地方。等这些内容清楚以后，你通常能够稳定推进。",
+                "innate_capabilities": ["能够整理复杂信息"],
+                "learned_strategies": ["开始前先确认要求"],
+                "current_costs": ["没有明确标准时容易反复确认"],
+                "development_direction": "允许自己先做一个小范围尝试，再根据现实反馈调整。",
+                "domain_manifestations": {
+                    "self_growth": ["面对陌生事情时先列出步骤"],
+                    "career": ["开始任务前先确认完成标准"]
+                },
+                "claim_ids": ["claim_self_1", "claim_self_17"],
+                "source_detail_atom_ids": ["detail_mh_pattern_structure_1_1", "detail_mh_root_seed_flower_fruit_1_1"],
+                "confidence": "high"
+            }],
+            "card_copy": {
+                "structure_text": "你习惯先把复杂事情理清楚，找到顺序以后再稳定推进。",
+                "life_theme_text": "这让你做事可靠，也提醒你在没有标准答案时，允许自己先走一步。"
+            }
+        },
         "domain_linkage_chains": [
             {"chain_id": f"linkage_{i}", "trigger": "责任增加", "transmission": ["提高稳定需求", "减少快速变化"], "affected_domains": ["career", "finance_resources"], "time_lag": "逐步出现", "amplifiers": [], "buffers": [], "claim_ids": ["claim_self_1", "claim_self_2"], "confidence": "to_verify"}
             for i in range(1, 4)

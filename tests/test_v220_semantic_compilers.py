@@ -11,8 +11,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "skills/rensheng-youji-growth-map/scripts"))
 sys.path.insert(0, str(ROOT / "internal/rensheng-youji-chinese-editor/scripts"))
+sys.path.insert(0, str(ROOT / "internal/rensheng-youji-report-writer/scripts"))
 
 from build_calibration_questions import build as build_questions  # noqa: E402
+from build_report_writing_pack import _narrative_buckets  # noqa: E402
 from compile_calibration_delta import compile_delta  # noqa: E402
 from compile_final_report import compile_report, digest as report_digest  # noqa: E402
 from core_baseline import digest  # noqa: E402
@@ -55,7 +57,7 @@ def calibration_baseline() -> dict:
             "status": "unverified",
         })
     return {
-        "analysis_meta": {"analysis_id": "v220-calibration", "core_version": "0.15.0"},
+        "analysis_meta": {"analysis_id": "v220-calibration", "core_version": "0.16.0", "analysis_as_of": "2026-09-07"},
         "reality_candidate_pool": candidates,
         "report_claim_ledger": claims,
     }
@@ -80,6 +82,16 @@ def editorial_draft() -> dict:
 
 
 class V220SemanticCompilerTest(unittest.TestCase):
+    def test_shortened_section_claims_are_balanced_across_paragraphs(self) -> None:
+        claim_index = {
+            f"claim_{number}": {"coverage_tags": ["feature"]}
+            for number in range(1, 5)
+        }
+
+        buckets = _narrative_buckets(list(claim_index), claim_index, 2)
+
+        self.assertEqual([len(bucket) for bucket in buckets], [2, 2])
+
     def test_questions_are_bound_to_the_exact_frozen_baseline(self) -> None:
         baseline = calibration_baseline()
         questions = build_questions(baseline, "事业")
@@ -95,6 +107,26 @@ class V220SemanticCompilerTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "校准题没有绑定"):
             compile_delta(baseline, lock, tampered, answers)
 
+    def test_calibration_never_asks_the_user_to_verify_future_years(self) -> None:
+        baseline = calibration_baseline()
+        future = copy.deepcopy(baseline["reality_candidate_pool"][0])
+        future.update({
+            "candidate_id": "future_2030", "domain": "self_growth",
+            "candidate_kind": "timed_event", "reality_dimension": "future_axis",
+            "answerable_time_scope": "2029年至2030年",
+            "answerable_observation": "2030年你已经完成职业调整。",
+            "answerable_alternative": "2030年你仍保留原来的方向。",
+            "related_claim_ids": ["claim_future"],
+        })
+        baseline["reality_candidate_pool"].append(future)
+        baseline["report_claim_ledger"].append({"claim_id": "claim_future", "claim_class": "calibration_pending"})
+
+        questions = build_questions(baseline)
+
+        visible = json.dumps([item["display"] for item in questions["questions"]], ensure_ascii=False)
+        self.assertNotIn("2030", visible)
+        self.assertNotIn("future_2030", {item["audit"]["candidate_ids"][0] for item in questions["questions"]})
+
     def test_question_selector_does_not_hide_a_needed_lower_ranked_domain(self) -> None:
         baseline = calibration_baseline()
         candidates = []
@@ -107,6 +139,9 @@ class V220SemanticCompilerTest(unittest.TestCase):
                 "candidate_id": f"pool_{index:02d}", "domain": domain, "candidate_kind": kind,
                 "reality_dimension": f"pool_axis_{index}", "related_claim_ids": [f"pool_claim_{index:02d}"],
                 "confidence": "high" if index < 19 else "to_verify",
+                "answerable_time_scope": "过去五年" if kind == "timed_event" else "当前及过去",
+                "answerable_observation": f"第{index}种已经发生的表现。",
+                "answerable_alternative": f"第{index}种表现并不常见。",
             })
             candidates.append(candidate)
             claims.append({
@@ -163,6 +198,17 @@ class V220SemanticCompilerTest(unittest.TestCase):
         _, review = apply_editorial(draft, problem_scan, complete)
         self.assertEqual(review["scan_status"], "repair_required")
 
+    def test_natural_chinese_scan_flags_ai_terms_and_defensive_phrasing(self) -> None:
+        draft = editorial_draft()
+        draft["dimensions"][2]["source_claim_ids"] = ["career_claim"]
+        draft["dimensions"][2]["paragraphs"] = ["事业上的主要问题不是没有能力，而是成果悬置以后无法形成价值闭环。"]
+
+        result = scan(draft)
+
+        issue = next(item for item in result["issues"] if item["slot_id"] == "career:1")
+        self.assertIn("AI黑话或生造表达", issue["reasons"])
+        self.assertIn("高频防御性或先否定后解释句式", issue["reasons"])
+
     def test_report_semantic_summary_has_no_unused_duplicate_fields(self) -> None:
         schema = json.loads((ROOT / "internal/rensheng-youji-report-writer/schemas/report-semantic-patch.schema.json").read_text(encoding="utf-8"))
         summary = schema["properties"]["summary"]
@@ -202,7 +248,7 @@ class V220SemanticCompilerTest(unittest.TestCase):
 
     def test_final_report_uses_only_the_semantic_text_bound_by_editor(self) -> None:
         analysis = {
-            "analysis_meta": {"analysis_id": "report-v220", "core_version": "0.15.0", "analysis_as_of": "2026-09-07"},
+            "analysis_meta": {"analysis_id": "report-v220", "core_version": "0.16.0", "analysis_as_of": "2026-09-07"},
             "chart_facts": {"pillars": [{"stem": "甲", "branch": "戌"}] * 4},
             "chart_audit": {"boundary_dependencies": []},
             "reality_candidate_pool": [],
@@ -228,7 +274,7 @@ class V220SemanticCompilerTest(unittest.TestCase):
         questions = {"schema_version": "3.0.0", "template_version": "2.0.0", "source": {"analysis_id": "report-v220", "baseline_sha256": baseline_sha}}
         delta = {"analysis_id": "report-v220", "baseline_sha256": baseline_sha, "responses": [{}] * 5, "candidate_updates": []}
         free_card = {
-            "source": {"analysis_id": "report-v220", "core_version": "0.15.0", "calibrated_sha256": analysis_hash, "resolved_source_sha256": resolved["resolved_sha256"]},
+            "source": {"analysis_id": "report-v220", "core_version": "0.16.0", "calibrated_sha256": analysis_hash, "resolved_source_sha256": resolved["resolved_sha256"]},
             "trend_panel": {"years": []},
         }
         review = {

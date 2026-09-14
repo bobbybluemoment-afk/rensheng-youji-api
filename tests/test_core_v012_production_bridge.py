@@ -25,7 +25,7 @@ from validate_analysis_output import self_test_fixture  # noqa: E402
 DETERMINISTIC = {
     "analysis_meta", "chart_facts", "chart_audit", "independent_method_analyses",
     "method_execution_audit", "source_coverage_audit", "evidence_registry", "report_source_bundle",
-    "calibration_state", "calibration_delta",
+    "reality_detail_registry", "calibration_state", "calibration_delta",
 }
 
 
@@ -239,7 +239,7 @@ class CoreV012ProductionBridgeTest(unittest.TestCase):
         self.assertEqual(second_errors, [])
         self.assertEqual(first, second)
         self.assertIn("report_source_bundle", first)
-        self.assertEqual(first["analysis_meta"]["core_version"], "0.15.0")
+        self.assertEqual(first["analysis_meta"]["core_version"], "0.16.0")
 
     def test_documented_cli_bridge_writes_a_complete_core(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-core-bridge-") as temp_dir:

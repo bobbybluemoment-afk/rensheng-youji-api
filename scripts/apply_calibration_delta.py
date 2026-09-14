@@ -89,12 +89,28 @@ def apply_patch(baseline: dict[str, Any], lock: dict[str, Any], patch: dict[str,
             status = "uncertain"
             candidate["status"] = status
         groups[GROUP_FOR_STATUS[status]].append(candidate["candidate_id"])
+    response_summaries = []
+    for index, response in enumerate(patch.get("responses", []), 1):
+        number = response.get("question_number")
+        choice = response.get("choice")
+        if number is not None and choice is not None:
+            response_summaries.append(f"第{number}题选择{choice}")
+        else:
+            # Preserve compatibility with baseline locks produced before the
+            # fixed five-question compiler introduced question_number/choice.
+            legacy_id = response.get("question_id", f"校准更新{index}")
+            legacy_choice = response.get("selected_value", "已记录")
+            response_summaries.append(f"{legacy_id}选择{legacy_choice}")
     result["calibration_state"] = {
         "confirmed": groups["confirmed"],
         "partial": groups["conditional"] + groups["weakened"],
         "rejected": groups["rejected"],
         "uncertain": groups["uncertain"],
-        "updates": patch.get("responses", []),
+        # calibration_state is the compact Core status index.  The complete
+        # structured responses remain in calibration-delta.json for the report
+        # compiler; keeping only summaries here matches the Core schema and
+        # avoids duplicating user-visible calibration content inside the Core.
+        "updates": response_summaries,
     }
     result["calibration_delta"] = {
         "baseline_preserved": True,

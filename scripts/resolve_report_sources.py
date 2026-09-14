@@ -193,8 +193,8 @@ def _focused_current_source(
 
 def resolve(analysis: dict[str, Any], focus: str = "") -> dict[str, Any]:
     meta = analysis.get("analysis_meta") or {}
-    if meta.get("core_version") not in {"0.14.0", "0.15.0"}:
-        raise ValueError("Post-calibration source resolution requires core_version=0.14.0 or 0.15.0")
+    if meta.get("core_version") not in {"0.14.0", "0.15.0", "0.16.0"}:
+        raise ValueError("Post-calibration source resolution requires core_version=0.14.0—0.16.0")
     if analysis.get("method_execution_audit", {}).get("delivery_decision") == "preliminary_only":
         raise ValueError("preliminary_only Core cannot enter full report source resolution")
     ledger = {item.get("claim_id"): item for item in analysis.get("report_claim_ledger") or [] if isinstance(item, dict)}
