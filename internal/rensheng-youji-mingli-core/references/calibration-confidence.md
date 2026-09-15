@@ -23,7 +23,7 @@
 
 每条候选至少包含一个真实方法来源；只有标记高置信度时才必须包含两个独立主要方法视角。候选还应包含 `root_seed_flower_fruit_map`、`resource_relationship`、`cross_method_analysis`、`luck_cycle_themes`、`annual_theme_activation` 或 `domain_connections` 中适用的一项。日主旺衰可以参与判断，但不能单独支撑现实候选。
 
-Core 0.16.0 先完成逐方法校验、生产桥汇总、`method_execution_audit`、`source_coverage_audit`、`independent_method_analyses` 和 `method_synthesis`。多方法一致只提高结构置信度，不能替代现实确认。校准优先核对待校准判断、条件判断、区分度高的独立补充与阶段判断；不得重复询问已经现实明确支持的内容。
+Core 0.17.0 先完成逐方法校验、生产桥汇总、`method_execution_audit`、`source_coverage_audit`、`independent_method_analyses` 和 `method_synthesis`。多方法一致只提高结构置信度，不能替代现实确认。校准优先核对待校准判断、条件判断、区分度高的独立补充与阶段判断；不得重复询问已经现实明确支持的内容。冻结前必须由正式选题程序证明候选池可以组成固定五题；若不满足四领域、时间题与客观题组合，先返修候选池，不能先冻结再停止。
 
 每个候选必须另外给出 `answerable_time_scope`、`answerable_observation` 和 `answerable_alternative`。三者只能描述截至分析日已经发生或当前能够观察的内容。未来趋势可以保留在Core时运判断中，但不能拿来问用户“未来几年是否发生”；程序会拒绝包含分析年份之后年份的校准候选。
 

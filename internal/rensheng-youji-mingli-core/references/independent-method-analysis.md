@@ -41,7 +41,11 @@
 
 ## 每种方法的两层输出
 
-每种方法只读取 `build_method_prompt_packs.py` 生成的本方法短提示包。AI输出必须符合 `schemas/method-semantic-patch.schema.json`，只保留真正需要判断的技术结论、现实候选、未支持领域理由和方法限制。方法身份、输入哈希、稳定编号、证据登记、现实确认初始状态和六领域候选编号映射由 `compile_method_packets.py` 确定性补齐。编译后的正式方法包仍只使用 `schemas/method-packet.schema.json`，下游接口不变。
+每种方法只读取 `build_method_prompt_packs.py` 生成的本方法短提示包。AI输出必须符合 `schemas/method-semantic-patch.schema.json`，只保留真正需要判断的重要结构检查、技术结论、现实候选、未支持领域理由和方法限制。方法身份、输入哈希、稳定编号、证据登记、现实确认初始状态和六领域候选编号映射由 `compile_method_packets.py` 确定性补齐。现实候选沿用来源技术结论的成立条件、反证、禁止外推与时间范围时可以省略重复字段，由编译器继承。编译后的正式方法包仍只使用 `schemas/method-packet.schema.json`，下游接口不变。
+
+### 重要结构检查
+
+每个方法有一张不同的短检查表。判断一项是否重要只问一个问题：如果把它拿掉，本方法的技术结论或现实判断是否会改变。会改变则标为 `material`；只在特定条件下改变则标为 `conditional`；确实不改变才标为 `background` 并说明原因。重要或条件结构必须同时连接技术结论序号和实际受到影响的现实领域。达到最低结论数不代表方法已经完成；只有检查表逐项交代且全部重要结构已经投影，METHOD GATE才通过。
 
 ### 技术结论
 
@@ -76,7 +80,7 @@
 - `insufficient_evidence`：本方法实际检查过，但不足以形成现实候选；
 - `not_applicable`：该领域超出本方法在本盘中的合理推演范围。
 
-十神动力、宫位六亲、干支动力、盲派和岁运连续性是 `love_partner` 锚点方法，必须在 `supported` 与 `insufficient_evidence` 中二选一，不得用 `not_applicable` 跳过。领域检查用于证明“分析过”，不是要求每种方法硬写六条候选。每个领域允许0—5条候选，不设最低数量；完整方法通常保留8—14条候选，证据少时允许更少，总数最多18条、技术结论最多12条。
+十神动力、宫位六亲、干支动力、盲派和岁运连续性是 `love_partner` 锚点方法，必须在 `supported` 与 `insufficient_evidence` 中二选一，不得用 `not_applicable` 跳过。领域检查用于证明“分析过”，不是要求每种方法硬写六条候选。每个领域允许0—5条候选，不设最低数量；现实候选总数最多18条、技术结论最多12条。数量不作为停止条件，也不作为完整性的替代品。
 
 ## 现实综合
 

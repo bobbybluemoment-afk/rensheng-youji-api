@@ -14,6 +14,7 @@ from method_input_contract import (
     build_method_input_view,
     canonical_digest,
 )
+from method_structure_contract import compact_checks
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -53,6 +54,8 @@ def build(method_input: dict, method_id: str, manifest: dict) -> tuple[str, dict
         "本提示包已经从完整规则中按方法提炼。运行时不要再读取完整Core Skill、其他方法提示、完整Core Schema、校准或报告文件。",
         common_path.read_text(encoding="utf-8").strip(),
         guide_path.read_text(encoding="utf-8").strip(),
+        "## 本方法结构检查表\n\n逐项完成下列检查。`material`和`conditional`必须连接技术结论及其全部现实投影；`background`必须具体说明检查结果和停止原因。不得因为达到最低候选数量而提前停止。\n\n```json\n"
+        + json.dumps(compact_checks(method_id), ensure_ascii=False, separators=(",", ":")) + "\n```",
         "## 规则来源回执\n\n" + json.dumps(source_receipt, ensure_ascii=False, indent=2),
         f"## 本次输入画像：{input_profile}\n\n完整主题隔离输入哈希：`{canonical_digest(method_input)}`。本方法只读取以下确定性投影视图；被省略的字段不属于本方法任务，不得自行补算或读取其他文件。",
         "## 本次唯一输入：method-input-view.json\n\n```json\n" + compact_input + "\n```",

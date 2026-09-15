@@ -40,7 +40,7 @@ def validate(data: Any, analysis: Any) -> list[str]:
     candidates = {item["candidate_id"]: item for item in analysis.get("reality_candidate_pool") or [] if isinstance(item, dict)}
     claims = {item["claim_id"]: item for item in analysis.get("report_claim_ledger") or [] if isinstance(item, dict)}
     analysis_year = int(str(analysis.get("analysis_meta", {}).get("analysis_as_of", "0000"))[:4])
-    strict_semantics = analysis.get("analysis_meta", {}).get("core_version") == "0.16.0"
+    strict_semantics = analysis.get("analysis_meta", {}).get("core_version") in {"0.16.0", "0.17.0"}
     domains: list[str] = []
     kinds: list[str] = []
     axes: list[tuple[str, str]] = []

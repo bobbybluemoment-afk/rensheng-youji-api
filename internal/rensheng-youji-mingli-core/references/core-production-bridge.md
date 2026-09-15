@@ -53,6 +53,8 @@ python scripts/run_in_env.py scripts/prepare_core_synthesis.py analysis-input.js
 
 综合判断必须引用方法包中真实存在的现实候选与证据。主要判断需要两个独立主要方法；单一主要方法只能形成补充或待验证判断。`same_direction` 判断的是同一领域中的实质语义是否同向，不要求两个独立方法事先生成完全相同的 `normalized_direction` 字符串；综合层必须保留成员候选、成员方法、共同指向和归并理由。
 
+每条方法现实候选都必须进入综合簇。未排除综合簇必须进入判断台账，且关联判断合计保留该簇全部成员候选；弱证据与排除是允许的明确去向，静默遗漏不是。现实候选池还必须在冻结前通过正式五题组合检查，确保可以生成固定五道只问过去或当前的题目。
+
 如果 `source_coverage_audit` 标记某个领域没有来源，相关人物区块保留结构并说明证据不足，`reality_candidate_pool` 和 `report_claim_ledger` 不得为该领域补造项目。
 
 ## 第三段：校验与确定性组装

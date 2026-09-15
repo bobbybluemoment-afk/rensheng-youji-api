@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.22.1",
+  "version": "2.23.0",
   "visibility": "internal",
   "stages": [
     {
@@ -39,7 +39,7 @@
     "pages": 10,
     "card_page": 2,
     "report_schema_version": "2.14.0",
-    "core_version": "0.16.0",
+    "core_version": "0.17.0",
     "content_brief_schema_version": "1.6.0",
     "report_draft_schema_version": "1.6.0",
     "editorial_review_version": "2.5.0",
@@ -48,5 +48,5 @@
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "2.22.1统一Core、校准题、中文编辑和终稿语言契约；拒绝建议型、跨领域、跨度过长或捆绑多问题的校准候选；由程序固定补入身体安全提示，并允许自然的‘兑现承诺’。正常运行不新增AI调用。"
+  "notes": "2.23.0为九方法加入方法专属重要结构检查与紧凑现实投影，禁止达到最低条数后浅层停止；Core必须登记每条上游观点的去向，并在冻结前确定性验证可组成固定五道校准题。正常运行不新增AI调用。"
 }

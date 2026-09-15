@@ -16,6 +16,7 @@ from report_source_contract import (
     focus_domain,
     mandatory_candidate_bounds,
     report_total_cjk_bounds,
+    synthesis_disposition_gaps,
 )
 from report_pipeline import STAGES as STATUS_STAGES
 
@@ -92,6 +93,19 @@ def audit(root: Path) -> list[str]:
     }
     if not evidence_retention_gaps(rich_but_lost):
         errors.append("Rich multi-method evidence can still be silently collapsed in Core")
+    disposition_sample = {
+        "independent_method_analyses": [{
+            "method_id": "pattern_structure", "status": "complete",
+            "reality_hypotheses": [{"hypothesis_id": "h1"}, {"hypothesis_id": "h2"}],
+        }],
+        "method_synthesis": {"clusters": [{
+            "synthesis_id": "s1", "member_hypothesis_ids": ["h1", "h2"],
+            "report_role": "supplemental",
+        }]},
+        "report_claim_ledger": [{"synthesis_ids": ["s1"], "method_hypothesis_ids": ["h1"]}],
+    }
+    if not synthesis_disposition_gaps(disposition_sample):
+        errors.append("A method hypothesis can still disappear silently inside a Core synthesis cluster")
 
     one_timing_claim: dict[str, Any] = {
         "report_claim_ledger": [{
@@ -152,6 +166,19 @@ def audit(root: Path) -> list[str]:
     core_validator_text = (root / "internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py").read_text(encoding="utf-8")
     if "evidence_retention_gaps" not in diversity_text or "evidence_retention_gaps" not in core_validator_text:
         errors.append("Core validator and quality audit must share the evidence-retention contract")
+    if "synthesis_disposition_gaps" not in diversity_text or "synthesis_disposition_gaps" not in core_validator_text:
+        errors.append("Core validator and quality audit must share the complete information-disposition contract")
+    selection_contract_text = (root / "scripts/calibration_selection_contract.py").read_text(encoding="utf-8")
+    calibration_builder_text = (root / "skills/rensheng-youji-growth-map/scripts/build_calibration_questions.py").read_text(encoding="utf-8")
+    if not all("calibration_selection_contract" in text for text in (diversity_text, core_validator_text, calibration_builder_text)):
+        errors.append("Core pre-freeze audit and calibration builder must share one five-question selection contract")
+    method_compiler_text = (root / "scripts/compile_method_packets.py").read_text(encoding="utf-8")
+    method_gate_text = (root / "scripts/pipeline_gate.py").read_text(encoding="utf-8")
+    method_validator_text = (root / "internal/rensheng-youji-mingli-core/scripts/validate_method_semantic_patch.py").read_text(encoding="utf-8")
+    if not all("method_structure_contract" in text for text in (method_compiler_text, method_gate_text, method_validator_text)):
+        errors.append("Method compiler, METHOD GATE and semantic validator must share one important-structure contract")
+    if "feasible_sets" not in selection_contract_text or "valid_question_set" not in selection_contract_text:
+        errors.append("The shared calibration selector does not expose one deterministic feasibility rule")
     writing_pack_text = (root / "internal/rensheng-youji-report-writer/scripts/build_report_writing_pack.py").read_text(encoding="utf-8")
     if "narrative_role" not in writing_pack_text or "index % count" in writing_pack_text:
         errors.append("Writing pack must use narrative roles instead of round-robin claim distribution")

@@ -69,7 +69,7 @@ def validate(data: Any, analysis: Any | None = None, resolved: Any | None = None
     if data.get("schema_version") not in {"1.0.0", "1.1.0", "1.2.0", "1.3.0", "1.4.0", "1.5.0", "1.6.0"}:
         errors.append("schema_version 必须为1.0.0—1.6.0中的受支持版本")
     source = data.get("source", {})
-    expected_cores = {"0.9.0", "0.10.0", "0.11.0", "0.12.0", "0.13.0", "0.14.0", "0.15.0", "0.16.0"} if is_v15 else {"0.8.1"} if is_v14 else {"0.8.0"} if is_v13 else {"0.7.0"} if is_v12 else {"0.6.0"} if is_v11 else {"0.5.0"}
+    expected_cores = {"0.9.0", "0.10.0", "0.11.0", "0.12.0", "0.13.0", "0.14.0", "0.15.0", "0.16.0", "0.17.0"} if is_v15 else {"0.8.1"} if is_v14 else {"0.8.0"} if is_v13 else {"0.7.0"} if is_v12 else {"0.6.0"} if is_v11 else {"0.5.0"}
     if source.get("core_version") not in expected_cores:
         errors.append(f"事实提纲必须来自core_version={sorted(expected_cores)}")
     if data.get("focus_scope", {}).get("protected_sections") != ["life_overview", "dimensions"]:
@@ -135,7 +135,7 @@ def validate(data: Any, analysis: Any | None = None, resolved: Any | None = None
             selected = section.get("selected_claims")
             if not isinstance(selected, list) or [item.get("claim_id") for item in selected if isinstance(item, dict)] != claim_ids:
                 errors.append(f"第{index + 1}个内容区必须按claim_ids顺序携带Core判断实体")
-            if source.get("core_version") == "0.16.0" and isinstance(selected, list):
+            if source.get("core_version") in {"0.16.0", "0.17.0"} and isinstance(selected, list):
                 required_explanation = {
                     "human_explanation", "source_detail_atom_ids", "observable_scenes",
                     "helpful_effects", "possible_costs",
@@ -244,9 +244,9 @@ def validate(data: Any, analysis: Any | None = None, resolved: Any | None = None
                     if section.get(key) != core_source.get(key):
                         errors.append(f"{where}.{key} 已偏离Core报告素材")
         snapshot_keys = ("claim_id", "domain", "reality_dimension", "claim_family", "mechanism_family", "claim", "plain_claim", "new_information", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin") if is_v14 or is_v15 else ("claim_id", "domain", "reality_dimension", "claim", "mechanism_chain", "evidence_ids", "supporting_methods", "allowed_examples", "counterevidence", "confidence", "unsupported_extensions", "calibration_status", "origin")
-        if source.get("core_version") == "0.16.0":
+        if source.get("core_version") in {"0.16.0", "0.17.0"}:
             snapshot_keys += ("human_explanation", "source_detail_atom_ids", "observable_scenes", "helpful_effects", "possible_costs")
-        if is_v15 and source.get("core_version") in {"0.10.0", "0.11.0", "0.12.0", "0.13.0", "0.14.0", "0.15.0", "0.16.0"}:
+        if is_v15 and source.get("core_version") in {"0.10.0", "0.11.0", "0.12.0", "0.13.0", "0.14.0", "0.15.0", "0.16.0", "0.17.0"}:
             snapshot_keys += ("synthesis_ids", "method_hypothesis_ids", "claim_class", "report_role", "coverage_tags", "applicable_conditions", "reality_confirmation")
         for section in sections if is_materialized else []:
             if not isinstance(section, dict):

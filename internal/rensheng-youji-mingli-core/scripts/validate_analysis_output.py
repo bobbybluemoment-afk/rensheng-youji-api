@@ -22,11 +22,13 @@ from report_source_contract import (  # noqa: E402
     DIMENSIONS,
     claim_diversity_gaps,
     evidence_retention_gaps,
+    synthesis_disposition_gaps,
     mandatory_candidate_bounds,
     required_coverage,
 )
 from core_synthesis_contract import LOVE_PARTNER_ANCHORS, build_source_coverage_audit  # noqa: E402
 from calibration_question_contract import quality_errors as calibration_question_quality_errors  # noqa: E402
+from calibration_selection_contract import feasibility_errors as calibration_feasibility_errors  # noqa: E402
 from user_language_contract import unnatural_realization_phrases  # noqa: E402
 
 SCHEMA_PATH = ROOT / "schemas" / "analysis-output.schema.json"
@@ -293,8 +295,8 @@ def validate(data: Any) -> list[str]:
     meta = data.get("analysis_meta")
     require_keys(meta, {"analysis_id", "request_id", "core_version", "generated_at", "analysis_as_of", "target_range", "input_completeness", "status"}, "analysis_meta", errors)
     if isinstance(meta, dict):
-        if meta.get("core_version") != "0.16.0":
-            errors.append("analysis_meta.core_version 必须为 0.16.0")
+        if meta.get("core_version") != "0.17.0":
+            errors.append("analysis_meta.core_version 必须为 0.17.0")
         if meta.get("status") not in {"complete", "pass_with_flags"}:
             errors.append("analysis_meta.status 必须是 complete 或 pass_with_flags")
         try:
@@ -1129,9 +1131,13 @@ def validate(data: Any) -> list[str]:
                 "reality_candidate_pool 的领域缺口必须与source_coverage_audit一致："
                 f"候选池缺少={missing_candidate_domains}；来源缺口={sorted(uncovered_source_domains)}"
             )
+        if isinstance(meta, dict) and meta.get("core_version") == "0.17.0":
+            errors.extend(calibration_feasibility_errors(data))
 
     candidate_ids = {item.get("candidate_id") for item in candidates or [] if isinstance(item, dict)}
     errors.extend("九方法到Core证据保留不足：" + item for item in evidence_retention_gaps(data))
+    if isinstance(meta, dict) and meta.get("core_version") == "0.17.0":
+        errors.extend("九方法到Core信息去向不完整：" + item for item in synthesis_disposition_gaps(data))
     relations = data.get("candidate_relation_map")
     relation_ids: set[str] = set()
     if not isinstance(relations, list) or len(relations) < 6:
@@ -1470,6 +1476,25 @@ def self_test_fixture() -> dict[str, Any]:
         "report_role": "supplemental",
         "reasoning": "单一主要方法提供不矛盾且新增信息的补充侧面",
     })
+    for suffix, method_id, offset, domain, group in (
+        ("position", "position_relationship", 1, "family_growth", "position_interface"),
+        ("stem", "stem_branch_dynamics", 1, "body_emotion", "stem_branch_structure"),
+        ("timing", "timing_continuity", 2, "self_growth", "timing_execution"),
+    ):
+        synthesis_clusters.append({
+            "synthesis_id": f"syn_excluded_{suffix}",
+            "domain": domain,
+            "normalized_direction": f"自检中明确排除的{suffix}候选",
+            "member_hypothesis_ids": [f"mh_{method_id}_{offset}"],
+            "supporting_method_ids": [method_id],
+            "independence_groups": [group],
+            "relationship_type": "complementary",
+            "structural_confidence": "to_verify",
+            "reality_confirmation": "contradicted",
+            "counterevidence": ["自检资料中存在直接相反事实"],
+            "report_role": "excluded",
+            "reasoning": "明确登记去向，不进入报告判断台账",
+        })
 
     evidence_method_sequence = [
         "pattern_structure", "pattern_structure", "momentum_configuration", "momentum_configuration",
@@ -1539,7 +1564,7 @@ def self_test_fixture() -> dict[str, Any]:
         }
 
     data = {
-        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.16.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
+        "analysis_meta": {"analysis_id": "self-test", "request_id": "self-test", "core_version": "0.17.0", "generated_at": "2026-08-18T00:00:00+08:00", "analysis_as_of": "2026-08-18", "target_range": {"start_year": 2026, "end_year": 2026}, "input_completeness": "complete", "status": "complete"},
         "chart_facts": {"day_master": "甲", "pillars": {"year": pillar, "month": pillar, "day": {**pillar, "stem_ten_god": "日主"}, "hour": pillar}, "luck_cycles": [{}], "annual_cycles": [{}]},
         "chart_audit": {"status": "pass", "checks": [], "boundary_dependencies": [], "versions": []},
         "social_context_model": empty_section(),

@@ -92,6 +92,23 @@ def compile_packet(method_input: dict[str, Any], patch: dict[str, Any], method_i
             })
         hypotheses = []
         for number, source in enumerate(patch["reality_hypotheses"], 1):
+            parent_conclusions = [
+                patch["technical_conclusions"][index - 1]
+                for index in source["derived_from_conclusion_numbers"]
+            ]
+            inherited_conditions = list(dict.fromkeys(
+                str(item)
+                for parent in parent_conclusions
+                for item in parent.get("conditions") or []
+            ))
+            inherited_counterevidence = list(dict.fromkeys(
+                str(item)
+                for parent in parent_conclusions
+                for item in parent.get("counterconditions") or []
+            ))
+            inherited_time_scopes = list(dict.fromkeys(
+                str(parent.get("time_scope")) for parent in parent_conclusions if parent.get("time_scope")
+            ))
             hypotheses.append({
                 "hypothesis_id": f"mh_{method_id}_{number:02d}",
                 "derived_from_conclusion_ids": [
@@ -102,10 +119,10 @@ def compile_packet(method_input: dict[str, Any], patch: dict[str, Any], method_i
                 "normalized_direction": source["normalized_direction"],
                 "statement": source["statement"],
                 "observable_indicators": source["observable_indicators"],
-                "conditions": source["conditions"],
-                "counterevidence": source["counterevidence"],
-                "unsupported_extensions": source["unsupported_extensions"],
-                "time_scope": source["time_scope"],
+                "conditions": source.get("conditions") or inherited_conditions,
+                "counterevidence": source.get("counterevidence") or inherited_counterevidence,
+                "unsupported_extensions": source.get("unsupported_extensions") or patch["limitations"],
+                "time_scope": source.get("time_scope") or "、".join(inherited_time_scopes),
                 "reality_confirmation": "unverified",
             })
         limits = {item["domain"]: item for item in patch["domain_limits"]}

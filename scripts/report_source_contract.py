@@ -133,6 +133,70 @@ def evidence_retention_gaps(data: dict[str, Any]) -> list[str]:
     return gaps
 
 
+def synthesis_disposition_gaps(data: dict[str, Any]) -> list[str]:
+    """Require an explicit Core disposition for every distinct method hypothesis.
+
+    This does not create a claim quota. Related hypotheses may share one synthesis
+    cluster and one report claim, but none may silently disappear inside that
+    cluster. Excluded clusters are the explicit internal disposition for evidence
+    that should not enter the report ledger.
+    """
+    upstream_ids = {
+        str(item.get("hypothesis_id"))
+        for method in data.get("independent_method_analyses") or []
+        if isinstance(method, dict) and method.get("status") == "complete"
+        for item in method.get("reality_hypotheses") or []
+        if isinstance(item, dict) and item.get("hypothesis_id")
+    }
+    clusters = [
+        item for item in (data.get("method_synthesis") or {}).get("clusters") or []
+        if isinstance(item, dict)
+    ]
+    cluster_ids = {str(item.get("synthesis_id")) for item in clusters if item.get("synthesis_id")}
+    clustered_ids = {
+        str(identifier)
+        for cluster in clusters
+        for identifier in cluster.get("member_hypothesis_ids") or []
+    }
+    gaps: list[str] = []
+    missing = sorted(upstream_ids - clustered_ids)
+    unknown = sorted(clustered_ids - upstream_ids)
+    if missing:
+        gaps.append(f"{len(missing)}条独立方法候选未进入任何综合簇：{missing}")
+    if unknown:
+        gaps.append(f"综合簇引用不存在的独立方法候选：{unknown}")
+
+    claims = [item for item in data.get("report_claim_ledger") or [] if isinstance(item, dict)]
+    unknown_synthesis = sorted({
+        str(identifier)
+        for claim in claims
+        for identifier in claim.get("synthesis_ids") or []
+        if str(identifier) not in cluster_ids
+    })
+    if unknown_synthesis:
+        gaps.append(f"报告判断引用不存在的综合簇：{unknown_synthesis}")
+    for cluster in clusters:
+        synthesis_id = str(cluster.get("synthesis_id", ""))
+        members = {str(value) for value in cluster.get("member_hypothesis_ids") or []}
+        linked_claims = [claim for claim in claims if synthesis_id in set(claim.get("synthesis_ids") or [])]
+        if cluster.get("report_role") == "excluded":
+            if linked_claims:
+                gaps.append(f"已排除综合簇{synthesis_id}不得进入报告判断台账")
+            continue
+        if not linked_claims:
+            gaps.append(f"综合簇{synthesis_id}未登记进入报告判断台账的去向")
+            continue
+        retained = {
+            str(identifier)
+            for claim in linked_claims
+            for identifier in claim.get("method_hypothesis_ids") or []
+        }
+        omitted = sorted(members - retained)
+        if omitted:
+            gaps.append(f"综合簇{synthesis_id}有上游候选被静默压缩：{omitted}")
+    return gaps
+
+
 def mandatory_candidate_bounds(claim_ids: list[str] | set[str] | tuple[str, ...]) -> tuple[int, int]:
     """Return the canonical pre-calibration candidate bounds for one source.
 

@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 from compile_method_packet import compile_packet  # noqa: E402
 from core_synthesis_contract import ALL_METHODS, build_method_audit, canonical_digest  # noqa: E402
+from method_structure_contract import structure_summary  # noqa: E402
 
 
 def main() -> int:
@@ -42,6 +43,14 @@ def main() -> int:
             "completed_method_ids": audit["completed_method_ids"],
             "excluded_method_ids": audit["excluded_method_ids"],
             "delivery_decision": audit["delivery_decision"],
+            "method_semantic_schema_version": "1.1.0",
+            "semantic_patch_sha256_by_method": {
+                method_id: canonical_digest(patch) for method_id, patch in patches.items()
+            },
+            "structure_check_summary_by_method": {
+                method_id: structure_summary(patches[method_id])
+                for method_id in sorted(ALL_METHODS)
+            },
             "method_packets_sha256": canonical_digest(packets),
             "packet_sha256_by_method": {
                 method_id: canonical_digest(packet) for method_id, packet in packets.items()

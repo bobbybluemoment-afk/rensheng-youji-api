@@ -14,7 +14,13 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from report_source_contract import claim_diversity_gaps, evidence_retention_gaps, mandatory_candidate_bounds  # noqa: E402
+from report_source_contract import (  # noqa: E402
+    claim_diversity_gaps,
+    evidence_retention_gaps,
+    mandatory_candidate_bounds,
+    synthesis_disposition_gaps,
+)
+from calibration_selection_contract import feasibility_errors as calibration_feasibility_errors  # noqa: E402
 
 
 DOMAINS = {"self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"}
@@ -41,7 +47,7 @@ def similarity(left: str, right: str) -> float:
 
 def audit(data: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    strict_detail_contract = data.get("analysis_meta", {}).get("core_version") == "0.16.0"
+    strict_detail_contract = data.get("analysis_meta", {}).get("core_version") in {"0.16.0", "0.17.0"}
     claims = [item for item in data.get("report_claim_ledger", []) if isinstance(item, dict)]
     claim_index = {item.get("claim_id"): item for item in claims}
     for claim in claims:
@@ -109,6 +115,9 @@ def audit(data: dict[str, Any]) -> list[str]:
         if not set(mandatory).issubset(set(source.get("claim_ids") or [])) or any(item not in claim_index for item in mandatory):
             errors.append("mandatory_candidate_ids must be valid source candidates")
     errors.extend("九方法到Core证据保留不足：" + item for item in evidence_retention_gaps(data))
+    if data.get("analysis_meta", {}).get("core_version") == "0.17.0":
+        errors.extend("九方法到Core信息去向不完整：" + item for item in synthesis_disposition_gaps(data))
+        errors.extend("冻结前五题不可组成：" + item for item in calibration_feasibility_errors(data))
     return errors
 
 

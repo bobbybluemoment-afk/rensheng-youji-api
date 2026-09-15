@@ -8,8 +8,8 @@ import json
 from typing import Any
 
 
-CORE_VERSION = "0.16.0"
-SYNTHESIS_INPUT_SCHEMA_VERSION = "1.3.0"
+CORE_VERSION = "0.17.0"
+SYNTHESIS_INPUT_SCHEMA_VERSION = "1.4.0"
 PRIMARY_METHODS = {
     "pattern_structure",
     "momentum_configuration",

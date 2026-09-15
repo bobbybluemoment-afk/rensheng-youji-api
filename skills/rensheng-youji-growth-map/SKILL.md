@@ -116,7 +116,7 @@ python scripts/run_in_env.py scripts/build_method_prompt_packs.py \
 
 每份提示包只包含共同短规则、本方法专用规则、规则来源回执，以及由统一 `method-input.json` 确定性裁出的本方法输入视图。原局方法不重复携带20年流年，阶段方法才取得所需大运或逐年字段；所有视图仍绑定同一个完整输入哈希。九方法AI不得再次读取完整Core Skill、完整Core Schema、其他方法提示、校准或报告文件。
 
-9. 九种方法彼此独立。提示清单中的 `parallel_batches` 把它们分为三组；运行环境支持并发时，同组3个任务同时执行，不能并发时才依次执行，不得仅凭Skill文字声称已经并行。每个方法只读取 `work/method-prompt-packs/<method_id>.prompt.md`，只输出技术结论、现实候选、未支持领域理由和本方法限制，保存到 `work/method-semantic-patches/<method_id>.json`。每个方法都逐项检查六个报告领域，每个领域允许0—5条候选、不设最低数；完整方法通常保留8—14条真正不同的候选，证据少时允许更少，总数最多18条、技术结论最多12条。学习和迁移作为六领域中的现实问题轴处理。编号、哈希、方法身份、证据登记与六领域候选映射不得由AI填写。每份答卷生成后立即运行：
+9. 九种方法彼此独立。提示清单中的 `parallel_batches` 把它们分为三组；运行环境支持并发时，同组3个任务同时执行，不能并发时才依次执行，不得仅凭Skill文字声称已经并行。每个方法只读取 `work/method-prompt-packs/<method_id>.prompt.md`，输出本方法专属的重要结构检查、技术结论、现实候选、未支持领域理由和本方法限制，保存到 `work/method-semantic-patches/<method_id>.json`。每个方法先逐项完成重要结构检查，再把真正改变判断的结构投影到相关现实领域；达到最低结论数不能提前停止。每个领域允许0—5条候选、不设最低数，总数最多18条、技术结论最多12条。学习和迁移作为六领域中的现实问题轴处理。与来源技术结论相同的成立条件、反证、禁止外推和时间范围由程序继承；编号、哈希、方法身份、证据登记与六领域候选映射不得由AI填写。每份答卷生成后立即运行：
 
 ```bash
 python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_method_semantic_patch.py \
@@ -135,7 +135,7 @@ python scripts/run_in_env.py scripts/compile_method_packets.py \
   --gate-output work/method-gate.json
 ```
 
-METHOD GATE负责核对九份答卷、编译后的正式Schema、主题隔离哈希、方法身份、证据引用和六领域检查。只有Gate通过才能运行确定性汇总：
+METHOD GATE负责核对九份答卷、每种方法专属的重要结构检查表、重要结构到现实领域的投影、编译后的正式Schema、主题隔离哈希、方法身份、证据引用和六领域检查。方法不能因为达到最低结论数就停止；只有重要结构逐项说明去向才算完成。只有Gate通过才能运行确定性汇总：
 
 ```bash
 python scripts/run_in_env.py scripts/pipeline_gate.py --gate METHOD_GATE --run-dir <work_dir>
@@ -191,7 +191,9 @@ python scripts/run_in_env.py scripts/audit_claim_diversity.py \
 
 审计失败、判断家族不足或六领域语义重复时，允许只返修 `core-semantic-analysis.json` 中被点名的语义区块一次，再重新执行语义校验、完整Core组装和本审计；方法包与确定性输入仍保持冻结。第二次仍失败才停止，不得用测试样例或宽泛套话补齐数量。
 
-审计还必须比较九方法候选与Core判断的实际保留关系：当同一领域已有至少三个方法、四条以上且方向不同的现实候选时，Core不能只留一条代替多个现实信息轴，也不能只引用少数上游候选。此类情况只返修Core综合，把不同方向分别保留为主要判断、独立补充、条件判断、阶段判断、待校准判断或证据较弱候选；不为任何领域设置必须条数或最多条数。Core同时必须生成跨领域解释主线，区分原有能力、后来做法、当前代价、领域表现和发展方向，并把方法中的具体可观察表现逐条保留到报告判断。所有将进入校准题或报告的用户可见Core文字一律使用“你”，不得使用“您”。
+审计还必须比较九方法候选与Core判断的实际保留关系：每条独立方法候选都必须进入综合簇；每个未排除综合簇都必须进入判断台账并保留全部成员候选。信息可以合并、转为弱候选或明确排除，但不能静默消失。当同一领域已有至少三个方法、四条以上且方向不同的现实候选时，Core不能只留一条代替多个现实信息轴。此类情况只返修Core综合，把不同方向分别保留为主要判断、独立补充、条件判断、阶段判断、待校准判断或证据较弱候选；不为任何领域设置必须条数或最多条数。Core同时必须生成跨领域解释主线，区分原有能力、后来做法、当前代价、领域表现和发展方向，并把方法中的具体可观察表现逐条保留到报告判断。所有将进入校准题或报告的用户可见Core文字一律使用“你”，不得使用“您”。
+
+同一次冻结前审计还要用正式选题算法验证候选池能否组成固定五题：至少四个领域、同领域最多两题、五个不同现实问题轴、至少一条已发生且有时运依据的时间题，以及至少两条客观状态或已发生事件题。若不可组成，返修Core综合中的候选池与对应判断，不得冻结后再发现，也不得手工凑题。
 
 审计通过后才冻结初始Core。此后不得重新生成或改写完整母稿：
 
@@ -291,7 +293,7 @@ python scripts/run_in_env.py scripts/resolve_report_sources.py \
 3. 完整读取 `internal/rensheng-youji-report-content-brief/SKILL.md`。`materialize_content_brief.py` 直接从校准后Core与 `resolved-report-sources.json` 生成实体化 `report-content-brief.json`；不再调用AI做第二次选材，也不生成 `report-content-selection.json`。
 4. 完整读取 `internal/rensheng-youji-report-writer/SKILL.md`。先由 `build_report_writing_pack.py` 按“主要表现与行为→形成经历与现实条件→重复挑战、阶段变化与应对”的叙事顺序分组，不得把判断轮流塞入段落。写作包只保留AI写正文真正需要的字段，来源、哈希和技术机制继续由程序保管。AI只返回正文和摘要、阶段、年度、行动等语义文字，不填写来源编号、段落映射、哈希或审计字段。再由 `compile_report_draft.py` 确定性补齐 `source_claim_ids`、`paragraph_claim_map`、`claim_realization_map` 和重点句映射。
 5. 完整读取 `internal/rensheng-youji-chinese-editor/SKILL.md` 和其中的《人生有迹自然中文写作标准》。Draft从源头按该标准生成，扫描器再检查AI造词、防御句式、抽象名词、长句多动作、六领域语言错位、“你/您”、残句、重复标点和逐年模板化。没有发现问题时不调用编辑AI，直接生成编辑记录；发现问题时只把被点名的小块交给AI修订。不新增固定的全文通读AI调用，也不得要求编辑层为了证明工作发生而强制修改若干章节。
-6. 正式报告使用 `schema_version=2.14.0`、`document_mode=full_calibrated`。Core使用0.16.0、事实提纲和初稿使用1.6.0、中文编辑使用2.5.0、校准题使用3.0.0。Core综合把判断分为主要判断、独立补充、条件判断、阶段判断、待校准判断和证据较弱候选；不设置每领域必须或最多几条。证据较弱候选仅内部保留，待校准判断在现实确认前不直接进入报告。报告章节再按真实可用证据决定正常、缩短、最小或证据缺口模式。
+6. 正式报告使用 `schema_version=2.14.0`、`document_mode=full_calibrated`。Core使用0.17.0、事实提纲和初稿使用1.6.0、中文编辑使用2.5.0、校准题使用3.0.0。Core综合把判断分为主要判断、独立补充、条件判断、阶段判断、待校准判断和证据较弱候选；不设置每领域必须或最多几条。证据较弱候选仅内部保留，待校准判断在现实确认前不直接进入报告。报告章节再按真实可用证据决定正常、缩短、最小或证据缺口模式。
 7. 时间分析继续使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系，同时概括更长阶段。
 8. 卡片没有独立校准流程。`build_card_content.py` 从冻结Core、校准后选材和用户资料确定性提取卡面文字；`build_card_visual_pack.py` 只提取Baseline结构化逐年资料，`build_visual_signals_from_core.py` 再按固定映射生成20年视觉信号，不调用AI、不读取五题答案，也不从自然语言关键词猜分。完整报告内卡片可以继承报告已确定的可见候选主次，但命理结构、人生K线语义和原始判断仍来自校准前冻结的同一Core。报告与卡片的分析编号、Core版本、Baseline哈希和明显关系机会年份必须一致。
 9. 卡片与编辑结果都完成后，由程序确定性编译正式 `report.json`。这里必须使用编辑后的正文和编辑后的语义文件：

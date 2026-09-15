@@ -10,6 +10,7 @@ from scripts.core_synthesis_contract import ALL_METHODS, PARTIAL_METHODS
 from scripts.audit_method_prompt_contract import audit as audit_prompts
 from scripts.build_method_prompt_packs import MANIFEST, build as build_prompt
 from scripts.method_input_contract import build_method_input_view
+from scripts.method_structure_contract import METHOD_STRUCTURE_CHECKS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -59,8 +60,18 @@ def semantic_patch(method_id: str) -> dict:
         for domain in sorted(DOMAINS - set(supported))
     ]
     return {
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "result": "complete",
+        "structure_checks": [
+            {
+                "check_id": check_id,
+                "importance": "material" if index < count else "background",
+                "finding": "本盘中该项已经逐项检查，并形成明确去向。",
+                "conclusion_numbers": [index + 1] if index < count else [],
+                "projection_domains": [supported[index]] if index < count else [],
+            }
+            for index, (check_id, _) in enumerate(METHOD_STRUCTURE_CHECKS[method_id])
+        ],
         "technical_conclusions": conclusions,
         "reality_hypotheses": hypotheses,
         "domain_limits": limits,
@@ -94,6 +105,25 @@ class MethodSemanticCompilerTest(unittest.TestCase):
         patch = semantic_patch("pattern_structure")
         patch["method_id"] = "climate_adjustment"
         with self.assertRaisesRegex(ValueError, "Schema"):
+            compile_packet({"chart_facts": {}}, patch, "pattern_structure")
+
+    def test_compiler_inherits_repeated_hypothesis_boundaries(self) -> None:
+        patch = semantic_patch("pattern_structure")
+        for hypothesis in patch["reality_hypotheses"]:
+            hypothesis.pop("conditions")
+            hypothesis.pop("counterevidence")
+            hypothesis.pop("unsupported_extensions")
+            hypothesis.pop("time_scope")
+        packet = compile_packet({"chart_facts": {}}, patch, "pattern_structure")
+        hypothesis = packet["method_analysis"]["reality_hypotheses"][0]
+        self.assertEqual(hypothesis["conditions"], patch["technical_conclusions"][0]["conditions"])
+        self.assertEqual(hypothesis["counterevidence"], patch["technical_conclusions"][0]["counterconditions"])
+        self.assertEqual(hypothesis["time_scope"], patch["technical_conclusions"][0]["time_scope"])
+
+    def test_compiler_rejects_missing_important_structure_check(self) -> None:
+        patch = semantic_patch("pattern_structure")
+        patch["structure_checks"].pop()
+        with self.assertRaisesRegex(ValueError, "结构检查表不完整"):
             compile_packet({"chart_facts": {}}, patch, "pattern_structure")
 
     def test_method_views_only_include_method_relevant_time_data(self) -> None:

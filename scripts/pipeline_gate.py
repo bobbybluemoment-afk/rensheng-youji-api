@@ -18,6 +18,8 @@ from core_synthesis_contract import ALL_METHODS, canonical_digest  # noqa: E402
 from core_baseline import digest as core_digest, validate_quality_audit, verify as verify_baseline  # noqa: E402
 from run_checkpoint import record as record_checkpoint  # noqa: E402
 from validate_method_packet import validate as validate_method_packet  # noqa: E402
+from validate_method_semantic_patch import validate as validate_method_semantic_patch  # noqa: E402
+from method_structure_contract import structure_summary  # noqa: E402
 
 
 def load(path: Path) -> Any:
@@ -40,7 +42,12 @@ def method_gate(work: Path) -> tuple[list[str], list[Path], list[Path]]:
     gate_path = work / "method-gate.json"
     gate = load(gate_path)
     packets = {}
+    patches = {}
     for method_id in sorted(ALL_METHODS):
+        semantic_path = work / "method-semantic-patches" / f"{method_id}.json"
+        patch = load(semantic_path)
+        patches[method_id] = patch
+        errors.extend(f"{method_id}语义答卷: {item}" for item in validate_method_semantic_patch(patch, method_id))
         path = work / "method-packets" / f"{method_id}.json"
         packet = load(path)
         packets[method_id] = packet
@@ -48,7 +55,18 @@ def method_gate(work: Path) -> tuple[list[str], list[Path], list[Path]]:
     actual = {method_id: canonical_digest(packet) for method_id, packet in packets.items()}
     if gate.get("status") != "pass" or gate.get("packet_count") != 9 or gate.get("packet_sha256_by_method") != actual:
         errors.append("method-gate.json与当前九个方法包不一致")
-    return errors, [work / "method-input.json"], [work / "method-packets", gate_path]
+    semantic_hashes = {method_id: canonical_digest(patch) for method_id, patch in patches.items()}
+    structure_summaries = {
+        method_id: structure_summary(patches[method_id])
+        for method_id in sorted(ALL_METHODS)
+    }
+    if gate.get("method_semantic_schema_version") != "1.1.0":
+        errors.append("method-gate.json未登记重要结构检查契约1.1.0")
+    if gate.get("semantic_patch_sha256_by_method") != semantic_hashes:
+        errors.append("method-gate.json与当前九份语义答卷哈希不一致")
+    if gate.get("structure_check_summary_by_method") != structure_summaries:
+        errors.append("method-gate.json与当前九份重要结构检查结果不一致")
+    return errors, [work / "method-input.json", work / "method-semantic-patches"], [work / "method-packets", gate_path]
 
 
 def core_gate(work: Path) -> tuple[list[str], list[Path], list[Path]]:

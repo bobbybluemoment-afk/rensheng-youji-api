@@ -167,10 +167,13 @@ class CoreV012ProductionBridgeTest(unittest.TestCase):
             item["synthesis_id"] for item in semantic["method_synthesis"]["clusters"]
             if item["domain"] == "love_partner"
         }
-        semantic["method_synthesis"]["clusters"] = [
-            item for item in semantic["method_synthesis"]["clusters"]
-            if item["synthesis_id"] not in removed_synthesis_ids
-        ]
+        for item in semantic["method_synthesis"]["clusters"]:
+            if item["synthesis_id"] in removed_synthesis_ids:
+                item["domain"] = "self_growth"
+                item["report_role"] = "excluded"
+                item["reality_confirmation"] = "contradicted"
+                item["counterevidence"] = ["该领域在当前方法输入中没有来源"]
+                item["reasoning"] = "明确登记上游候选去向，不补造缺口领域材料"
         for key in ("primary_synthesis_ids", "supplemental_synthesis_ids", "to_verify_synthesis_ids"):
             semantic["method_synthesis"][key] = [
                 item for item in semantic["method_synthesis"][key]
@@ -239,7 +242,7 @@ class CoreV012ProductionBridgeTest(unittest.TestCase):
         self.assertEqual(second_errors, [])
         self.assertEqual(first, second)
         self.assertIn("report_source_bundle", first)
-        self.assertEqual(first["analysis_meta"]["core_version"], "0.16.0")
+        self.assertEqual(first["analysis_meta"]["core_version"], "0.17.0")
 
     def test_documented_cli_bridge_writes_a_complete_core(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rensheng-youji-core-bridge-") as temp_dir:

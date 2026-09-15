@@ -5,10 +5,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
 from _jsonschema_subset import validate_schema_instance
+
+
+ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "scripts"))
+from method_structure_contract import expected_check_ids  # noqa: E402
 
 
 PRIMARY = {
@@ -39,6 +45,7 @@ def validate(patch: Any, method_id: str) -> list[str]:
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     errors = ["语义答卷Schema：" + item for item in validate_schema_instance(patch, schema)]
     result = patch.get("result")
+    structure_checks = patch.get("structure_checks") or []
     conclusions = patch.get("technical_conclusions") or []
     hypotheses = patch.get("reality_hypotheses") or []
     domain_limits = patch.get("domain_limits") or []
@@ -46,8 +53,8 @@ def validate(patch: Any, method_id: str) -> list[str]:
     degradation_effects = patch.get("degradation_effects") or []
 
     if result != "complete":
-        if conclusions or hypotheses or domain_limits:
-            errors.append("未完成答卷不得携带半成品结论、候选或领域检查")
+        if structure_checks or conclusions or hypotheses or domain_limits:
+            errors.append("未完成答卷不得携带半成品结构检查、结论、候选或领域检查")
         if not failure_reasons or not degradation_effects:
             errors.append("未完成答卷必须说明失败原因和降级影响")
         return errors
@@ -60,6 +67,22 @@ def validate(patch: Any, method_id: str) -> list[str]:
         errors.append(f"{method_id}技术结论最多12条，当前{len(conclusions)}条")
     if len(hypotheses) > 18:
         errors.append(f"{method_id}现实候选总数最多18条，当前{len(hypotheses)}条")
+
+    check_by_id: dict[str, dict[str, Any]] = {}
+    for item in structure_checks:
+        if not isinstance(item, dict):
+            continue
+        check_id = str(item.get("check_id", ""))
+        if check_id in check_by_id:
+            errors.append(f"structure_checks检查项重复：{check_id}")
+        check_by_id[check_id] = item
+    expected_checks = expected_check_ids(method_id)
+    if set(check_by_id) != expected_checks:
+        errors.append(
+            "本方法结构检查表不完整："
+            f"缺少={sorted(expected_checks - set(check_by_id))}；"
+            f"多余={sorted(set(check_by_id) - expected_checks)}"
+        )
 
     for index, conclusion in enumerate(conclusions, 1):
         refs = list(conclusion.get("chart_refs") or []) if isinstance(conclusion, dict) else []
@@ -80,6 +103,40 @@ def validate(patch: Any, method_id: str) -> list[str]:
         numbers = hypothesis.get("derived_from_conclusion_numbers") or []
         if any(not isinstance(number, int) or not 1 <= number <= len(conclusions) for number in numbers):
             errors.append(f"第{index}条现实候选引用了不存在的技术结论序号")
+
+    referenced_conclusions: set[int] = set()
+    hypothesis_covered_by_check: set[int] = set()
+    for check_id, item in check_by_id.items():
+        importance = item.get("importance")
+        numbers = set(item.get("conclusion_numbers") or [])
+        domains = set(item.get("projection_domains") or [])
+        if any(not isinstance(number, int) or not 1 <= number <= len(conclusions) for number in numbers):
+            errors.append(f"structure_checks.{check_id}引用了不存在的技术结论序号")
+            continue
+        if importance in {"material", "conditional"}:
+            if not numbers or not domains:
+                errors.append(f"structure_checks.{check_id}为重要或条件结构时必须连接技术结论和现实领域")
+                continue
+            referenced_conclusions.update(numbers)
+            for domain in domains:
+                matches = {
+                    index
+                    for index, hypothesis in enumerate(hypotheses, 1)
+                    if hypothesis.get("domain") == domain
+                    and numbers & set(hypothesis.get("derived_from_conclusion_numbers") or [])
+                }
+                if not matches:
+                    errors.append(f"structure_checks.{check_id}声明投影到{domain}，但没有对应现实候选")
+                hypothesis_covered_by_check.update(matches)
+        elif importance == "background" and (numbers or domains):
+            errors.append(f"structure_checks.{check_id}为背景结构时不得伪装成已形成结论或现实投影")
+
+    missing_conclusion_checks = sorted(set(range(1, len(conclusions) + 1)) - referenced_conclusions)
+    if missing_conclusion_checks:
+        errors.append(f"技术结论没有重要结构来源：{missing_conclusion_checks}")
+    missing_hypothesis_checks = sorted(set(range(1, len(hypotheses) + 1)) - hypothesis_covered_by_check)
+    if missing_hypothesis_checks:
+        errors.append(f"现实候选没有结构检查来源：{missing_hypothesis_checks}")
 
     limit_by_domain: dict[str, dict[str, Any]] = {}
     for item in domain_limits:

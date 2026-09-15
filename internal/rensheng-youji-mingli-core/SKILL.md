@@ -107,7 +107,7 @@ python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/adapter
 
 多方法一致必须按不同主要方法家族计算，不能把扶抑、病药、通关、旺衰、根透、刑冲合害等同源术语拆成多票。只有至少两个不同主要方法家族独立同向时，结构置信度才可为高。单一主要方法若新增实质信息、条件明确、可观察且没有事实冲突，可以保留为补充判断。
 
-每个完整方法先逐项检查六个报告领域。现实候选的 `domain` 只允许 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`；学习、教育、迁移和地域变化作为这些领域中的现实问题轴处理。每个领域允许0—5条候选、不设最低数；完整方法通常保留8—14条真正不同的候选，证据少时可以更少，总数最多18条、技术结论最多12条。没有候选时登记 `insufficient_evidence` 或 `not_applicable`。十神动力、宫位六亲、干支动力、盲派和岁运连续性是关系锚点，必须实际检查 `love_partner`。输出错误最多进行三轮局部修复；第三轮仍失败则记录真实失败并排除计票。不得因单个部分方法失败或某个报告领域缺少候选而停止其他可靠内容，也不得让 `preliminary_only` 进入完整报告。
+每个完整方法先完成本方法专属的重要结构检查表，再逐项检查六个报告领域。若删掉某项会改变本方法技术结论或现实判断，它必须标为重要或条件结构，并连接技术结论与实际受影响领域；只有不改变结论时才能作为背景并说明理由。达到最低结论数不是停止条件。现实候选的 `domain` 只允许 `self_growth`、`love_partner`、`career`、`finance_resources`、`body_emotion`、`family_growth`；学习、教育、迁移和地域变化作为这些领域中的现实问题轴处理。每个领域允许0—5条候选、不设最低数，总数最多18条、技术结论最多12条。没有候选时登记 `insufficient_evidence` 或 `not_applicable`。十神动力、宫位六亲、干支动力、盲派和岁运连续性是关系锚点，必须实际检查 `love_partner`。输出错误最多进行三轮局部修复；第三轮仍失败则记录真实失败并排除计票。不得因单个部分方法失败或某个报告领域缺少候选而停止其他可靠内容，也不得让 `preliminary_only` 进入完整报告。
 
 ### 6. 把命盘当作现实中的人
 
@@ -321,7 +321,7 @@ validation: []
 
 不要省略没有明显结论的栏目。使用空数组、`null` 或“证据不足”保留结构，不得补造内容。
 
-完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.16.0`。正式方法包仍符合 [method-packet.schema.json](schemas/method-packet.schema.json)，但九方法AI不再直接填写这份生产结构。AI只生成 [method-semantic-patch.schema.json](schemas/method-semantic-patch.schema.json) 约束的语义答卷，再由程序编译为正式方法包。
+完整输出契约见 [analysis-output.schema.json](schemas/analysis-output.schema.json)。当前 `core_version` 使用 `0.17.0`。正式方法包仍符合 [method-packet.schema.json](schemas/method-packet.schema.json)，但九方法AI不再直接填写这份生产结构。AI只生成 [method-semantic-patch.schema.json](schemas/method-semantic-patch.schema.json) 约束的语义答卷，再由程序编译为正式方法包。语义答卷使用1.1.0重要结构检查契约；METHOD GATE会锁定答卷哈希和各方法的重要、条件、背景结构计数。
 
 先生成一份完整主题隔离输入和九份按方法需要裁剪的短提示包。完整输入只作为统一哈希源；AI实际只读取各自提示包中的 `method-input-view.json`：
 

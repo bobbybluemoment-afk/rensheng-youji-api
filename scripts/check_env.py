@@ -191,10 +191,10 @@ def main() -> int:
         cwd=ROOT, text=True, capture_output=True, check=False,
     )
     if core_test.returncode:
-        print("FAILED: v0.16.0 Core topic isolation, detail retention, interpretive spine, six-domain review, source coverage, synthesis validation or deterministic assembly")
+        print("FAILED: v0.17.0 Core important-structure coverage, topic isolation, detail retention, interpretive spine, five-question feasibility, source coverage, synthesis validation or deterministic assembly")
         print(core_test.stdout or core_test.stderr)
         return 7
-    print("READY: dependencies, chart, deterministic v2 card, Core v0.16.0 topic isolation, reality-detail retention, interpretive spine, six-domain method review, compact synthesis matrix, hash-bound local repair, resume checkpoints, consolidated gates, past/current five-question calibration, optional local editing, stable fallback and fixed 10-page report pipeline passed")
+    print("READY: dependencies, chart, deterministic v2 card, Core v0.17.0 important-structure coverage, topic isolation, reality-detail retention, interpretive spine, five-question feasibility, compact synthesis matrix, hash-bound local repair, resume checkpoints, consolidated gates, past/current calibration, optional local editing, stable fallback and fixed 10-page report pipeline passed")
     return 0
 
 

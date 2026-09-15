@@ -183,7 +183,7 @@ def compact_view(source: dict[str, Any]) -> dict[str, Any]:
         "confidence": item["confidence"],
     } for item in source["evidence_registry"]]
     return {
-        "schema_version": "1.3.0",
+        "schema_version": SYNTHESIS_INPUT_SCHEMA_VERSION,
         "core_version": source["core_version"],
         "analysis_input_sha256": source["analysis_input_sha256"],
         "method_input_sha256": source["method_input_sha256"],
@@ -202,6 +202,8 @@ def compact_view(source: dict[str, Any]) -> dict[str, Any]:
             "claim_class_rule": "每条报告判断只标记六类claim_class之一；report_role由编译器填写。",
             "calibration_probe_rule": "现实候选的answerable_*必须只写过去或当前可观察事实：A/B各核对一个现实问题轴，不写建议或解决办法，不跨多个行为与阶段；明确年份跨度不超过六年。去掉领域标题后仍须看得出本领域，财富必须直接谈收入、工资、奖金、存钱、消费、预算或资产，身体情绪必须直接谈睡眠、疲劳、紧绷、烦躁、注意力、休息或身体感受。",
             "evidence_retention_rule": "不按领域硬凑条数；但同一领域已有至少三个方法、四条以上且方向不同的候选时，一条判断不能代替多个现实信息轴，请至少拆开被证据支持的不同方向。",
+            "information_disposition_rule": "九方法每条现实候选都必须进入某个method_synthesis综合簇。未排除综合簇必须进入report_claim_ledger，且相关判断合计必须保留该簇全部member_hypothesis_ids；不适合交付的信息应明确标为excluded或weak_candidate，不得静默压缩。",
+            "calibration_feasibility_rule": "冻结前的reality_candidate_pool必须能由程序选出恰好5题：至少4个领域、同领域最多2题、5个不同现实问题轴、至少1条已发生且有时运依据的timed_event、timed_event与objective_state合计至少2条。候选仍须逐条满足只问过去或当前、单一问题轴和领域自然语言规则。",
             "detail_retention_rule": "report_claim_ledger每条判断必须引用1—6个属于其method_hypothesis_ids的source_detail_atom_ids。程序会从这些编号恢复具体生活表现并覆盖allowed_examples；不得用‘可通过具体任务核对’等通用占位句代替。",
             "interpretive_spine_rule": "interpretive_spine提炼1—4条真正跨领域的核心模式。每条必须区分原有能力、后来形成的做法、当前可能付出的代价和发展方向，并引用真实判断与生活细节；不能把全部人生压成工作方式，也不能吞掉领域独有信息。",
             "natural_chinese_rule": "所有用户表达使用自然、成熟、可保存的中文：直接判断、现实场景、形成解释。一句只承担一个主要意思，不用抽象名词替代生活中实际发生的动作。",

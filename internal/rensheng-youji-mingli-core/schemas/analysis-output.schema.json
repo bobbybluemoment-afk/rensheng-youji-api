@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rensheng-youji.local/schemas/analysis-output.schema.json",
-  "title": "人生有迹完整命理分析母稿 v0.16.0",
+  "title": "人生有迹完整命理分析母稿 v0.17.0",
   "description": "内置分析核心返回的统一 analysis_bundle。包含各方法独立命理推演、独立现实候选、现实综合、完整人物画像、实体证据台账、开放现实候选、形成链、领域联动与校准审计。",
   "type": "object",
   "additionalProperties": false,

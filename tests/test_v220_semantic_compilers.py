@@ -22,6 +22,7 @@ from scan_report_language import scan  # noqa: E402
 from apply_editorial_patch import apply as apply_editorial, apply_all as apply_all_editorial  # noqa: E402
 from validate_calibration_free_text import validate as validate_free_text  # noqa: E402
 from calibration_question_contract import quality_errors  # noqa: E402
+from calibration_selection_contract import feasibility_errors  # noqa: E402
 
 
 DOMAINS = ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]
@@ -69,7 +70,7 @@ def calibration_baseline() -> dict:
             "status": "unverified",
         })
     return {
-        "analysis_meta": {"analysis_id": "v220-calibration", "core_version": "0.16.0", "analysis_as_of": "2026-09-07"},
+        "analysis_meta": {"analysis_id": "v220-calibration", "core_version": "0.17.0", "analysis_as_of": "2026-09-07"},
         "reality_candidate_pool": candidates,
         "report_claim_ledger": claims,
     }
@@ -118,6 +119,18 @@ class V220SemanticCompilerTest(unittest.TestCase):
         tampered["source"]["baseline_sha256"] = "0" * 64
         with self.assertRaisesRegex(ValueError, "校准题没有绑定"):
             compile_delta(baseline, lock, tampered, answers)
+
+    def test_freeze_precheck_uses_the_same_five_question_contract(self) -> None:
+        baseline = calibration_baseline()
+        self.assertEqual(feasibility_errors(baseline), [])
+        sparse = copy.deepcopy(baseline)
+        sparse["reality_candidate_pool"] = [
+            item for item in sparse["reality_candidate_pool"]
+            if item["candidate_kind"] not in {"timed_event", "objective_state"}
+        ]
+        errors = feasibility_errors(sparse)
+        self.assertTrue(errors)
+        self.assertTrue(any("不足5条" in item or "timed_event" in item for item in errors))
 
     def test_calibration_never_asks_the_user_to_verify_future_years(self) -> None:
         baseline = calibration_baseline()
@@ -296,7 +309,7 @@ class V220SemanticCompilerTest(unittest.TestCase):
 
     def test_final_report_uses_only_the_semantic_text_bound_by_editor(self) -> None:
         analysis = {
-            "analysis_meta": {"analysis_id": "report-v220", "core_version": "0.16.0", "analysis_as_of": "2026-09-07"},
+            "analysis_meta": {"analysis_id": "report-v220", "core_version": "0.17.0", "analysis_as_of": "2026-09-07"},
             "chart_facts": {"pillars": [{"stem": "甲", "branch": "戌"}] * 4},
             "chart_audit": {"boundary_dependencies": []},
             "reality_candidate_pool": [],
@@ -324,7 +337,7 @@ class V220SemanticCompilerTest(unittest.TestCase):
         questions = {"schema_version": "3.0.0", "template_version": "2.0.0", "source": {"analysis_id": "report-v220", "baseline_sha256": baseline_sha}}
         delta = {"analysis_id": "report-v220", "baseline_sha256": baseline_sha, "responses": [{}] * 5, "candidate_updates": []}
         free_card = {
-            "source": {"analysis_id": "report-v220", "core_version": "0.16.0", "calibrated_sha256": analysis_hash, "resolved_source_sha256": resolved["resolved_sha256"]},
+            "source": {"analysis_id": "report-v220", "core_version": "0.17.0", "calibrated_sha256": analysis_hash, "resolved_source_sha256": resolved["resolved_sha256"]},
             "trend_panel": {"years": []},
         }
         review = {

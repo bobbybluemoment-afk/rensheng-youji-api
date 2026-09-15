@@ -37,7 +37,7 @@ def audit(root: Path) -> list[str]:
         text = common.read_text(encoding="utf-8")
         for required in (
             "不得读取用户关注问题", "不得读取", "其他方法结果", "domain_limits",
-            "只输出 JSON", "8—14条", "最多18条", "最多12条",
+            "只输出 JSON", "重要结构", "最低条数不是完成标准", "最多18条", "最多12条",
         ):
             if required not in text:
                 errors.append(f"共同短规则缺少关键边界：{required}")
