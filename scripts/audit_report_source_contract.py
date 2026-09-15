@@ -19,6 +19,7 @@ from report_source_contract import (
     synthesis_disposition_gaps,
 )
 from report_pipeline import STAGES as STATUS_STAGES
+from calibration_state_contract import CALIBRATION_STATUS_VALUES
 
 
 STALE_RULES = (
@@ -73,6 +74,9 @@ def audit(root: Path) -> list[str]:
     candidate_required = set(schema["$defs"]["realityCandidate"].get("required") or [])
     if not {"answerable_time_scope", "answerable_observation", "answerable_alternative"}.issubset(candidate_required):
         errors.append("Calibration candidates must provide past/current answerable text")
+    status_enum = set(schema["$defs"]["reportClaim"]["properties"]["calibration_status"].get("enum") or [])
+    if status_enum != CALIBRATION_STATUS_VALUES:
+        errors.append("Core Schema and calibration-state contract disagree on claim statuses")
 
     if mandatory_candidate_bounds([]) != (0, 0) or mandatory_candidate_bounds(["claim-1"]) != (1, 2):
         errors.append("Canonical mandatory candidate bounds are invalid")
@@ -164,6 +168,9 @@ def audit(root: Path) -> list[str]:
         errors.append("Current-question source resolution must receive the user focus explicitly")
     diversity_text = (root / "scripts/audit_claim_diversity.py").read_text(encoding="utf-8")
     core_validator_text = (root / "internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py").read_text(encoding="utf-8")
+    baseline_text = (root / "scripts/core_baseline.py").read_text(encoding="utf-8")
+    if "calibration_state_contract" not in core_validator_text or "calibration_state_contract" not in baseline_text:
+        errors.append("Baseline freeze and calibrated Core validation must share one calibration-state contract")
     if "evidence_retention_gaps" not in diversity_text or "evidence_retention_gaps" not in core_validator_text:
         errors.append("Core validator and quality audit must share the evidence-retention contract")
     if "synthesis_disposition_gaps" not in diversity_text or "synthesis_disposition_gaps" not in core_validator_text:

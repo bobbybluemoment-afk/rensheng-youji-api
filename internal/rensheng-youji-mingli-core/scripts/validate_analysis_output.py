@@ -29,6 +29,7 @@ from report_source_contract import (  # noqa: E402
 from core_synthesis_contract import LOVE_PARTNER_ANCHORS, build_source_coverage_audit  # noqa: E402
 from calibration_question_contract import quality_errors as calibration_question_quality_errors  # noqa: E402
 from calibration_selection_contract import feasibility_errors as calibration_feasibility_errors  # noqa: E402
+from calibration_state_contract import calibrated_claim_update_errors  # noqa: E402
 from user_language_contract import unnatural_realization_phrases  # noqa: E402
 
 SCHEMA_PATH = ROOT / "schemas" / "analysis-output.schema.json"
@@ -852,8 +853,6 @@ def validate(data: Any) -> list[str]:
                 errors.append(f"{path} to_verify判断仍需保留方法来源")
             if claim_class == "independent_supplement" and len(claim_method_ids) != 1:
                 errors.append(f"{path} 独立补充必须只来自一个有效方法")
-            if claim_class == "calibration_pending" and claim.get("calibration_status") not in {"unverified", "uncertain"}:
-                errors.append(f"{path} 待校准判断在冻结前必须保持unverified或uncertain")
             if claim_method_ids and not claim_method_ids.issubset({item.get("method_id") for item in substantive}):
                 errors.append(f"{path}.evidence_ids 未覆盖声明的方法来源")
             incomplete_sources = sorted(claim_method_ids - completed_methods)
@@ -1184,6 +1183,7 @@ def validate(data: Any) -> list[str]:
                     errors.append(f"{path}.user_fact_evidence_ids 未登记在calibration_delta")
                 if update.get("after_status") == "reject" and update.get("preserves_chart_mechanism") is not True:
                     errors.append(f"{path} 排除现实落点时仍须保留原命理机制记录")
+        errors.extend(calibrated_claim_update_errors(claims, delta.get("claim_updates")))
 
     if data.get("monthly_theme_activation") is not None and not isinstance(data.get("monthly_theme_activation"), list):
         errors.append("monthly_theme_activation 必须是数组或 null")

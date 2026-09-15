@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.23.0",
+  "version": "2.23.1",
   "visibility": "internal",
   "stages": [
     {
@@ -48,5 +48,5 @@
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "2.23.0为九方法加入方法专属重要结构检查与紧凑现实投影，禁止达到最低条数后浅层停止；Core必须登记每条上游观点的去向，并在冻结前确定性验证可组成固定五道校准题。正常运行不新增AI调用。"
+  "notes": "2.23.1修复校准生命周期契约：冻结动作单独限制待校准判断的初始状态，通用Core校验允许有增量记录的校准后状态，并核对状态、原句与机制保留的一致性。Core仍为0.17.0，不新增AI调用。"
 }

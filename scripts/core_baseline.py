@@ -11,6 +11,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from calibration_state_contract import pre_freeze_pending_claim_errors
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CORE_VALIDATOR = REPO_ROOT / "internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py"
@@ -85,6 +87,9 @@ def freeze(source: Path, baseline: Path, lock_path: Path, quality_audit_path: Pa
         raise ValueError("Baseline Core must be frozen before calibration user facts are added")
     if any(item.get("status") != "unverified" for item in data.get("reality_candidate_pool", [])):
         raise ValueError("Baseline candidates must all be unverified before calibration")
+    pending_claim_errors = pre_freeze_pending_claim_errors(data.get("report_claim_ledger"))
+    if pending_claim_errors:
+        raise ValueError("; ".join(pending_claim_errors))
     baseline.parent.mkdir(parents=True, exist_ok=True)
     baseline.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     lock = {

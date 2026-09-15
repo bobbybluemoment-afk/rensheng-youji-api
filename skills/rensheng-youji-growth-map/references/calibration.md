@@ -98,3 +98,5 @@ python scripts/run_in_env.py scripts/compile_calibration_delta.py \
 没有D答案时省略 `--free-text-patch`。编译器验证五题不缺不重、用户原文与补丁一致、自由补丁只覆盖D问题，并把用户事实只连接到对应候选和判断。之后再使用 `apply_calibration_delta.py` 合成校准后Core并用Baseline锁校验受保护字段。
 
 校准结果只决定候选的现实确认状态和报告选材。没有被选中的兼容、互补、条件或阶段候选继续保留；只有用户事实明确否定且与当前候选真实互斥时才排除。
+
+冻结动作单独检查待校准判断在冻结前仍为 `unverified|uncertain`。校准完成后，通用Core校验器允许判断进入 `match|partial|weakened|reject` 等合法状态，同时逐条核对判断台账与 `calibration_delta.claim_updates` 的状态、原句和机制保留标记。两阶段不能共用“始终未确认”这一条限制。

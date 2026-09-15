@@ -268,6 +268,8 @@ python scripts/run_in_env.py scripts/core_baseline.py verify \
 python scripts/run_in_env.py scripts/pipeline_gate.py --gate CALIBRATION_GATE --run-dir <work_dir>
 ```
 
+冻结前与校准后使用同一份状态契约但承担不同职责：`core_baseline.py freeze` 强制待校准判断保持 `unverified|uncertain`；校准后的通用Core校验允许 `match|partial|weakened|reject` 等合法结果，但每个改变都必须与 `calibration_delta.claim_updates` 一一对应。不得用冻结前规则拒绝已经合法完成的校准，也不得让没有增量记录的状态变化进入报告。
+
 每道已回答问题必须改变对应候选状态；字母答案只能调整原有候选主次，不能产生新职业、家庭、关系、身体或收入判断。未选候选继续按关系图保留；只有事实明确否定且真正互斥时才标记为 `reject`。
 9. 用户跳过任何一条时，`document_mode` 必须为 `preliminary_uncalibrated`，标题必须为“人生有迹｜初步分析”，只交付初步 Markdown 和新版卡片；不得生成或称为正式完整PDF。
 
