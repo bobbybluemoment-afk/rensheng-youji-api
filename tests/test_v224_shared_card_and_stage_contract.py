@@ -16,9 +16,11 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "internal/rensheng-youji-mingli-core/scripts"))
 sys.path.insert(0, str(ROOT / "internal/rensheng-youji-report-writer/scripts"))
+sys.path.insert(0, str(ROOT / "skills/rensheng-youji-growth-map/scripts"))
 from report_source_contract import delivery_mode  # noqa: E402
 from build_report_writing_pack import yearly_writing_plan  # noqa: E402
 from validate_analysis_output import self_test_fixture, validate  # noqa: E402
+from render_report import _validate_narrative  # noqa: E402
 
 
 def twenty_year_fixture() -> dict:
@@ -58,6 +60,24 @@ class V224SharedCardAndStageContractTest(unittest.TestCase):
         self.assertEqual(delivery_mode(4, ["formation"]), "shortened")
         self.assertEqual(delivery_mode(2, []), "shortened")
         self.assertEqual(delivery_mode(1, []), "minimal")
+
+    def test_four_claims_can_cover_three_normal_paragraphs(self) -> None:
+        sentence = "你会先把现实情况看清，再决定下一步怎样推进。"
+        section = {
+            "delivery_mode": "normal",
+            "paragraphs": [sentence * 11, sentence * 11, sentence * 11],
+            "source_claim_ids": ["c1", "c2", "c3", "c4"],
+            "paragraph_claim_map": [["c1"], ["c2"], ["c3", "c4"]],
+        }
+        errors: list[str] = []
+        _validate_narrative(section, 0, 0, "dimensions.career", errors, require_map=True, use_delivery_mode=True)
+        self.assertEqual(errors, [])
+
+    def test_skill_does_not_restore_two_claims_per_paragraph(self) -> None:
+        skill_text = (ROOT / "skills/rensheng-youji-growth-map/SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("每个自然段至少映射两个实体化Core判断", skill_text)
+        self.assertIn("每个自然段至少映射一条实体化Core判断", skill_text)
+        self.assertIn("章节整体必须覆盖全部必进判断", skill_text)
 
     def test_report_ai_writes_stages_not_twenty_rows(self) -> None:
         baseline = twenty_year_fixture()

@@ -30,7 +30,7 @@ STALE_RULES = (
     "每个领域至少覆盖三个不同判断家族",
     "完整人生主线写3—4个自然段、500—700个汉字；每个领域写3—4个自然段、500—700个汉字",
     "完整人生主线与六领域各500—700字",
-    "每个自然段至少映射两个实体化Core判断，完整人生主线和六领域",
+    "每个自然段至少映射两个实体化Core判断",
     "`domain_mechanisms`：至少两个领域自身机制",
     "证据缺口模式0条",
     "写作前先为每段选择至少两个 `selected_claims`",
@@ -224,6 +224,8 @@ def audit(root: Path) -> list[str]:
     card_skill_text = (root / "internal/rensheng-youji-free-card-output/SKILL.md").read_text(encoding="utf-8")
     if "卡片没有独立校准流程" not in growth_skill_text or "命理结构、人生K线语义和原始判断仍来自校准前冻结的同一Core" not in growth_skill_text:
         errors.append("Growth-map Skill must preserve the embedded-card calibration boundary")
+    if "每个自然段至少映射一条实体化Core判断" not in growth_skill_text or "章节整体必须覆盖全部必进判断" not in growth_skill_text:
+        errors.append("Growth-map Skill must match the one-claim paragraph mapping used by the report validator")
     if "卡片没有独立的五题校准流程" not in card_skill_text or "不得改写校准前冻结的命理结构、人生K线语义和原始判断" not in card_skill_text:
         errors.append("Free-card output Skill must preserve the standalone and embedded-card calibration boundary")
     card_contract_text = (root / "internal/rensheng-youji-free-card-output/scripts/card_visual_contract.py").read_text(encoding="utf-8")
