@@ -31,6 +31,8 @@ STALE_RULES = (
     "完整人生主线写3—4个自然段、500—700个汉字；每个领域写3—4个自然段、500—700个汉字",
     "完整人生主线与六领域各500—700字",
     "每个自然段至少映射两个实体化Core判断",
+    "minimum_mapped = 2 if",
+    "at least two distinct claims per",
     "`domain_mechanisms`：至少两个领域自身机制",
     "证据缺口模式0条",
     "写作前先为每段选择至少两个 `selected_claims`",
@@ -190,10 +192,13 @@ def audit(root: Path) -> list[str]:
     if "feasible_sets" not in selection_contract_text or "valid_question_set" not in selection_contract_text:
         errors.append("The shared calibration selector does not expose one deterministic feasibility rule")
     writing_pack_text = (root / "internal/rensheng-youji-report-writer/scripts/build_report_writing_pack.py").read_text(encoding="utf-8")
+    draft_validator_text = (root / "internal/rensheng-youji-report-writer/scripts/validate_report_draft.py").read_text(encoding="utf-8")
     if "narrative_role" not in writing_pack_text or "index % count" in writing_pack_text:
         errors.append("Writing pack must use narrative roles instead of round-robin claim distribution")
     if not all(field in writing_pack_text for field in ("interpretive_spine", "human_explanation", "observable_scenes", "helpful_effects", "possible_costs")):
         errors.append("Writing pack does not carry the complete Core explanation contract downstream")
+    if 'minimum_mapped = 1 if not rule or mode != "evidence_gap" else 0' not in draft_validator_text:
+        errors.append("Draft validator must accept one real Core claim per non-gap paragraph")
     brief_materializer_text = (root / "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py").read_text(encoding="utf-8")
     brief_validator_text = (root / "internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py").read_text(encoding="utf-8")
     explanation_fields = ("human_explanation", "source_detail_atom_ids", "observable_scenes", "helpful_effects", "possible_costs")

@@ -157,17 +157,9 @@ def _narrative_buckets(ordered: list[str], claim_index: dict[str, dict[str, Any]
         donor = max(range(count), key=lambda index: len(buckets[index]))
         if len(buckets[donor]) > 1:
             buckets[empty].append(buckets[donor].pop())
-    # Normal and shortened sections require at least two distinct claims per
-    # paragraph whenever the section has enough source claims. Narrative-role
-    # scoring must not create a 3+1 or 5+1 split that the draft validator can
-    # never accept.
-    if count > 1 and len(ordered) >= count * 2:
-        for target in [index for index, bucket in enumerate(buckets) if len(bucket) < 2]:
-            while len(buckets[target]) < 2:
-                donor = max(range(count), key=lambda index: len(buckets[index]))
-                if donor == target or len(buckets[donor]) <= 2:
-                    break
-                buckets[target].append(buckets[donor].pop())
+    # A non-gap paragraph needs at least one real Core claim. Keep additional
+    # claims with the narrative role they actually explain instead of moving
+    # them merely to satisfy a hidden per-paragraph count.
     return buckets
 
 

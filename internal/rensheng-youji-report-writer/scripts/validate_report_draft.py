@@ -61,7 +61,11 @@ def check_section(section: Any, minimum: int, maximum: int, where: str, errors: 
         if not isinstance(paragraph_map, list) or len(paragraph_map) != len(paragraphs or []):
             errors.append(f"{where}.paragraph_claim_map 必须与自然段逐项对应")
         else:
-            minimum_mapped = 2 if not rule or mode in {"normal", "shortened"} else 1 if mode == "minimal" else 0
+            # Every non-gap paragraph needs a real Core source, but one claim
+            # is sufficient. Requiring two per paragraph silently recreates a
+            # six-claim floor for a three-paragraph normal section even though
+            # four diverse claims are a complete, valid source set.
+            minimum_mapped = 1 if not rule or mode != "evidence_gap" else 0
             for index, mapped in enumerate(paragraph_map):
                 if not isinstance(mapped, list) or len(set(mapped)) < minimum_mapped:
                     errors.append(f"{where}.paragraph_claim_map[{index}] 至少包含{minimum_mapped}个不同Core判断")

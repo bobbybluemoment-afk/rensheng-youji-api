@@ -95,7 +95,7 @@ def editorial_draft() -> dict:
 
 
 class V220SemanticCompilerTest(unittest.TestCase):
-    def test_shortened_section_claims_are_balanced_across_paragraphs(self) -> None:
+    def test_shortened_section_keeps_a_real_claim_in_each_paragraph(self) -> None:
         claim_index = {
             f"claim_{number}": {"coverage_tags": ["feature"]}
             for number in range(1, 5)
@@ -103,7 +103,8 @@ class V220SemanticCompilerTest(unittest.TestCase):
 
         buckets = _narrative_buckets(list(claim_index), claim_index, 2)
 
-        self.assertEqual([len(bucket) for bucket in buckets], [2, 2])
+        self.assertTrue(all(bucket for bucket in buckets))
+        self.assertEqual(set().union(*map(set, buckets)), set(claim_index))
 
     def test_questions_are_bound_to_the_exact_frozen_baseline(self) -> None:
         baseline = calibration_baseline()

@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT / "skills/rensheng-youji-growth-map/scripts"))
 from report_source_contract import delivery_mode  # noqa: E402
 from build_report_writing_pack import yearly_writing_plan  # noqa: E402
 from validate_analysis_output import self_test_fixture, validate  # noqa: E402
+from validate_report_draft import check_section  # noqa: E402
 from render_report import _validate_narrative  # noqa: E402
 
 
@@ -72,6 +73,14 @@ class V224SharedCardAndStageContractTest(unittest.TestCase):
         errors: list[str] = []
         _validate_narrative(section, 0, 0, "dimensions.career", errors, require_map=True, use_delivery_mode=True)
         self.assertEqual(errors, [])
+
+        writer_errors: list[str] = []
+        mapped = check_section(
+            section, 0, 0, "dimensions.career", writer_errors,
+            require_map=True, use_delivery_mode=True,
+        )
+        self.assertEqual(writer_errors, [])
+        self.assertEqual(mapped, {"c1", "c2", "c3", "c4"})
 
     def test_skill_does_not_restore_two_claims_per_paragraph(self) -> None:
         skill_text = (ROOT / "skills/rensheng-youji-growth-map/SKILL.md").read_text(encoding="utf-8")
