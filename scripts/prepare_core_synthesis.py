@@ -27,6 +27,7 @@ from _jsonschema_subset import validate_schema_instance  # noqa: E402
 from validate_analysis_input import SCHEMA_PATH as INPUT_SCHEMA_PATH, validate as validate_analysis_input  # noqa: E402
 from validate_method_packet import validate as validate_method_packet  # noqa: E402
 from method_input_contract import build_core_synthesis_input, build_method_input  # noqa: E402
+from core_semantic_contract import build_ai_schema, compiler_owned_contract  # noqa: E402
 
 
 def _load(path: Path) -> Any:
@@ -97,6 +98,9 @@ def prepare(analysis_input: dict[str, Any], packets: list[dict[str, Any]]) -> di
         "source_coverage_audit": source_coverage,
         "semantic_output_contract": {
             "required_sections": sorted(SEMANTIC_SECTIONS),
+            "schema": build_ai_schema(SEMANTIC_SECTIONS),
+            "compiler_owned_fields": compiler_owned_contract(),
+            "compiler_owned_rule": "compiler_owned_fields由确定性编译器计算。AI必须省略，不得花Token抄写来源、方法、证据、状态和派生字段。",
             "forbidden_rule": "不得重写排盘事实、方法包、方法审计、实体证据、校准初始状态或报告来源映射。",
             "source_gap_rule": "uncovered_report_domains不得补造候选、报告判断或现实事实；必须保留为证据缺口并让对应章节降级。",
             "consensus_rule": "same_direction按同一领域中的实质语义归并，不要求成员normalized_direction字符串完全相同；必须保留成员候选、方法家族与归并理由。",
@@ -192,7 +196,6 @@ def compact_view(source: dict[str, Any]) -> dict[str, Any]:
         "method_roles": method_roles,
         "technical_index": technical_index,
         "judgment_matrix": judgment_matrix,
-        "detail_atom_index": detail_atom_index,
         "method_boundaries": method_boundaries,
         "evidence_index": evidence_index,
         "method_execution_audit": source["method_execution_audit"],
@@ -206,6 +209,8 @@ def compact_view(source: dict[str, Any]) -> dict[str, Any]:
             "calibration_feasibility_rule": "冻结前的reality_candidate_pool必须能由程序选出恰好5题：至少4个领域、同领域最多2题、5个不同现实问题轴、至少1条已发生且有时运依据的timed_event、timed_event与objective_state合计至少2条。候选仍须逐条满足只问过去或当前、单一问题轴和领域自然语言规则。",
             "detail_retention_rule": "report_claim_ledger每条判断必须引用1—6个属于其method_hypothesis_ids的source_detail_atom_ids。程序会从这些编号恢复具体生活表现并覆盖allowed_examples；不得用‘可通过具体任务核对’等通用占位句代替。",
             "interpretive_spine_rule": "interpretive_spine提炼1—4条真正跨领域的核心模式。每条必须区分原有能力、后来形成的做法、当前可能付出的代价和发展方向，并引用真实判断与生活细节；不能把全部人生压成工作方式，也不能吞掉领域独有信息。",
+            "career_example_rule": "事业判断如果有足够方法细节，必须保留工作对象、常见任务、组织环境或岗位功能类别中的至少一类现实例子。具体行业或岗位名称至少需要两个独立主要方法共同支持；证据只到类别时写‘例如’并保留为候选，不能把例子写成命主已从事的事实。",
+            "annual_differentiation_rule": "20年年度语义必须逐年读取timing_continuity及大运流年结构，不能用‘普通年一个模板、重点年一个模板’填满。只要年度激活机制发生变化，受影响领域、人的行动、外部反馈、承上启下内容中至少一项也要相应变化；同一领域不得20年保持完全相同的方向、强度和机制。无明显变化的年份可以平稳，但要说明当年具体在延续什么。",
             "natural_chinese_rule": "所有用户表达使用自然、成熟、可保存的中文：直接判断、现实场景、形成解释。一句只承担一个主要意思，不用抽象名词替代生活中实际发生的动作。",
             "user_address_rule": "plain_claim、现实候选陈述、可观察例子与validation_question统一使用第二人称‘你’，不得使用‘您’。",
         },
@@ -240,7 +245,12 @@ def main() -> int:
         compiler_source = prepare(_load(args.analysis_input), packets)
         result = compact_view(compiler_source)
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+        # This is the AI-visible artifact.  Keep it compact so the canonical
+        # working Schema does not increase prompt cost through indentation.
+        args.output.write_text(
+            json.dumps(result, ensure_ascii=False, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
         compiler_path = args.compiler_source or args.output.with_name("core-compiler-source.json")
         compiler_path.write_text(json.dumps(compiler_source, ensure_ascii=False, indent=2), encoding="utf-8")
     except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:

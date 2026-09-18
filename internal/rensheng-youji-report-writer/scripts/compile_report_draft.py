@@ -27,8 +27,20 @@ def compile_draft(brief: dict[str, Any], pack: dict[str, Any], patch: dict[str, 
     schema_errors = validate_schema_instance(patch, json.loads(PATCH_SCHEMA.read_text(encoding="utf-8")))
     if schema_errors:
         raise ValueError("正文语义补丁Schema无效：" + "；".join(schema_errors))
-    if patch.get("schema_version") != "1.0.0" or patch.get("brief_id") != brief.get("brief_id"):
+    if patch.get("schema_version") != "1.1.0" or patch.get("brief_id") != brief.get("brief_id"):
         raise ValueError("正文语义补丁没有绑定当前事实提纲")
+    expected_stages = [
+        (item.get("start_year"), item.get("end_year"))
+        for item in (pack.get("yearly_writing_plan") or {}).get("stages") or []
+    ]
+    actual_stages = [
+        (item.get("start_year"), item.get("end_year"))
+        for item in (patch.get("yearly_outlook") or {}).get("stages") or []
+    ]
+    expected_key_years = [item.get("year") for item in (pack.get("yearly_writing_plan") or {}).get("key_years") or []]
+    actual_key_years = [item.get("year") for item in (patch.get("yearly_outlook") or {}).get("key_years") or []]
+    if actual_stages != expected_stages or actual_key_years != expected_key_years:
+        raise ValueError("阶段边界与重点年份必须原样采用确定性写作计划，AI只负责解释")
     text_by_slot = {item.get("slot_id"): item.get("text") for item in patch.get("paragraphs") or [] if isinstance(item, dict)}
     expected_slots = [item["slot_id"] for item in pack["slots"]]
     if set(text_by_slot) != set(expected_slots) or len(text_by_slot) != len(expected_slots):

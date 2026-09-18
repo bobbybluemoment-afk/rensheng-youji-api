@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.23.1",
+  "version": "2.24.0",
   "visibility": "internal",
   "stages": [
     {
@@ -38,15 +38,15 @@
     "post_calibration_selector": "../scripts/resolve_report_sources.py",
     "pages": 10,
     "card_page": 2,
-    "report_schema_version": "2.14.0",
+    "report_schema_version": "2.15.0",
     "core_version": "0.17.0",
     "content_brief_schema_version": "1.6.0",
     "report_draft_schema_version": "1.6.0",
-    "editorial_review_version": "2.5.0",
+    "editorial_review_version": "2.6.0",
     "calibration_schema_version": "3.0.0",
     "calibration_template_version": "2.0.0",
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "2.23.1修复校准生命周期契约：冻结动作单独限制待校准判断的初始状态，通用Core校验允许有增量记录的校准后状态，并核对状态、原句与机制保留的一致性。Core仍为0.17.0，不新增AI调用。"
+  "notes": "2.24.0统一免费卡片与报告卡片的2.0.0确定性视觉算法并锁定Baseline/趋势哈希；章节交付模式改为证据覆盖优先，四条多样判断即可支持正常篇幅；事业保留来源约束的岗位功能与组织环境例子；长文改写3—6个连续阶段和3—8个重点年份，完整20年仍留在冻结Core与卡片。新增年度模板坍缩、卡片平线和自然标题审计。Core仍为0.17.0，不增加AI调用并减少逐年写作输出。"
 }

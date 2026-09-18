@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_SKILL = ROOT / "internal/rensheng-youji-free-card-output"
 sys.path.insert(0, str(OUTPUT_SKILL / "scripts"))
+from card_visual_contract import CARD_ALGORITHM_VERSION, canonical_digest  # noqa: E402
 
 
 def load(path: str) -> dict:
@@ -48,9 +49,16 @@ def main() -> int:
             raise ValueError("卡片的冻结Core与校准后Core不是同一次分析")
         if lock and series.get("window_start_state", {}).get("evidence_mode") != "birth_only":
             raise ValueError("完整报告卡片的人生K线必须来自校准前冻结Core，不得使用校准事实改写")
+        if series.get("algorithm_version") != CARD_ALGORITHM_VERSION:
+            raise ValueError("卡片趋势没有使用当前共享算法版本")
+        if series.get("source_baseline_sha256") != baseline_sha:
+            raise ValueError("卡片趋势没有绑定当前校准前冻结Core")
+        expected_series_sha = canonical_digest({key: value for key, value in series.items() if key != "series_sha256"})
+        if series.get("series_sha256") != expected_series_sha:
+            raise ValueError("卡片趋势哈希无效")
         calibrated_sha = hashlib.sha256(json.dumps(analysis, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         result = {
-            "schema_version": "1.2.0",
+            "schema_version": "1.3.0",
             "source": {
                 "analysis_id": meta["analysis_id"],
                 "core_version": meta["core_version"],
@@ -60,6 +68,8 @@ def main() -> int:
                 "resolved_source_sha256": resolved.get("resolved_sha256") if resolved else None,
                 "trend_source": "frozen_baseline",
                 "visible_selection_source": "post_calibration" if resolved else "frozen_baseline",
+                "card_algorithm_version": CARD_ALGORITHM_VERSION,
+                "visual_series_sha256": series["series_sha256"],
             },
             "identity": content["identity"],
             "mingju_analysis": content["mingju_analysis"],

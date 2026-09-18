@@ -49,7 +49,7 @@ def main() -> int:
         report = json.loads(args.report.read_text(encoding="utf-8"))
         free_card = json.loads(args.free_card.read_text(encoding="utf-8"))
         calibration_questions = json.loads(args.calibration_questions.read_text(encoding="utf-8"))
-        is_traceable = report.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0", "2.14.0"}
+        is_traceable = report.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0", "2.14.0", "2.15.0"}
         if is_traceable:
             required_artifacts = {
                 "--content-brief": args.content_brief,
@@ -75,7 +75,7 @@ def main() -> int:
             ]
             if temporary_patches:
                 raise ValueError("正式交付目录含临时修补脚本或人工语义分片，禁止据此拼装正文、Core或哈希：" + "、".join(sorted(set(temporary_patches))))
-            if report.get("schema_version") in {"2.12.0", "2.13.0", "2.14.0"}:
+            if report.get("schema_version") in {"2.12.0", "2.13.0", "2.14.0", "2.15.0"}:
                 protected = {
                     "--analysis-baseline": args.analysis_baseline,
                     "--baseline-lock": args.baseline_lock,
@@ -99,14 +99,14 @@ def main() -> int:
                     "--calibrated", str(args.analysis),
                 ])
                 run([sys.executable, str(REPO_ROOT / "scripts/audit_claim_diversity.py"), str(args.analysis)])
-                if report.get("schema_version") == "2.14.0":
+                if report.get("schema_version") in {"2.14.0", "2.15.0"}:
                     run([
                         sys.executable,
                         str(SKILL_ROOT / "scripts/validate_calibration_questions.py"),
                         str(args.calibration_questions),
                         "--analysis", str(args.analysis_baseline),
                     ])
-            if report.get("schema_version") in {"2.13.0", "2.14.0"}:
+            if report.get("schema_version") in {"2.13.0", "2.14.0", "2.15.0"}:
                 if args.resolved_sources is None:
                     raise ValueError("2.13.0正式报告缺少--resolved-sources")
                 with tempfile.TemporaryDirectory(prefix="rensheng-youji-resolved-") as temp_dir:
@@ -131,7 +131,7 @@ def main() -> int:
                 str(REPO_ROOT / "internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py"),
                 str(args.content_brief), "--analysis", str(args.analysis),
             ]
-            if report.get("schema_version") in {"2.13.0", "2.14.0"}:
+            if report.get("schema_version") in {"2.13.0", "2.14.0", "2.15.0"}:
                 brief_validation.extend(["--resolved-sources", str(args.resolved_sources)])
             run(brief_validation)
             run([
@@ -144,16 +144,16 @@ def main() -> int:
                 str(REPO_ROOT / "internal/rensheng-youji-chinese-editor/scripts/validate_editorial_review.py"),
                 str(args.editorial_review), "--draft", str(args.report_draft), "--report", str(args.report),
             ])
-            if report.get("schema_version") in {"2.12.0", "2.13.0", "2.14.0"}:
+            if report.get("schema_version") in {"2.12.0", "2.13.0", "2.14.0", "2.15.0"}:
                 run([
                     sys.executable, str(REPO_ROOT / "scripts/audit_report_claim_coverage.py"),
                     "--analysis", str(args.analysis), "--brief", str(args.content_brief),
                     "--draft", str(args.report_draft), "--report", str(args.report),
                 ])
         question_schema = calibration_questions.get("schema_version")
-        if report.get("schema_version") == "2.14.0":
+        if report.get("schema_version") in {"2.14.0", "2.15.0"}:
             if question_schema != CURRENT_CALIBRATION_SCHEMA or calibration_questions.get("template_version") != "2.0.0":
-                raise ValueError("2.14.0正式交付必须使用3.0.0个性化确定性校准结果")
+                raise ValueError("2.14.0及以后正式交付必须使用3.0.0个性化确定性校准结果")
         elif report.get("schema_version") == "2.13.0":
             if question_schema != "2.2.0" or calibration_questions.get("template_version") != "1.0.0":
                 raise ValueError("2.13.0正式交付必须使用2.2.0固定题型校准结果")
@@ -183,6 +183,12 @@ def main() -> int:
         for key in ("analysis_id", "core_version"):
             if report_source.get(key) != card_source.get(key):
                 raise ValueError(f"报告与新版卡片不是来自同一Core母稿：source.{key}不一致")
+        if report.get("schema_version") == "2.15.0":
+            artifacts = report.get("source_artifacts", {})
+            if card_source.get("card_algorithm_version") != "2.0.0" or artifacts.get("card_algorithm_version") != "2.0.0":
+                raise ValueError("免费卡片与完整报告卡片没有使用同一共享算法")
+            if artifacts.get("card_visual_series_sha256") != card_source.get("visual_series_sha256"):
+                raise ValueError("报告记录的卡片趋势哈希与实际免费卡片输出不一致")
         report_relationship_years = report.get("cross_output_consistency", {}).get("relationship_opportunity_years")
         card_relationship_years = [
             item.get("year")
@@ -212,14 +218,14 @@ def main() -> int:
                 "traceable_editorial_review_valid": True,
                 "calibration_hidden_from_visible_report": True,
             })
-        if report.get("schema_version") in {"2.12.0", "2.13.0", "2.14.0"}:
+        if report.get("schema_version") in {"2.12.0", "2.13.0", "2.14.0", "2.15.0"}:
             checks.update({
                 "baseline_core_locked": True,
                 "calibration_delta_only": True,
                 "claim_diversity_valid": True,
                 "mandatory_core_claims_realized": True,
             })
-        if report.get("schema_version") in {"2.13.0", "2.14.0"}:
+        if report.get("schema_version") in {"2.13.0", "2.14.0", "2.15.0"}:
             checks.update({
                 "post_calibration_sources_resolved": True,
                 "rejected_claims_removed": True,

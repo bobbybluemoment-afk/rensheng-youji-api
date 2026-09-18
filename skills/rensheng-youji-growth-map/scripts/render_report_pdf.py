@@ -54,7 +54,7 @@ def year_story(item: dict[str, Any], index: int) -> str:
         f"{carry}。这一年，{signal}。{seed}。",
         f"带着{carry}，{signal}。随后，{seed}。",
         f"{carry}会继续影响这一年。{signal}；{seed}。",
-        f"这一年承接{carry}，主要表现为{signal}。最终，{seed}。",
+        f"这一年延续{carry}，主要表现为{signal}。最终，{seed}。",
     )
     return patterns[index % len(patterns)]
 
@@ -323,7 +323,7 @@ def page_three(data: dict[str, Any]) -> Image.Image:
     body_size = 23
     bullet_size = 22
     page.heading("完整人生主线", color=TEAL, size=32)
-    if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0", "2.14.0"}:
+    if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0", "2.14.0", "2.15.0"}:
         spans = {item["paragraph_index"]: item["text"] for item in summary["life_overview"].get("emphasis_spans") or []}
         for index, paragraph in enumerate(summary["life_overview"]["paragraphs"]):
             page.paragraph_emphasis(paragraph, spans.get(index), size=body_size, gap=18)
@@ -349,7 +349,7 @@ def page_four(data: dict[str, Any]) -> Image.Image:
     answer_size = 27
     label_size = 22
     page.paragraph("你想问｜" + data["profile"]["question"], size=26, color=PINK, gap=18)
-    if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0", "2.14.0"}:
+    if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0", "2.14.0", "2.15.0"}:
         page.heading("对当前问题的直接回应", color=TEAL, size=29)
         current = data["current_question_narrative"]
         spans = {item["paragraph_index"]: item["text"] for item in current.get("emphasis_spans") or []}
@@ -375,10 +375,10 @@ def dimensions_page(data: dict[str, Any], number: int, indexes: tuple[int, int])
         page.y = block_top + 18
         page.draw.text((MARGIN_X, page.y), section["title"], font=font(28, role="heading"), fill=TEAL)
         page.y += 44
-        if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0", "2.14.0"}:
+        if data.get("schema_version") in {"2.7.0", "2.8.0", "2.9.0", "2.10.0", "2.11.0", "2.12.0", "2.13.0", "2.14.0", "2.15.0"}:
             spans = {item["paragraph_index"]: item["text"] for item in section.get("emphasis_spans") or []}
             for paragraph_index, paragraph in enumerate(section["paragraphs"]):
-                page.paragraph_emphasis(paragraph, spans.get(paragraph_index), size=23 if data.get("schema_version") in {"2.10.0", "2.11.0", "2.12.0", "2.13.0", "2.14.0"} else 22, gap=8)
+                page.paragraph_emphasis(paragraph, spans.get(paragraph_index), size=23 if data.get("schema_version") in {"2.10.0", "2.11.0", "2.12.0", "2.13.0", "2.14.0", "2.15.0"} else 22, gap=8)
         else:
             page.callout("", section["overview"], size=22, fill="#E7EFEA")
             for key, heading in zip(DIMENSION_PARAGRAPHS[section["id"]], DIMENSION_HEADINGS[section["id"]]):
@@ -391,6 +391,41 @@ def dimensions_page(data: dict[str, Any], number: int, indexes: tuple[int, int])
 
 
 def years_page(data: dict[str, Any], number: int, start: int) -> Image.Image:
+    if data.get("schema_version") == "2.15.0":
+        outlook = data["yearly_outlook"]
+        if start == 0:
+            page = Page(number, "阶段观察", compact=True)
+            page.paragraph(outlook["summary"], size=18, color=TEAL, gap=10)
+            items = outlook["stages"]
+            top = page.y
+            span = (HEIGHT - BOTTOM - 30 - top) / len(items)
+            for index, item in enumerate(items):
+                block_top = int(top + index * span)
+                block_bottom = int(top + (index + 1) * span - 12)
+                page.draw.rounded_rectangle((MARGIN_X - 12, block_top, WIDTH - MARGIN_X + 12, block_bottom), 18, fill="#FBF7EF", outline=LIGHT_TEAL, width=2)
+                page.y = block_top + 13
+                page.draw.text((MARGIN_X, page.y), f"{item['start_year']}—{item['end_year']}｜{item['title']}", font=font(21, role="heading"), fill=GOLD)
+                page.y += 31
+                page.paragraph(item["narrative"], size=20, gap=3)
+                page.paragraph("可以留意｜" + "、".join(item["real_world_signals"]), size=18, color=TEAL, gap=3)
+                if page.y > block_bottom + 2:
+                    raise ValueError("第8页阶段文字超出对应区块，请缩短阶段说明")
+            return page.finish()
+        page = Page(number, "变化更明显的年份", compact=True)
+        items = outlook["key_years"]
+        top = page.y
+        span = (HEIGHT - BOTTOM - 30 - top) / len(items)
+        for index, item in enumerate(items):
+            block_top = int(top + index * span)
+            block_bottom = int(top + (index + 1) * span - 10)
+            page.draw.rounded_rectangle((MARGIN_X - 12, block_top, WIDTH - MARGIN_X + 12, block_bottom), 16, fill="#FBF7EF", outline="#E9D6D4", width=2)
+            page.y = block_top + 10
+            page.draw.text((MARGIN_X, page.y), f"{item['year']}｜{item['title']}", font=font(20, role="heading"), fill=PINK)
+            page.y += 29
+            page.paragraph(item["what_changes"] + " 可以留意：" + item["what_to_notice"], size=19, gap=2)
+            if page.y > block_bottom + 2:
+                raise ValueError("第9页重点年份文字超出对应区块，请缩短年度说明")
+        return page.finish()
     page = Page(number, f"逐年观察｜{start + 1}—{start + 10}", compact=True)
     if start == 0:
         page.paragraph(data["yearly_outlook"]["summary"], size=18, color=TEAL, gap=8)

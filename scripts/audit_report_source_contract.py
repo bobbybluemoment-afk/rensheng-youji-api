@@ -13,6 +13,7 @@ from report_source_contract import (
     MANDATORY_CANDIDATE_MAX,
     claim_diversity_gaps,
     evidence_retention_gaps,
+    delivery_mode,
     focus_domain,
     mandatory_candidate_bounds,
     report_total_cjk_bounds,
@@ -84,6 +85,8 @@ def audit(root: Path) -> list[str]:
         errors.append("Sparse evidence must degrade instead of failing a fixed claim-count rule")
     if report_total_cjk_bounds(["normal"] * 8) != (4300, 6500):
         errors.append("Normal report total bounds changed unexpectedly")
+    if delivery_mode(4, []) != "normal" or delivery_mode(4, ["formation"]) != "shortened":
+        errors.append("Delivery mode must let four complete diverse claims support a normal chapter")
     if report_total_cjk_bounds(["evidence_gap"] * 8)[0] >= 4300:
         errors.append("Degraded sections must lower the full-report minimum length")
     if focus_domain("事业发展") != "career" or focus_domain("财务与收入") != "finance_resources":
@@ -223,6 +226,21 @@ def audit(root: Path) -> list[str]:
         errors.append("Growth-map Skill must preserve the embedded-card calibration boundary")
     if "卡片没有独立的五题校准流程" not in card_skill_text or "不得改写校准前冻结的命理结构、人生K线语义和原始判断" not in card_skill_text:
         errors.append("Free-card output Skill must preserve the standalone and embedded-card calibration boundary")
+    card_contract_text = (root / "internal/rensheng-youji-free-card-output/scripts/card_visual_contract.py").read_text(encoding="utf-8")
+    card_assembler_text = (root / "scripts/assemble_free_card.py").read_text(encoding="utf-8")
+    delivery_text = (root / "skills/rensheng-youji-growth-map/scripts/generate_full_report.py").read_text(encoding="utf-8")
+    if 'CARD_ALGORITHM_VERSION = "2.0.0"' not in card_contract_text:
+        errors.append("Shared free/report card algorithm version is missing")
+    if not all("card_algorithm_version" in text and "visual_series_sha256" in text for text in (card_assembler_text, delivery_text)):
+        errors.append("Card assembler and final delivery do not verify the same algorithm and visual-series hash")
+    semantic_schema = json.loads((root / "internal/rensheng-youji-report-writer/schemas/report-semantic-patch.schema.json").read_text(encoding="utf-8"))
+    yearly_required = set(semantic_schema["properties"]["yearly_outlook"].get("required") or [])
+    if yearly_required != {"start_year", "end_year", "summary", "stages", "key_years"}:
+        errors.append("Report writer must output deterministic stages and key years instead of 20 AI-written rows")
+    if "annual_differentiation_rule" not in (root / "scripts/prepare_core_synthesis.py").read_text(encoding="utf-8"):
+        errors.append("Core synthesis does not require evidence-based annual differentiation")
+    if "跨多年完全复制同一方向、强度和机制" not in core_validator_text:
+        errors.append("Core validator cannot detect annual template collapse")
     return errors
 
 

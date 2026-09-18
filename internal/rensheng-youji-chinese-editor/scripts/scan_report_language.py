@@ -29,6 +29,8 @@ DEFENSIVE_PATTERNS = (
     r"优势不只在于", r"与其[^。！？]{0,30}(?:不如|更应该)",
 )
 DANGLING_ENDINGS = ("与此同时", "因为", "但", "但是", "而", "并且", "以及", "另一面是", "例如", "比如")
+ABSTRACT_TITLE_TERMS = {"评价", "结算", "定型", "归档", "承接", "检验", "配置", "转换", "重整", "输出", "责任", "路径"}
+CONCRETE_TITLE_TERMS = {"工作", "岗位", "项目", "收入", "工资", "合同", "学习", "考试", "家庭", "住房", "关系", "休息", "睡眠", "客户", "领导", "同事", "存钱", "消费"}
 
 
 def sections(draft: dict[str, Any]) -> list[dict[str, Any]]:
@@ -65,6 +67,14 @@ def reasons_for(text: str) -> list[str]:
     return reasons
 
 
+def title_reasons(text: str) -> list[str]:
+    reasons = reasons_for(text)
+    abstract_hits = sum(term in text for term in ABSTRACT_TITLE_TERMS)
+    if abstract_hits >= 2 and not any(term in text for term in CONCRETE_TITLE_TERMS):
+        reasons.append("阶段或年份标题由抽象词拼接，需改成现实中的变化")
+    return list(dict.fromkeys(reasons))
+
+
 def semantic_slots(semantic: dict[str, Any]) -> list[tuple[str, str]]:
     slots: list[tuple[str, str]] = []
 
@@ -78,9 +88,14 @@ def semantic_slots(semantic: dict[str, Any]) -> list[tuple[str, str]]:
         add(f"stage_story.{key}", value)
     outlook = semantic.get("yearly_outlook") or {}
     add("yearly_outlook.summary", outlook.get("summary"))
-    for index, year in enumerate(outlook.get("years") or []):
-        for key in ("theme", "carry_in", "real_world_signal", "seed_for_next"):
-            add(f"yearly_outlook.years.{index}.{key}", year.get(key))
+    for index, stage in enumerate(outlook.get("stages") or []):
+        add(f"yearly_outlook.stages.{index}.title", stage.get("title"))
+        add(f"yearly_outlook.stages.{index}.narrative", stage.get("narrative"))
+        for signal_index, value in enumerate(stage.get("real_world_signals") or []):
+            add(f"yearly_outlook.stages.{index}.real_world_signals.{signal_index}", value)
+    for index, year in enumerate(outlook.get("key_years") or []):
+        for key in ("title", "what_changes", "what_to_notice"):
+            add(f"yearly_outlook.key_years.{index}.{key}", year.get(key))
     guide = semantic.get("action_guide") or {}
     for index, value in enumerate(guide.get("priority_actions") or []):
         add(f"action_guide.priority_actions.{index}", value)
@@ -118,21 +133,21 @@ def scan(draft: dict[str, Any], semantic: dict[str, Any] | None = None) -> dict[
             if slot_id not in existing_slots:
                 issues.append({"slot_id": slot_id, "section_id": section_id, "paragraph_index": 0, "reasons": ["本领域没有使用能够让用户认出生活场景的语言"], "text": (section.get("paragraphs") or [""])[0]})
     for slot_id, text in semantic_slots(semantic or {}):
-        reasons = reasons_for(text)
+        reasons = title_reasons(text) if slot_id.endswith(".title") else reasons_for(text)
         if reasons:
             issues.append({"slot_id": slot_id, "reasons": reasons, "text": text})
-    yearly = (semantic or {}).get("yearly_outlook", {}).get("years") or []
+    yearly = (semantic or {}).get("yearly_outlook", {}).get("key_years") or []
     opening_slots: dict[str, list[tuple[str, str]]] = {}
     for index, year in enumerate(yearly):
         if not isinstance(year, dict):
             continue
-        for key in ("carry_in", "real_world_signal", "seed_for_next"):
+        for key in ("what_changes", "what_to_notice"):
             value = year.get(key)
             if not isinstance(value, str):
                 continue
             opening = "".join(re.findall(r"[\u3400-\u9fff]", value))[:10]
             if len(opening) >= 6:
-                opening_slots.setdefault(opening, []).append((f"semantic.yearly_outlook.years.{index}.{key}", value))
+                opening_slots.setdefault(opening, []).append((f"semantic.yearly_outlook.key_years.{index}.{key}", value))
     issue_ids = {item["slot_id"] for item in issues}
     for repeated in opening_slots.values():
         if len(repeated) < 4:

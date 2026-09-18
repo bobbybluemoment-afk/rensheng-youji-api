@@ -43,10 +43,10 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
     is_v21 = review.get("version") == "2.1.0"
     is_v22 = review.get("version") == "2.2.0"
     is_v23 = review.get("version") == "2.3.0"
-    is_v25 = review.get("version") == "2.5.0"
-    is_v24 = review.get("version") in {"2.4.0", "2.5.0"}
-    if review.get("version") not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.4.0", "2.5.0"}:
-        errors.append("编辑记录版本必须为2.0.0—2.5.0中的受支持版本")
+    is_v25 = review.get("version") in {"2.5.0", "2.6.0"}
+    is_v24 = review.get("version") in {"2.4.0", "2.5.0", "2.6.0"}
+    if review.get("version") not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.4.0", "2.5.0", "2.6.0"}:
+        errors.append("编辑记录版本必须为2.0.0—2.6.0中的受支持版本")
     if review.get("draft_id") != draft.get("draft_id") or review.get("final_report_id") != report.get("report_id"):
         errors.append("编辑记录与初稿或终稿来源不一致")
     if is_v25 and review.get("semantic_final_sha256") != report.get("source_artifacts", {}).get("report_semantic_sha256"):

@@ -22,6 +22,10 @@ def digest(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
+def paragraph_digest(paragraphs: list[str]) -> str:
+    return hashlib.sha256("\n".join(paragraphs).encode("utf-8")).hexdigest()
+
+
 def with_body_emotion_safety_note(dimensions: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Add the required health boundary without asking AI to remember boilerplate."""
     result = json.loads(json.dumps(dimensions, ensure_ascii=False))
@@ -39,7 +43,7 @@ def compile_report(analysis: dict[str, Any], profile: dict[str, Any], brief: dic
         raise ValueError("最终报告输入没有绑定同一份事实提纲")
     meta = analysis["analysis_meta"]
     if meta.get("core_version") != "0.17.0":
-        raise ValueError("2.14.0报告只能由0.17.0 Core编译")
+        raise ValueError("2.15.0报告只能由0.17.0 Core编译")
     if brief.get("source", {}).get("analysis_id") != meta.get("analysis_id") or resolved.get("source", {}).get("analysis_id") != meta.get("analysis_id"):
         raise ValueError("事实提纲或报告选材没有绑定当前Core")
     analysis_hash = digest(analysis)
@@ -52,6 +56,8 @@ def compile_report(analysis: dict[str, Any], profile: dict[str, Any], brief: dic
         raise ValueError("卡片与最终报告不是来自同一Core")
     if free_card.get("source", {}).get("calibrated_sha256") != analysis_hash or free_card.get("source", {}).get("resolved_source_sha256") != resolved_hash:
         raise ValueError("卡片可见内容没有绑定当前校准后Core和报告选材")
+    if free_card.get("source", {}).get("card_algorithm_version") != "2.0.0":
+        raise ValueError("完整报告卡片必须调用与免费版相同的2.0.0共享算法")
     if questions.get("schema_version") != "3.0.0" or questions.get("template_version") != "2.0.0":
         raise ValueError("最终报告必须使用3.0.0个性化确定性校准题")
     if delta.get("analysis_id") != meta.get("analysis_id") or len(delta.get("responses") or []) != 5:
@@ -60,8 +66,8 @@ def compile_report(analysis: dict[str, Any], profile: dict[str, Any], brief: dic
         raise ValueError("校准题与校准增量不是来自同一冻结Baseline")
     if review.get("draft_id") != draft.get("draft_id"):
         raise ValueError("中文编辑记录没有绑定当前报告初稿")
-    if review.get("version") != "2.5.0" or review.get("scan_status") not in {"pass", "repair_required"}:
-        raise ValueError("最终报告必须使用2.5.0按需中文编辑记录")
+    if review.get("version") != "2.6.0" or review.get("scan_status") not in {"pass", "repair_required"}:
+        raise ValueError("最终报告必须使用2.6.0按需中文编辑记录")
     if review.get("semantic_final_sha256") != digest(semantic):
         raise ValueError("中文编辑记录没有绑定最终使用的报告语义文字")
     focus = brief.get("focus_scope", {}).get("user_focus", "")
@@ -80,9 +86,9 @@ def compile_report(analysis: dict[str, Any], profile: dict[str, Any], brief: dic
         text = str(candidate.get("statement") or candidate.get("label") or "该现实侧面仍待核对")
         calibrated_text[status_groups.get(update.get("status"), "uncertain")].append(text)
     report = {
-        "schema_version": "2.14.0", "report_id": report_id, "document_mode": "full_calibrated",
+        "schema_version": "2.15.0", "report_id": report_id, "document_mode": "full_calibrated",
         "source": {"analysis_id": meta["analysis_id"], "core_version": meta["core_version"], "analysis_as_of": meta["analysis_as_of"], "calibration_status": "calibrated"},
-        "source_artifacts": {"content_brief_id": brief["brief_id"], "report_draft_id": draft["draft_id"], "editorial_review_id": review["review_id"], "resolved_source_sha256": resolved["resolved_sha256"], "report_semantic_sha256": digest(semantic)},
+        "source_artifacts": {"content_brief_id": brief["brief_id"], "report_draft_id": draft["draft_id"], "editorial_review_id": review["review_id"], "resolved_source_sha256": resolved["resolved_sha256"], "report_semantic_sha256": digest(semantic), "card_algorithm_version": "2.0.0", "card_visual_series_sha256": free_card["source"]["visual_series_sha256"]},
         "title": "人生有迹｜完整报告", "subtitle": "看见你带来的能力，理解你走过的路，也寻找新的可能",
         "generated_on": meta["analysis_as_of"], "brand": "人生有迹 by 景行",
         "profile": {"name": profile.get("name", ""), "identity_option": profile.get("gender", ""), "birth": profile.get("time", {}).get("input_local_time", ""), "location": profile.get("birthplace", ""), "focus": focus, "question": focus},
@@ -90,7 +96,7 @@ def compile_report(analysis: dict[str, Any], profile: dict[str, Any], brief: dic
         "cross_output_consistency": {"relationship_opportunity_years": relationship_years},
         "chart": {"pillars": pillars, "luck_start": profile.get("bazi", {}).get("luck_start_local_time", ""), "current_luck_cycle": f"{current_luck['pillar']}（{current_luck['start_year']}—{current_luck['end_year']}）" if current_luck else "当前阶段待核对", "time_basis": profile.get("time", {}).get("note", "已按确定性排盘口径处理"), "uncertainty": "；".join(analysis.get("chart_audit", {}).get("boundary_dependencies") or ["不接近关键时间边界"]), "formal_report_allowed": True},
         "calibration": {"question_schema_version": questions["schema_version"], "template_version": questions["template_version"], "summary": "五道校准题已用于确认现实候选的主次。", "birth_time_status": "稳定", "responses": delta.get("responses") or [], **calibrated_text},
-        "editorial_review": {"version": "2.5.0", "review_id": review["review_id"]},
+        "editorial_review": {"version": "2.6.0", "review_id": review["review_id"]},
         "executive_summary": summary, "current_question_narrative": draft["current_question"],
         "stage_story": semantic["stage_story"], "dimensions": with_body_emotion_safety_note(draft["dimensions"]),
         "yearly_outlook": semantic["yearly_outlook"], "action_guide": semantic["action_guide"],
@@ -101,6 +107,20 @@ def compile_report(analysis: dict[str, Any], profile: dict[str, Any], brief: dic
     }
     updated_review = json.loads(json.dumps(review, ensure_ascii=False))
     updated_review["final_report_id"] = report_id
+    final_sections = {
+        "life_overview": report["executive_summary"]["life_overview"],
+        "current_question": report["current_question_narrative"],
+        **{f"dimension:{item['id']}": item for item in report["dimensions"]},
+    }
+    for record in updated_review.get("sections") or []:
+        section = final_sections.get(record.get("section_id"))
+        if isinstance(section, dict):
+            record["final_sha256"] = paragraph_digest(section.get("paragraphs") or [])
+            if record.get("section_id") == "dimension:body_emotion":
+                changes = list(record.get("changes") or [])
+                if "确定性补充健康安全提示" not in changes:
+                    changes.append("确定性补充健康安全提示")
+                record["changes"] = changes
     return report, updated_review
 
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -13,12 +14,26 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "internal/rensheng-youji-mingli-core/scripts"))
 from core_synthesis_contract import SEMANTIC_SECTIONS, canonical_digest  # noqa: E402
+from core_semantic_contract import build_ai_schema  # noqa: E402
 
 
 METHOD_TARGETS = {
     "technical_conclusions", "reality_hypotheses", "domain_limits", "limitations",
     "failure_reasons", "degradation_effects", "result",
 }
+
+
+def targets_from_errors(errors: list[str], allowed: set[str]) -> list[str]:
+    """Extract only the top-level sections actually named by validation errors."""
+    targets: set[str] = set()
+    for error in errors:
+        match = re.match(r"^\$\.([A-Za-z0-9_]+)|^([A-Za-z0-9_]+)(?:\.|\[|\s)", error)
+        if not match:
+            continue
+        target = match.group(1) or match.group(2)
+        if target in allowed:
+            targets.add(target)
+    return sorted(targets)
 
 
 def build(source: dict[str, Any], stage: str, targets: list[str], errors: list[str]) -> dict[str, Any]:
@@ -39,6 +54,9 @@ def build(source: dict[str, Any], stage: str, targets: list[str], errors: list[s
         "locked_rule": "只返回allowed_targets对应的replacements；不得重写其他已经通过的内容。",
         "fragments": {target: source[target] for target in targets},
     }
+    if stage == "core_synthesis":
+        request["target_schema"] = build_ai_schema(SEMANTIC_SECTIONS, target_set)
+        request["schema_rule"] = "replacements中的value必须符合target_schema对应字段；不得猜测字段名、类型或枚举值。"
     request["repair_request_sha256"] = canonical_digest(request)
     return request
 
@@ -47,7 +65,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--stage", choices=["independent_method", "core_synthesis"], required=True)
-    parser.add_argument("--targets", required=True, help="逗号分隔的顶层字段")
+    parser.add_argument("--targets", help="逗号分隔的顶层字段；core_synthesis建议省略并从--errors自动提取")
     parser.add_argument("--errors", type=Path, help="校验器输出JSON；只读取errors数组")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -57,7 +75,14 @@ def main() -> int:
         if args.errors:
             payload = json.loads(args.errors.read_text(encoding="utf-8"))
             errors = [str(item) for item in payload.get("errors") or []]
-        result = build(source, args.stage, [item.strip() for item in args.targets.split(",") if item.strip()], errors)
+        if args.targets:
+            targets = [item.strip() for item in args.targets.split(",") if item.strip()]
+        elif args.errors:
+            allowed = METHOD_TARGETS if args.stage == "independent_method" else SEMANTIC_SECTIONS
+            targets = targets_from_errors(errors, allowed)
+        else:
+            raise ValueError("必须提供--targets或可解析的--errors")
+        result = build(source, args.stage, targets, errors)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:

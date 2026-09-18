@@ -45,6 +45,14 @@ def main() -> int:
         print("FAILED: an AI-authored production stage lacks a discoverable output contract")
         print(ai_contract_test.stdout or ai_contract_test.stderr)
         return 1
+    core_semantic_contract_test = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/audit_core_semantic_contract.py")],
+        cwd=ROOT, text=True, capture_output=True, check=False,
+    )
+    if core_semantic_contract_test.returncode:
+        print("FAILED: Core AI working schema, compiler ownership and canonical Schema disagree")
+        print(core_semantic_contract_test.stdout or core_semantic_contract_test.stderr)
+        return 1
     method_prompt_test = subprocess.run(
         [sys.executable, str(ROOT / "scripts/audit_method_prompt_contract.py"), str(ROOT)],
         cwd=ROOT, text=True, capture_output=True, check=False,
@@ -92,6 +100,7 @@ def main() -> int:
         ROOT / "internal/rensheng-youji-report-content-brief/SKILL.md",
         ROOT / "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py",
         ROOT / "internal/rensheng-youji-report-writer/SKILL.md",
+        ROOT / "internal/rensheng-youji-report-writer/schemas/report-semantic-patch.schema.json",
         ROOT / "internal/rensheng-youji-chinese-editor/SKILL.md",
         ROOT / "internal/rensheng-youji-free-card-output/SKILL.md",
         ROOT / "internal/rensheng-youji-free-card-renderer/SKILL.md",
@@ -106,6 +115,8 @@ def main() -> int:
         ROOT / "internal/pipeline-contract.json",
         ROOT / "scripts/audit_pipeline_contract.py",
         ROOT / "scripts/core_synthesis_contract.py",
+        ROOT / "scripts/core_semantic_contract.py",
+        ROOT / "scripts/audit_core_semantic_contract.py",
         ROOT / "scripts/run_in_env.py",
         ROOT / "scripts/audit_runtime_entry.py",
         ROOT / "scripts/audit_ai_stage_contracts.py",
@@ -135,6 +146,7 @@ def main() -> int:
         ROOT / "scripts/audit_report_claim_coverage.py",
         ROOT / "scripts/audit_skill_references.py",
         ROOT / "internal/rensheng-youji-free-card-output/scripts/build_visual_signals_from_core.py",
+        ROOT / "internal/rensheng-youji-free-card-output/scripts/card_visual_contract.py",
         ROOT / "assets/wechat-contact.jpg",
         ROOT / "assets/rensheng-youji-logo.png",
         ROOT / "assets/asset-manifest.json",
@@ -176,6 +188,7 @@ def main() -> int:
             "tests.test_pipeline_contract.PipelineContractTest",
             "tests.test_report_source_contract.ReportSourceContractTest",
             "tests.test_v221_efficiency_contracts.V221EfficiencyContractsTest",
+            "tests.test_core_semantic_contract.CoreSemanticContractTest",
         ],
         cwd=ROOT,
         text=True,
@@ -194,7 +207,7 @@ def main() -> int:
         print("FAILED: v0.17.0 Core important-structure coverage, topic isolation, detail retention, interpretive spine, five-question feasibility, source coverage, synthesis validation or deterministic assembly")
         print(core_test.stdout or core_test.stderr)
         return 7
-    print("READY: dependencies, chart, deterministic v2 card, Core v0.17.0 important-structure coverage, topic isolation, reality-detail retention, interpretive spine, five-question feasibility, compact synthesis matrix, hash-bound local repair, resume checkpoints, consolidated gates, past/current calibration, optional local editing, stable fallback and fixed 10-page report pipeline passed")
+    print("READY: dependencies, chart, deterministic v2 card, Core v0.17.0 important-structure coverage, topic isolation, reality-detail retention, interpretive spine, five-question feasibility, canonical AI working schema, deterministic Core bookkeeping, scoped repair, contract audit, resume checkpoints, consolidated gates, past/current calibration, optional local editing, stable fallback and fixed 10-page report pipeline passed")
     return 0
 
 

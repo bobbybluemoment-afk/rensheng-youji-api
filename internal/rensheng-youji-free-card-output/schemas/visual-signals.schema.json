@@ -4,10 +4,12 @@
   "title": "人生有迹四项趋势视觉信号",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "analysis_id", "center_year", "evidence_mode", "window_start_state", "annual_visual_signals"],
+  "required": ["schema_version", "algorithm_version", "analysis_id", "baseline_sha256", "center_year", "evidence_mode", "window_start_state", "annual_visual_signals"],
   "properties": {
     "schema_version": {"const": "1.3.0"},
+    "algorithm_version": {"const": "2.0.0"},
     "analysis_id": {"type": "string", "minLength": 1},
+    "baseline_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "center_year": {"type": "integer"},
     "evidence_mode": {"enum": ["birth_only", "reality_calibrated"]},
     "window_start_state": {
@@ -58,7 +60,7 @@
     "annualSignal": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["year", "age", "theme", "direction", "luck_bias", "stage_target_shift", "opportunity", "cost", "realization", "durable_shift", "change_intensity", "activation_strength", "reversal_level", "major_transition", "confirmed_major_event", "career_outcome", "career_strength", "learning_carry", "wealth_inflow", "wealth_outflow", "resource_restructure", "relationship_natal_entry", "relationship_luck_environment", "relationship_opportunity", "relationship_carry", "relationship_confirmed_context", "relationship_conflict_only", "confidence", "basis"],
+      "required": ["year", "age", "theme", "direction", "luck_bias", "stage_target_shift", "opportunity", "cost", "realization", "durable_shift", "change_intensity", "activation_strength", "reversal_level", "major_transition", "confirmed_major_event", "career_outcome", "career_strength", "learning_carry", "wealth_inflow", "wealth_outflow", "wealth_balance", "resource_restructure", "relationship_natal_entry", "relationship_luck_environment", "relationship_opportunity", "relationship_carry", "relationship_confirmed_context", "relationship_conflict_only", "confidence", "basis"],
       "properties": {
         "year": {"type": "integer"},
         "age": {"type": "number", "minimum": 0},
@@ -80,6 +82,7 @@
         "learning_carry": {"type": "number", "minimum": 0, "maximum": 2},
         "wealth_inflow": {"type": "number", "minimum": 0, "maximum": 3},
         "wealth_outflow": {"type": "number", "minimum": 0, "maximum": 3},
+        "wealth_balance": {"type": "number", "minimum": -3, "maximum": 3},
         "resource_restructure": {"type": "boolean"},
         "relationship_natal_entry": {"type": "number", "minimum": 0, "maximum": 2},
         "relationship_luck_environment": {"type": "number", "minimum": 0, "maximum": 2},

@@ -5,10 +5,10 @@
   "type": "object",
   "required": ["schema_version", "source", "identity", "mingju_analysis", "trend_panel", "current_issue", "full_report_hint", "disclaimers"],
   "properties": {
-    "schema_version": {"const": "1.2.0"},
+    "schema_version": {"const": "1.3.0"},
     "source": {
       "type": "object",
-      "required": ["analysis_id", "core_version", "analysis_as_of", "baseline_sha256", "calibrated_sha256", "resolved_source_sha256", "trend_source", "visible_selection_source"],
+      "required": ["analysis_id", "core_version", "analysis_as_of", "baseline_sha256", "calibrated_sha256", "resolved_source_sha256", "trend_source", "visible_selection_source", "card_algorithm_version", "visual_series_sha256"],
       "properties": {
         "analysis_id": {"type": "string"},
         "core_version": {"type": "string"},
@@ -17,7 +17,9 @@
         "calibrated_sha256": {"type": "string"},
         "resolved_source_sha256": {"type": ["string", "null"]},
         "trend_source": {"const": "frozen_baseline"},
-        "visible_selection_source": {"enum": ["frozen_baseline", "post_calibration"]}
+        "visible_selection_source": {"enum": ["frozen_baseline", "post_calibration"]},
+        "card_algorithm_version": {"const": "2.0.0"},
+        "visual_series_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
       }
     },
     "identity": {
@@ -45,8 +47,11 @@
     },
     "trend_panel": {
       "type": "object",
-      "required": ["window", "window_start_state", "years", "render_rules"],
+      "required": ["algorithm_version", "source_baseline_sha256", "series_sha256", "window", "window_start_state", "years", "render_rules"],
       "properties": {
+        "algorithm_version": {"const": "2.0.0"},
+        "source_baseline_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "series_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "window": {"type": "object"},
         "window_start_state": {
           "type": "object",

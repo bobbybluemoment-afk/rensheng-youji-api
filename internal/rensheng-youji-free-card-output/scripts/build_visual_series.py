@@ -9,6 +9,8 @@ import math
 from pathlib import Path
 from typing import Any
 
+from card_visual_contract import CARD_ALGORITHM_VERSION, canonical_digest
+
 
 WEIGHTS = {"facts": 0.50, "prior_cycles": 0.30, "natal": 0.15, "social_stage": 0.05}
 CONFIDENCE_RANK = {"needs_validation": 0, "medium": 1, "high": 2}
@@ -73,7 +75,10 @@ def career_delta(signal: dict[str, Any], previous_learning: float, current_level
             delta += 0.15
         delta = min(delta, 1.0)
     elif outcome == "consolidate":
-        delta = 0.25 if strength >= 2 and realization >= 1 else 0.0
+        # 整理年也会把已经掌握的方法变成稳定台阶。旧阈值要求
+        # realization>=1，而Core的consolidation固定只给0.3，导致该
+        # 分支永远无法触发，完整20年因此被画成一条直线。
+        delta = 0.20 if strength >= 1.2 and realization >= 0.2 else 0.0
         if delta and previous_learning >= 1.0:
             delta += 0.15
         delta = min(delta, 0.5)
@@ -138,6 +143,8 @@ def peach_candidates(signals: list[dict[str, Any]]) -> dict[int, float]:
 
 
 def build(data: dict[str, Any]) -> dict[str, Any]:
+    if data.get("algorithm_version") != CARD_ALGORITHM_VERSION:
+        raise ValueError("视觉信号与共享卡片算法版本不一致")
     center_year = int(data["center_year"])
     expected = list(range(center_year - 5, center_year + 15))
     signals = sorted(data["annual_visual_signals"], key=lambda item: item["year"])
@@ -170,8 +177,8 @@ def build(data: dict[str, Any]) -> dict[str, Any]:
     career_hidden_level = career_baseline
     previous_career_delta = 0.0
     previous_learning = 0.0
-    wealth_level = wealth_baseline
-    previous_ingots = ingot_count(wealth_level)
+    wealth_hidden_level = wealth_baseline
+    previous_ingots = ingot_count(wealth_hidden_level)
 
     for signal in signals:
         year = int(signal["year"])
@@ -197,7 +204,7 @@ def build(data: dict[str, Any]) -> dict[str, Any]:
         gap = annual_target - previous_close
         if gap > 0:
             gap *= growth_multiplier
-        raw_delta = 0.25 * previous_delta + 0.35 * gap
+        raw_delta = 0.20 * previous_delta + 0.45 * gap
         strong_transition = signal["change_intensity"] == "high" and (
             signal["activation_strength"] >= 2 or signal["major_transition"]
         )
@@ -239,15 +246,21 @@ def build(data: dict[str, Any]) -> dict[str, Any]:
         career_hidden_level = clamp(career_hidden_level + current_career_delta, 1.0, 9.0)
         career_level = quantize_half(career_hidden_level)
 
-        inflow = 0.45 * float(signal["wealth_inflow"])
-        outflow = 0.45 * float(signal["wealth_outflow"])
+        inflow = 0.32 * float(signal["wealth_inflow"])
+        outflow = 0.32 * float(signal["wealth_outflow"])
+        # “机会和成本同时存在”不等于每年精确抵消。使用结构化方向、
+        # 实现度与收支共同决定小幅积累或回撤，不读取自然语言猜分。
+        wealth_balance = 0.40 * float(signal["wealth_balance"])
         career_lag = 0.20 * max(previous_career_delta, 0.0)
-        next_wealth = 0.90 * wealth_level + 0.10 * wealth_baseline + inflow - outflow + career_lag
+        next_wealth = 0.90 * wealth_hidden_level + 0.10 * wealth_baseline + inflow - outflow + wealth_balance + career_lag
         next_wealth = clamp(next_wealth, 1.0, 8.0)
         next_ingots = ingot_count(next_wealth)
         ingot_limit = 3 if signal["resource_restructure"] else 2
         next_ingots = int(clamp(next_ingots, previous_ingots - ingot_limit, previous_ingots + ingot_limit))
-        wealth_level = 1.0 + (next_ingots - 3) * 7.0 / 9.0
+        # Hidden level preserves sub-ingot accumulation. The old implementation
+        # snapped state back to the last displayed ingot count every year, so a
+        # sequence of modest gains could never add up to the next visible step.
+        wealth_hidden_level = next_wealth
 
         peach_score = highlighted_peach.get(year, 0.0)
         blossoms = 7 if peach_score >= 8 else 5 if peach_score >= 7 else 3 if peach_score >= 6.25 else 1 if peach_score >= 5.5 else 0
@@ -264,7 +277,7 @@ def build(data: dict[str, Any]) -> dict[str, Any]:
             },
             "career": {"level": career_level, "label": "步步高升"},
             "wealth": {
-                "level": round(wealth_level, 1),
+                "level": round(wealth_hidden_level, 1),
                 "ingot_count": next_ingots,
                 "display_ingot_count": display_ingots,
             },
@@ -289,7 +302,9 @@ def build(data: dict[str, Any]) -> dict[str, Any]:
                 "growth_multiplier": round(growth_multiplier, 3),
                 "durable_shift": durable_shift,
                 "career_hidden_level": round(career_hidden_level, 2),
+                "career_outcome": signal["career_outcome"],
                 "career_age_factor": career_age_factor(float(signal["age"])),
+                "wealth_balance": signal["wealth_balance"],
                 "relationship_display_score": round(peach_score, 2),
                 "confidence": signal["confidence"],
             },
@@ -300,7 +315,9 @@ def build(data: dict[str, Any]) -> dict[str, Any]:
         previous_learning = float(signal["learning_carry"])
         previous_ingots = next_ingots
 
-    return {
+    result = {
+        "algorithm_version": CARD_ALGORITHM_VERSION,
+        "source_baseline_sha256": data["baseline_sha256"],
         "window": {"start_year": expected[0], "center_year": center_year, "end_year": expected[-1]},
         "window_start_state": {
             "evidence_mode": data["evidence_mode"],
@@ -336,6 +353,8 @@ def build(data: dict[str, Any]) -> dict[str, Any]:
             "current_peach_stays_pink": True,
         },
     }
+    result["series_sha256"] = canonical_digest({key: value for key, value in result.items() if key != "series_sha256"})
+    return result
 
 
 def main() -> int:

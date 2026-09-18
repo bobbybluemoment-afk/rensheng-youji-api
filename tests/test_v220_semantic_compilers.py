@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT / "internal/rensheng-youji-report-writer/scripts"))
 from build_calibration_questions import build as build_questions  # noqa: E402
 from build_report_writing_pack import _narrative_buckets  # noqa: E402
 from compile_calibration_delta import compile_delta  # noqa: E402
-from compile_final_report import compile_report, digest as report_digest  # noqa: E402
+from compile_final_report import compile_report, digest as report_digest, paragraph_digest  # noqa: E402
 from core_baseline import digest  # noqa: E402
 from scan_report_language import scan  # noqa: E402
 from apply_editorial_patch import apply as apply_editorial, apply_all as apply_all_editorial  # noqa: E402
@@ -288,7 +288,7 @@ class V220SemanticCompilerTest(unittest.TestCase):
                 "next_direction": "你可以先完成小范围尝试，再观察反馈。",
                 "long_range": "你会逐步形成更稳定的选择方法。",
             },
-            "yearly_outlook": {"summary": "未来的变化需要结合真实选择持续观察。", "years": []},
+            "yearly_outlook": {"summary": "未来的变化需要结合真实选择持续观察。", "stages": [], "key_years": []},
             "action_guide": {"priority_actions": [], "reduce": "减少同时准备过多方案。", "traditional_preferences": []},
             "open_questions": ["目前最重要的现实条件是什么？", "哪些经验值得继续保留？"],
         }
@@ -337,20 +337,28 @@ class V220SemanticCompilerTest(unittest.TestCase):
         questions = {"schema_version": "3.0.0", "template_version": "2.0.0", "source": {"analysis_id": "report-v220", "baseline_sha256": baseline_sha}}
         delta = {"analysis_id": "report-v220", "baseline_sha256": baseline_sha, "responses": [{}] * 5, "candidate_updates": []}
         free_card = {
-            "source": {"analysis_id": "report-v220", "core_version": "0.17.0", "calibrated_sha256": analysis_hash, "resolved_source_sha256": resolved["resolved_sha256"]},
+            "source": {"analysis_id": "report-v220", "core_version": "0.17.0", "calibrated_sha256": analysis_hash, "resolved_source_sha256": resolved["resolved_sha256"], "card_algorithm_version": "2.0.0", "visual_series_sha256": "c" * 64},
             "trend_panel": {"years": []},
         }
         review = {
-            "version": "2.5.0", "review_id": "review-v220", "draft_id": "draft-v220",
+            "version": "2.6.0", "review_id": "review-v220", "draft_id": "draft-v220",
             "scan_status": "pass", "semantic_final_sha256": report_digest(semantic),
+            "sections": [{
+                "section_id": "dimension:body_emotion",
+                "final_sha256": "before-compiler",
+                "changes": [],
+            }],
         }
         profile = {"gender": "男", "birthplace": "泉州", "time": {"input_local_time": "1999-01-22 17:45"}, "bazi": {"pillars": ["甲戌"] * 4, "da_yun": []}}
 
         original_draft = copy.deepcopy(draft)
-        report, _ = compile_report(analysis, profile, brief, draft, semantic, questions, delta, resolved, free_card, review)
+        report, updated_review = compile_report(analysis, profile, brief, draft, semantic, questions, delta, resolved, free_card, review)
         self.assertEqual(report["source_artifacts"]["report_semantic_sha256"], report_digest(semantic))
         body = next(item for item in report["dimensions"] if item["id"] == "body_emotion")
         self.assertIn("不构成疾病诊断", body["paragraphs"][-1])
+        body_record = next(item for item in updated_review["sections"] if item["section_id"] == "dimension:body_emotion")
+        self.assertEqual(body_record["final_sha256"], paragraph_digest(body["paragraphs"]))
+        self.assertIn("确定性补充健康安全提示", body_record["changes"])
         self.assertEqual(draft, original_draft)
         changed = copy.deepcopy(semantic)
         changed["summary"]["capabilities_resources"][0] = "这段文字绕过了编辑记录。"

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +28,7 @@ ROLE_TAGS = {
 DOMAIN_VOICE = {
     "self_growth": "写思考、选择、在意、犹豫、安心、要求自己和放松，不用工作项目语言代替内心经验。",
     "love_partner": "写喜欢、靠近、回应、承诺、失望、依赖、争执、陪伴和安心；必须出现具体互动。",
-    "career": "写工作、领导、同事、任务、职位、机会、收入和职责，可以适度使用职业语言。",
+    "career": "写工作、领导、同事、任务、职位、机会、收入和职责。优先从allowed_examples与observable_scenes提取1—3个岗位功能、工作对象或组织环境例子；只能写成‘例如’的适配候选，不能把例子说成用户已经从事的事实。证据只到任务类别时，不擅自扩大成具体行业。",
     "finance_resources": "真正写工资、奖金、存钱、消费、价格、预算、风险、安全感或收入来源，只使用Core允许的例子。",
     "body_emotion": "写累、紧绷、睡眠、烦躁、注意力、休息和身体反应，说明压力出现的顺序。",
     "family_growth": "写父母、家人、期待、支持、压力、独立、求助和家庭决定，不能照搬事业角色。",
@@ -65,6 +66,65 @@ def compact_core_context(analysis: dict[str, Any]) -> dict[str, Any]:
         "life_stages": [_pick(item, stage_keys) for item in analysis.get("life_stages") or []],
         "turning_points": [_pick(item, turning_keys) for item in analysis.get("turning_points") or []],
         "annual_theme_activation": [_pick(item, annual_keys) for item in analysis.get("annual_theme_activation") or []],
+    }
+
+
+def yearly_writing_plan(analysis: dict[str, Any]) -> dict[str, Any]:
+    """Create deterministic stage boundaries and key-year choices.
+
+    The writer explains these already-selected periods; it no longer invents
+    twenty titles or decides which years deserve attention.
+    """
+    annuals = sorted(
+        [item for item in analysis.get("annual_theme_activation") or [] if isinstance(item, dict)],
+        key=lambda item: int(item.get("year", 0)),
+    )
+    if len(annuals) != 20:
+        return {"stages": [], "key_years": []}
+    groups: list[list[dict[str, Any]]] = []
+    current: list[dict[str, Any]] = []
+    for item in annuals:
+        luck_changed = current and item.get("luck_theme_link") != current[-1].get("luck_theme_link")
+        if current and (len(current) >= 5 or (luck_changed and len(current) >= 3)):
+            groups.append(current)
+            current = []
+        current.append(item)
+    if current:
+        groups.append(current)
+    if len(groups) > 1 and len(groups[-1]) < 3:
+        groups[-2].extend(groups.pop())
+    stage_seeds = [{
+        "start_year": int(group[0]["year"]),
+        "end_year": int(group[-1]["year"]),
+        "luck_theme": group[0].get("luck_theme_link"),
+        "annual_sources": [{
+            "year": item.get("year"),
+            "year_theme": item.get("year_theme"),
+            "direction": item.get("direction"),
+            "change_intensity": item.get("change_intensity"),
+            "domain_impacts": item.get("domain_impacts"),
+            "human_actions": item.get("human_actions"),
+            "social_feedback": item.get("social_feedback"),
+        } for item in group],
+    } for group in groups]
+    turning_years = {
+        int(year)
+        for item in analysis.get("turning_points") or []
+        for year in re.findall(r"(?:19|20|21)\d{2}", str(item.get("year_or_range", "")))
+    }
+    key_years = [item for item in annuals if item.get("change_intensity") == "high" or int(item["year"]) in turning_years]
+    if len(key_years) < 3:
+        key_years = sorted(annuals, key=lambda item: (item.get("change_intensity") != "high", item["year"]))[:3]
+    key_years = key_years[:8]
+    return {
+        "stages": stage_seeds,
+        "key_years": [{
+            "year": item.get("year"), "year_theme": item.get("year_theme"),
+            "direction": item.get("direction"), "change_intensity": item.get("change_intensity"),
+            "domain_impacts": item.get("domain_impacts"), "carry_in": item.get("carry_in"),
+            "carry_out": item.get("carry_out"), "seed_for_next": item.get("seed_for_next"),
+            "confidence": item.get("confidence"),
+        } for item in key_years],
     }
 
 
@@ -139,7 +199,7 @@ def build(brief: dict[str, Any], analysis: dict[str, Any] | None = None) -> dict
     sections = [brief["life_overview"], *brief["dimensions"], brief["current_question"]]
     slots = [slot for section in sections for slot in section_slots(section)]
     return {
-        "schema_version": "1.0.0", "brief_id": brief["brief_id"], "brief_sha256": digest(brief),
+        "schema_version": "1.1.0", "brief_id": brief["brief_id"], "brief_sha256": digest(brief),
         "rules": {
             "task": "只为每个slot_id写一个自然中文段落，不输出来源映射。",
             "voice": "统一使用第二人称你。像一个很会观察人的人认真解释用户：自然、成熟、好理解，但仍像一份值得保存的正式个人报告。不要总结用户，要解释用户。",
@@ -155,11 +215,12 @@ def build(brief: dict[str, Any], analysis: dict[str, Any] | None = None) -> dict
         "supplemental_tasks": {
             "summary": ["capabilities_resources"],
             "stage_story": ["previous_foundation", "recent_development", "present_task", "next_direction", "long_range"],
-            "yearly_outlook": "20年数据仍完整返回供K线使用；正文说明按连续阶段理解，只给真正明显的年份写具体日常标题。禁止评价结算、角色定型、重新归档等拼接概念。普通年份用短而中性的现实描述，不强造事件。",
+            "yearly_outlook": "严格使用yearly_writing_plan给出的阶段边界和重点年份。正文只写3—6个连续阶段和3—8个真正明显年份，不逐年制造20个标题。阶段标题和年份标题必须写普通人能立刻理解的生活变化，禁止评价结算、角色定型、重新归档等拼接概念。完整20年数据仍保留在冻结Core和卡片链中，不由写作AI重复输出。",
             "action_guide": "写三条优先行动、一个减少项和两条传统偏好建议。每条必须直接回应前文已经说明的问题，并给一个用户能执行的动作。",
             "open_questions": "只保留仍值得用户继续观察的问题。",
         },
         "core_context": compact_core_context(analysis or {}),
+        "yearly_writing_plan": yearly_writing_plan(analysis or {}),
     }
 
 

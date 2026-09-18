@@ -106,7 +106,7 @@ def apply_all(
         "semantic_changes": semantic_changes,
     }, ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:16]
     review = {
-        "version": "2.5.0", "review_id": review_id, "draft_id": draft["draft_id"],
+        "version": "2.6.0", "review_id": review_id, "draft_id": draft["draft_id"],
         "final_report_id": "pending", "scan_status": scan["status"], "sections": records,
         "semantic_source_sha256": semantic_source_sha256,
         "semantic_final_sha256": semantic_final_sha256,

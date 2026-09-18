@@ -95,11 +95,10 @@ class V2211QualityContractsTest(unittest.TestCase):
             "current_question": {"id": "current_question", "paragraphs": ["你可以先行动。"]},
         }
         years = [{
-            "carry_in": "上一年留下的影响会继续进入这一年。",
-            "real_world_signal": "这一年的表现各不相同。",
-            "seed_for_next": "之后会留下新的准备。",
+            "what_changes": "这一年的工作安排会出现可以观察的变化。",
+            "what_to_notice": "这一年的实际反馈值得继续观察。",
         } for _ in range(4)]
-        result = scan(draft, {"yearly_outlook": {"years": years}})
+        result = scan(draft, {"yearly_outlook": {"key_years": years}})
         self.assertEqual(result["status"], "repair_required")
         self.assertTrue(any("称呼" in reason for item in result["issues"] for reason in item["reasons"]))
         self.assertTrue(any("模板" in reason for item in result["issues"] for reason in item["reasons"]))
@@ -114,6 +113,7 @@ class V2211QualityContractsTest(unittest.TestCase):
         self.assertEqual(len(set(stories)), 4)
         self.assertTrue(all("上一年留下的影响" not in text for text in stories))
         self.assertTrue(all("。。" not in text for text in stories))
+        self.assertTrue(all("承接" not in text for text in stories))
 
     def test_report_checkpoint_cannot_precede_calibration(self) -> None:
         run_root = ROOT / "work/runs"

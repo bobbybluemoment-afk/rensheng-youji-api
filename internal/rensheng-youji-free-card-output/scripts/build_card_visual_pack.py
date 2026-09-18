@@ -9,6 +9,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from card_visual_contract import CARD_ALGORITHM_VERSION
+
 
 def digest(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
@@ -18,6 +20,7 @@ def build(baseline: dict[str, Any]) -> dict[str, Any]:
     meta = baseline["analysis_meta"]
     return {
         "schema_version": "1.0.0",
+        "algorithm_version": CARD_ALGORITHM_VERSION,
         "analysis_id": meta["analysis_id"],
         "baseline_sha256": digest(baseline),
         "center_year": int(meta["analysis_as_of"][:4]),
@@ -25,7 +28,7 @@ def build(baseline: dict[str, Any]) -> dict[str, Any]:
         "rules": {
             "output": "由确定性映射器输出visual-signals.schema.json规定的字段。",
             "source": "人生K线、事业、财富和关系机会只使用本包中的校准前Core材料。",
-            "boundary": "不得使用用户校准事实，不得把候选职业、收入或关系当成已发生事实，不得从自然语言关键词猜分。",
+            "boundary": "不得使用用户校准事实，不得把候选职业、收入或关系当成已发生事实，不得从自然语言关键词猜分。免费版与完整报告必须调用同一映射器和同一算法版本。",
         },
         "timing_context": {
             "chart_facts": baseline.get("chart_facts"),

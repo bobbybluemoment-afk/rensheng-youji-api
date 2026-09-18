@@ -173,6 +173,27 @@ class ReportV213PostCalibrationSelectionTest(unittest.TestCase):
 
         self.assertNotIn("claim_pending_unverified", resolved["dimensions"]["career"]["claim_ids"])
 
+    def test_focused_answer_uses_a_different_locked_sentence_from_the_domain_chapter(self) -> None:
+        analysis = self_test_fixture()
+
+        resolved = resolve(analysis, "事业发展")
+
+        career_locked = set(resolved["dimensions"]["career"]["mandatory_claim_ids"])
+        focus_locked = set(resolved["current_question"]["mandatory_claim_ids"])
+        self.assertTrue(career_locked)
+        self.assertTrue(focus_locked)
+        self.assertFalse(career_locked & focus_locked)
+
+    def test_life_overview_and_domain_chapter_do_not_lock_the_same_sentence(self) -> None:
+        analysis = self_test_fixture()
+
+        resolved = resolve(analysis, "事业发展")
+
+        life_locked = set(resolved["life_overview"]["mandatory_claim_ids"])
+        for section in resolved["dimensions"].values():
+            if len(section["claim_ids"]) > 1:
+                self.assertFalse(life_locked & set(section["mandatory_claim_ids"]))
+
     def test_materialized_brief_uses_resolved_sources_and_excludes_rejected_claim(self) -> None:
         analysis = self_test_fixture()
         for claim in analysis["report_claim_ledger"]:

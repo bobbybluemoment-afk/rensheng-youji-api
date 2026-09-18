@@ -96,7 +96,9 @@ def _resolve_section(
         if family not in mechanism_families and claim_id not in mainline_pool and add(claim_id):
             mechanism_families.add(family)
 
-    # Fill to a normal target without allowing the shared life-mainline to dominate.
+    # Fill the available explanation axes without allowing the shared life-mainline
+    # to dominate. Delivery depth is decided from coverage, not from padding a
+    # section to six or eight claims.
     for claim_id in available:
         if len(selected) >= 8:
             break
@@ -153,7 +155,7 @@ def _resolve_section(
         "ineligible_claim_ids": ineligible,
         "promoted_calibration_pending_claim_ids": promoted_pending,
         "replacement_log": replacements,
-        "evidence_gaps": _ordered_unique((source.get("evidence_gaps") or []) + (["校准后可用判断不足，章节按证据缩短。"] if mode != "normal" else [])),
+        "evidence_gaps": _ordered_unique((source.get("evidence_gaps") or []) + (["仍有关键解释角度缺少可用证据，章节按现有内容缩短。"] if mode != "normal" else [])),
     }
 
 
@@ -202,6 +204,51 @@ def resolve(analysis: dict[str, Any], focus: str = "") -> dict[str, Any]:
     dimensions = source_bundle.get("dimensions") or {}
     selected_domain = focus_domain(focus)
     focused_current = _focused_current_source(source_bundle, ledger, selected_domain)
+    resolved_life = _resolve_section(source_bundle.get("life_narrative_source") or {}, ledger, None, 2, True)
+    resolved_dimensions = {
+        domain: _resolve_section(dimensions.get(domain) or {}, ledger, domain, 1, True)
+        for domain in DIMENSIONS
+    }
+    life_mandatory = set(resolved_life.get("mandatory_claim_ids") or [])
+    for domain, section in resolved_dimensions.items():
+        if not life_mandatory.intersection(section.get("mandatory_claim_ids") or []):
+            continue
+        source = dimensions.get(domain) or {}
+        preferred = [
+            claim_id
+            for claim_id in source.get("mandatory_candidate_ids") or []
+            if claim_id in section.get("claim_ids", []) and claim_id not in life_mandatory
+        ]
+        fallback = [
+            claim_id
+            for claim_id in section.get("claim_ids") or []
+            if claim_id not in life_mandatory
+        ]
+        replacement = _ordered_unique(preferred + fallback)
+        if replacement:
+            section["mandatory_claim_ids"] = replacement[:1]
+    resolved_current = _resolve_section(focused_current, ledger, selected_domain, 1, False, True)
+    # The focused answer sits next to the full domain chapter in the final
+    # report.  When two eligible mandatory candidates exist, do not lock the
+    # same sentence into both sections: keep the domain's primary sentence and
+    # use the next focus-specific sentence for the direct answer.
+    if selected_domain in resolved_dimensions:
+        domain_mandatory = set(resolved_dimensions[selected_domain].get("mandatory_claim_ids") or [])
+        current_mandatory = list(resolved_current.get("mandatory_claim_ids") or [])
+        if domain_mandatory & set(current_mandatory):
+            preferred = [
+                claim_id
+                for claim_id in focused_current.get("mandatory_candidate_ids") or []
+                if claim_id in resolved_current.get("claim_ids", []) and claim_id not in domain_mandatory
+            ]
+            fallback = [
+                claim_id
+                for claim_id in resolved_current.get("claim_ids") or []
+                if claim_id not in domain_mandatory
+            ]
+            replacement = _ordered_unique(preferred + fallback)
+            if replacement:
+                resolved_current["mandatory_claim_ids"] = replacement[:1]
     result = {
         "schema_version": "1.0.0",
         "source": {
@@ -210,9 +257,9 @@ def resolve(analysis: dict[str, Any], focus: str = "") -> dict[str, Any]:
             "analysis_sha256": digest(analysis),
         },
         "focus_scope": {"user_focus": focus, "selected_domain": selected_domain},
-        "life_overview": _resolve_section(source_bundle.get("life_narrative_source") or {}, ledger, None, 2, True),
-        "dimensions": {domain: _resolve_section(dimensions.get(domain) or {}, ledger, domain, 1, True) for domain in DIMENSIONS},
-        "current_question": _resolve_section(focused_current, ledger, selected_domain, 1, False, True),
+        "life_overview": resolved_life,
+        "dimensions": resolved_dimensions,
+        "current_question": resolved_current,
     }
     result["resolved_sha256"] = digest({key: value for key, value in result.items() if key != "resolved_sha256"})
     return result

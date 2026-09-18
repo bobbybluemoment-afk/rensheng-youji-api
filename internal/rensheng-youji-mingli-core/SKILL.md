@@ -349,7 +349,7 @@ python scripts/run_in_env.py scripts/compile_method_packets.py \
   --gate-output method-gate.json
 ```
 
-九个方法完成或被合法归类后，按生产桥生成受约束综合输入。AI只读取六领域判断矩阵、精简技术索引、精简证据索引与方法限制；完整方法包只留给确定性编译器和审计。AI只生成规定的语义综合区块，随后由程序组装完整Core并自动生成报告来源：
+九个方法完成或被合法归类后，按生产桥生成受约束综合输入。AI只读取六领域判断矩阵、精简技术索引、精简证据索引、方法限制和由正式Schema自动投影的工作Schema；完整方法包只留给确定性编译器和审计。AI只生成规定的语义综合区块，并省略 `compiler_owned_fields`，随后由程序补齐来源、方法、证据、状态和派生字段，组装完整Core并自动生成报告来源：
 
 ```bash
 python scripts/run_in_env.py scripts/prepare_core_synthesis.py analysis-input.json \

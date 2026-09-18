@@ -6,7 +6,7 @@ description: 人生有迹内部中文编辑层。接收已校验的人物初稿�
 # 中文编辑层
 
 1. 完整读取 [人生有迹自然中文写作标准](references/natural-chinese.md)。它同时是Draft、阶段文字、卡片短文案和本层局部修订的统一语言标准。
-2. 先让确定性扫描器检查完整人生主线、六个现实领域、当前问题、能力摘要、阶段说明、20年逐年文字、行动建议和待观察问题：
+2. 先让确定性扫描器检查完整人生主线、六个现实领域、当前问题、能力摘要、阶段说明、阶段观察与重点年份、行动建议和待观察问题：
 
 ```bash
 python scripts/run_in_env.py internal/rensheng-youji-chinese-editor/scripts/scan_report_language.py \
@@ -20,7 +20,7 @@ python scripts/run_in_env.py internal/rensheng-youji-chinese-editor/scripts/scan
 5. 用户可见文字全部使用第二人称“你”，删除“这个人、他、她、命主、本人”等第三人称或内部称呼。
 6. 检查“经营”等高频抽象词的实际语境，并检查章节之间是否重复整句或固定模板。
 7. 可润色或删除不适合突出显示的重点句，但不得增加数量或改变Core来源。保留的重点句必须是带句末标点的完整判断；不得只保留半句、连接语、例子或解释。编辑后让精确句子继续写入 `emphasis_spans`。
-8. 使用程序应用可选修订补丁并生成终稿初稿与独立编辑记录；编辑记录版本使用 `2.5.0`。不再要求至少修改几个章节：没有问题时零处修改就是正确结果。
+8. 使用程序应用可选修订补丁并生成终稿初稿与独立编辑记录；编辑记录版本使用 `2.6.0`。不再要求至少修改几个章节：没有问题时零处修改就是正确结果。
 
 ```bash
 python scripts/run_in_env.py internal/rensheng-youji-chinese-editor/scripts/apply_editorial_patch.py \

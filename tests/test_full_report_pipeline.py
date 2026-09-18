@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 import re
 import subprocess
@@ -305,8 +306,14 @@ def _assemble_free_card(work: Path) -> Path:
     analysis = work / "analysis-output.json"
     content = work / "card-content.json"
     output = work / "free-card-output.json"
-    signals.write_text(json.dumps(_visual_signals(), ensure_ascii=False), encoding="utf-8")
-    analysis.write_text(json.dumps({"analysis_meta": {"status": "complete", "analysis_id": "fixture-v2-pipeline", "core_version": "0.4.0", "analysis_as_of": "2026-08-20"}}, ensure_ascii=False), encoding="utf-8")
+    analysis_payload = {"analysis_meta": {"status": "complete", "analysis_id": "fixture-v2-pipeline", "core_version": "0.4.0", "analysis_as_of": "2026-08-20"}}
+    analysis.write_text(json.dumps(analysis_payload, ensure_ascii=False), encoding="utf-8")
+    signal_payload = _visual_signals()
+    signal_payload["algorithm_version"] = "2.0.0"
+    signal_payload["baseline_sha256"] = hashlib.sha256(json.dumps(analysis_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    for item in signal_payload["annual_visual_signals"]:
+        item["wealth_balance"] = 0.25 if item.get("direction") == "support" else -0.25 if item.get("direction") == "pressure" else 0.0
+    signals.write_text(json.dumps(signal_payload, ensure_ascii=False), encoding="utf-8")
     content.write_text(json.dumps(_card_content(), ensure_ascii=False), encoding="utf-8")
     _run("internal/rensheng-youji-free-card-output/scripts/build_visual_series.py", str(signals), "--output", str(series))
     _run("scripts/assemble_free_card.py", "--analysis", str(analysis), "--content", str(content), "--series", str(series), "--output", str(output))

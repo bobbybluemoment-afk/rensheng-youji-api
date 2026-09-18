@@ -9,6 +9,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from card_visual_contract import CARD_ALGORITHM_VERSION
+
 
 DIRECTION = {
     "support": {"bias": 0.8, "opportunity": 2.4, "cost": 0.8, "realization": 0.8, "durable": 0.20},
@@ -49,6 +51,8 @@ def _numbers(direction: str, intensity: str) -> dict[str, float]:
 
 
 def build(pack: dict[str, Any]) -> dict[str, Any]:
+    if pack.get("algorithm_version") != CARD_ALGORITHM_VERSION:
+        raise ValueError("卡片提示包与共享视觉算法版本不一致")
     center_year = int(pack["center_year"])
     expected = list(range(center_year - 5, center_year + 15))
     context = pack["timing_context"]
@@ -91,7 +95,7 @@ def build(pack: dict[str, Any]) -> dict[str, Any]:
             "theme": year["year_theme"],
             "direction": direction,
             "luck_bias": overall["bias"],
-            "stage_target_shift": round(overall["bias"] * 3.0, 2),
+            "stage_target_shift": round(overall["bias"] * 4.5, 2),
             "opportunity": overall["opportunity"],
             "cost": overall["cost"],
             "realization": overall["realization"],
@@ -106,6 +110,12 @@ def build(pack: dict[str, Any]) -> dict[str, Any]:
             "learning_carry": min(2.0, max(0.0, learning_values["realization"] + 0.8)),
             "wealth_inflow": min(3.0, wealth_values["opportunity"]),
             "wealth_outflow": min(3.0, wealth_values["cost"]),
+            "wealth_balance": round(
+                wealth_values["bias"]
+                + 0.25 * (wealth_values["opportunity"] - wealth_values["cost"])
+                + 0.30 * wealth_values["realization"],
+                2,
+            ),
             "resource_restructure": bool(wealth and wealth.get("direction") == "pressure" and wealth.get("intensity") == "high"),
             "relationship_natal_entry": 0.8,
             "relationship_luck_environment": min(2.0, relation_values["opportunity"] * 0.55),
@@ -118,7 +128,9 @@ def build(pack: dict[str, Any]) -> dict[str, Any]:
         })
     return {
         "schema_version": "1.3.0",
+        "algorithm_version": CARD_ALGORITHM_VERSION,
         "analysis_id": pack["analysis_id"],
+        "baseline_sha256": pack["baseline_sha256"],
         "center_year": center_year,
         "evidence_mode": "birth_only",
         "window_start_state": {

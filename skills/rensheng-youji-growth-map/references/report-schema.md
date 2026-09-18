@@ -1,4 +1,4 @@
-# 人生有迹报告 JSON v2.14.0
+# 人生有迹报告 JSON v2.15.0
 
 ## 目录
 
@@ -18,7 +18,7 @@
 - 正式报告：`document_mode=full_calibrated`，必须完成五条现实校准、事实提纲、人物初稿和中文编辑，生成10页PDF。
 - 未校准版：`document_mode=preliminary_uncalibrated`，只生成初步Markdown与新版卡片，不生成正式PDF。
 
-正式报告使用 `schema_version=2.14.0`，当前Core使用 `core_version=0.17.0`。校准前，九个规定方法家族分别读取从统一冻结命盘裁出的本方法主题隔离短提示，逐项完成本方法重要结构检查并投影到真正相关的现实领域；每领域允许0—5条候选，每方法现实候选总数最多18条、技术结论最多12条。方法AI只写语义，生产字段由程序编译。Core综合使用六类判断，不设置每领域最低或最高条数，并用解释主线连接原有能力、后来做法、当前代价、领域表现和发展方向。每条方法现实候选都要在综合层登记去向，不能在综合时压成抽象标签或静默丢失。候选池必须在冻结前通过固定五题组合检查。校准后只能通过绑定Baseline哈希的增量文件调整现实确认状态，再由程序确定报告名单、事实提纲、来源映射和降级模式。
+正式报告使用 `schema_version=2.15.0`，当前Core使用 `core_version=0.17.0`。校准前，九个规定方法家族分别读取从统一冻结命盘裁出的本方法主题隔离短提示，逐项完成本方法重要结构检查并投影到真正相关的现实领域；每领域允许0—5条候选，每方法现实候选总数最多18条、技术结论最多12条。方法AI只写语义，生产字段由程序编译。Core综合使用六类判断，不设置每领域最低或最高条数，并用解释主线连接原有能力、后来做法、当前代价、领域表现和发展方向。每条方法现实候选都要在综合层登记去向，不能在综合时压成抽象标签或静默丢失。候选池必须在冻结前通过固定五题组合检查。校准后只能通过绑定Baseline哈希的增量文件调整现实确认状态，再由程序确定报告名单、事实提纲、来源映射和降级模式。
 
 ## 2. 来源链路
 
@@ -36,7 +36,7 @@
 
 ```json
 {
-  "schema_version": "2.14.0",
+  "schema_version": "2.15.0",
   "report_id": "唯一报告编号",
   "document_mode": "full_calibrated",
   "source": {
@@ -50,7 +50,9 @@
     "report_draft_id": "人物初稿编号",
     "editorial_review_id": "编辑记录编号",
     "resolved_source_sha256": "校准后确定性选材哈希",
-    "report_semantic_sha256": "经过语言扫描或局部修订后的报告语义哈希"
+    "report_semantic_sha256": "经过语言扫描或局部修订后的报告语义哈希",
+    "card_algorithm_version": "2.0.0",
+    "card_visual_series_sha256": "与免费版卡片相同的趋势序列哈希"
   },
   "title": "人生有迹｜完整报告",
   "subtitle": "看见你带来的能力，理解你走过的路，也寻找新的可能",
@@ -66,7 +68,7 @@
   "cross_output_consistency": {"relationship_opportunity_years": []},
   "chart": {},
   "calibration": {"responses": []},
-  "editorial_review": {"version": "2.5.0", "review_id": "与source_artifacts一致"},
+  "editorial_review": {"version": "2.6.0", "review_id": "与source_artifacts一致"},
   "executive_summary": {
     "life_overview": {"paragraphs": [], "source_claim_ids": [], "paragraph_claim_map": [], "claim_realization_map": [], "emphasis_spans": [], "coverage": []},
     "capabilities_resources": []
@@ -94,7 +96,7 @@
 - 能力与可用资源；
 - 当前阶段与问题回应；
 - 六个现实领域；
-- 连续20年逐年观察；
+- 3—6个连续阶段与3—8个重点年份；完整20年保留在冻结Core和卡片；
 - 行动建议、仍需验证、品牌与边界。
 
 校准回答、候选编号、盘面证据、置信推理、事实提纲和编辑记录永远不进入用户正文。
@@ -104,8 +106,8 @@
 `executive_summary.life_overview` 包含：
 
 - `paragraphs`：按 `delivery_mode` 使用正常2—4段、缩短2—3段、最小1—2段或证据缺口1段的统一篇幅规则；
-- `source_claim_ids`：正常至少6个、缩短至少4个、最小至少2个；证据缺口允许0—1个；
-- `paragraph_claim_map`：正常和缩短模式每段至少映射两个实体化Core判断，最小模式每段至少一个，证据缺口模式允许为空；
+- `source_claim_ids`：正常至少4个、缩短至少2个、最小至少1个；证据缺口允许0个；
+- `paragraph_claim_map`：除证据缺口外，每段至少映射一个实体化Core判断；四条多样判断可以支持正常三段正文，不再暗中要求六条；
 - `claim_realization_map`：逐条登记本区必须兑现判断的编号、段落编号和与Core完全一致的 `exact_span`；
 - `emphasis_spans`：0—2条完整重点判断的段落位置、精确文本与Core判断来源；
 - `coverage`：至少覆盖性格、形成、家庭教育、事业财富、关系和当前阶段。
@@ -129,10 +131,10 @@
 
 - `delivery_mode`：`normal`、`shortened`、`minimal` 或 `evidence_gap`；
 - `paragraphs`：正常模式2—4段、500—700字；缩短模式2—3段、320—500字；最小模式1—2段、180—320字；证据缺口模式1段、60—180字；
-- `source_claim_ids`：正常至少6个、缩短至少4个、最小至少2个；证据缺口允许0—1个；
-- `paragraph_claim_map`：与自然段逐项对应；正常和缩短模式每段至少两个判断，最小模式每段至少一个，证据缺口模式允许为空；
+- `source_claim_ids`：正常至少4个、缩短至少2个、最小至少1个；证据缺口允许0个。数量只识别稀疏证据，是否正常展开还要看关键解释角度是否完整；
+- `paragraph_claim_map`：与自然段逐项对应；除证据缺口外每段至少一个判断，证据缺口模式允许为空；
 - `claim_realization_map`：逐条证明 `mandatory_claim_ids` 对应的白话判断原句确实出现在正文；
-- `domain_specific_claim_ids`：正常至少4个，缩短至少3个，最小至少1个；
+- `domain_specific_claim_ids`：正常至少3个，缩短至少2个，最小至少1个；
 - `mainline_claim_ids`：最多占本节判断的30%；
 - `domain_mechanisms`：正常和缩短模式至少两个领域自身机制，最小模式至少一个，证据缺口模式允许为空；
 - `survives_without_mainline`：正常模式必须为 `true`，降级模式保留实际结果；
@@ -164,7 +166,7 @@
 
 ## 8. 中文编辑
 
-`editorial_review` 只保存 `review_id` 和 `version=2.5.0`；完整记录放在独立 `editorial-review.json`。
+`editorial_review` 只保存 `review_id` 和 `version=2.6.0`；完整记录放在独立 `editorial-review.json`。
 
 `life_overview`、`current_question_narrative` 和六个领域都保留 `emphasis_spans` 字段，允许空数组。每项保存 `paragraph_index`、正文中带句末标点的完整 `text` 和支撑它的 `claim_ids`；正文自身保持纯文本，由渲染器将重点判断独立成行。不得截取半句或为满足数量扩写。
 
@@ -185,13 +187,14 @@
 
 ## 9. 逐年与行动
 
-逐年观察仍为当前年前5年、当前年和未来14年，共20年。每年保留上一年带入、本年现实表现和下一年伏笔。普通年份不强行虚构事件，重点年份才增加岗位调整、合同、考试、搬家、见父母、回款等现实载体。
+冻结Core与卡片仍保留当前年前5年、当前年和未来14年，共20年连续数据。用户报告不再强迫AI写20个年度标题，而由程序先确定3—6个连续阶段和3—8个重点年份；AI只解释确定的区段。阶段必须首尾相接并覆盖完整20年，重点年份必须来自Core中的高变化年或转折点。普通阶段不强行虚构事件，重点年份才增加岗位调整、合同、考试、搬家、见父母、回款等现实载体。
 
 行动建议恰好三项，优先回答当前问题。不得把过去年份写成未来任务。
 
 ## 10. 固定检查
 
 - 报告、卡片、Core、事实提纲和初稿来源一致；
+- 免费版与完整报告卡片使用同一个2.0.0确定性算法；Baseline哈希和趋势序列哈希一致；
 - 完整人生主线与六领域按 `delivery_mode` 使用动态篇幅：正常500—700字、缩短320—500字、最小180—320字、证据缺口60—180字；
 - 六个领域为自然段，不使用固定小标题；
 - 具体组织、行业、岗位、收入和对象特征来自Core开放候选或用户事实；
@@ -204,6 +207,6 @@
 - 校准后Core受保护字段与冻结Baseline哈希一致；
 - 每个内容区的指定判断均以完整原句进入正文，且同一判断最多跨两个内容区；
 - “经营”只在真实经商、创业、利润责任或业务经营语境使用；
-- PDF恰好10页，第2页嵌入同一Core生成的新版1242×1660卡片；
+- PDF恰好10页，第2页嵌入同一Core、同一共享算法生成的新版1242×1660卡片；第8页为连续阶段，第9页为重点年份；
 - Logo、固定字体、微信二维码、GitHub、颜色和免责声明正常；
 - 无缺字、乱码、溢出、截断或段落左边缘不一致。

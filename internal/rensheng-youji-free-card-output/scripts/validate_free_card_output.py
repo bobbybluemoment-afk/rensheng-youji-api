@@ -7,6 +7,8 @@ import argparse
 import json
 from pathlib import Path
 
+from card_visual_contract import CARD_ALGORITHM_VERSION, canonical_digest
+
 
 def validate(data: dict) -> list[str]:
     errors: list[str] = []
@@ -17,13 +19,23 @@ def validate(data: dict) -> list[str]:
     if errors:
         return errors
 
-    if data["schema_version"] != "1.2.0":
-        errors.append("schema_version 必须为1.2.0")
+    if data["schema_version"] != "1.3.0":
+        errors.append("schema_version 必须为1.3.0")
     source = data.get("source", {})
     if source.get("trend_source") != "frozen_baseline":
         errors.append("人生K线来源必须是校准前冻结Core")
     if source.get("visible_selection_source") not in {"frozen_baseline", "post_calibration"}:
         errors.append("卡片可见选材来源无效")
+    if source.get("card_algorithm_version") != CARD_ALGORITHM_VERSION:
+        errors.append("免费卡片和完整报告卡片必须使用同一共享算法版本")
+    trend = data.get("trend_panel", {})
+    if trend.get("algorithm_version") != CARD_ALGORITHM_VERSION:
+        errors.append("trend_panel算法版本无效")
+    if trend.get("source_baseline_sha256") != source.get("baseline_sha256"):
+        errors.append("trend_panel没有绑定source中的冻结Baseline")
+    expected_series_sha = canonical_digest({key: value for key, value in trend.items() if key != "series_sha256"})
+    if trend.get("series_sha256") != expected_series_sha or source.get("visual_series_sha256") != expected_series_sha:
+        errors.append("趋势序列哈希无效或上下游不一致")
 
     pillars = data["mingju_analysis"].get("pillars", [])
     if len(pillars) != 4 or any(not isinstance(value, str) or len(value) != 2 for value in pillars):
@@ -121,6 +133,22 @@ def validate(data: dict) -> list[str]:
             errors.append("事业年龄阶段修正未启用")
         if render_rules.get("peach_age_stage_adjustment") is not True:
             errors.append("桃花年龄阶段修正未启用")
+
+        semantic_directions = {
+            (item.get("source_semantics") or {}).get("direction") for item in years
+        }
+        if len(semantic_directions) > 1 and len({item.get("life_kline", {}).get("close") for item in years}) == 1:
+            errors.append("年度结构已有变化，但人生K线被错误压成一条直线")
+        career_inputs = {
+            (item.get("source_semantics") or {}).get("career_outcome") for item in years
+        }
+        if len(career_inputs) > 1 and len({item.get("career", {}).get("level") for item in years}) == 1:
+            errors.append("事业年度结构已有变化，但事业台阶被错误压平")
+        wealth_inputs = {
+            (item.get("source_semantics") or {}).get("wealth_balance") for item in years
+        }
+        if len(wealth_inputs) > 1 and len({item.get("wealth", {}).get("level") for item in years}) == 1:
+            errors.append("财富年度结构已有变化，但财富序列被错误压平")
 
     issue = data["current_issue"]
     title = str(issue.get("title", ""))

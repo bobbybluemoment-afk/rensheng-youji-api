@@ -9,6 +9,7 @@ AI 生成 Core 母稿的步骤不属于确定性测试范围。
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 import subprocess
 import sys
@@ -23,6 +24,19 @@ CENTER_YEAR = 2026
 sys.path.insert(0, str(ROOT / "internal/rensheng-youji-free-card-output/scripts"))
 from build_visual_signals_from_core import build as build_signals_from_core  # noqa: E402
 from validate_visual_signals import validate as validate_visual_signals  # noqa: E402
+
+
+def _analysis_payload() -> dict:
+    return {
+        "analysis_meta": {
+            "status": "complete", "analysis_id": "fixture-v2-pipeline",
+            "core_version": "0.2.0", "analysis_as_of": "2026-08-20",
+        }
+    }
+
+
+def _digest(value: dict) -> str:
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
 def _baseline(value: float, confidence: str = "medium") -> dict:
@@ -63,6 +77,7 @@ def _visual_signals() -> dict:
             "learning_carry": 1.2 if index in {3, 4, 10, 11} else 0.4,
             "wealth_inflow": 2.0 if index in {5, 11, 12, 17} else 1.2,
             "wealth_outflow": 2.2 if pressure_year else 0.8,
+            "wealth_balance": -0.8 if pressure_year else 0.6,
             "resource_restructure": pressure_year,
             "relationship_natal_entry": 1.2,
             "relationship_luck_environment": 1.4 if strong_relationship_year else 0.6,
@@ -75,7 +90,9 @@ def _visual_signals() -> dict:
         })
     return {
         "schema_version": "1.3.0",
+        "algorithm_version": "2.0.0",
         "analysis_id": "fixture-v2-pipeline",
+        "baseline_sha256": _digest(_analysis_payload()),
         "center_year": CENTER_YEAR,
         "evidence_mode": "birth_only",
         "window_start_state": {
@@ -162,7 +179,8 @@ class FreeCardV2PipelineTest(unittest.TestCase):
                 "confidence": "medium",
             })
         pack = {
-            "analysis_id": "fixture-v2-pipeline", "center_year": CENTER_YEAR,
+            "algorithm_version": "2.0.0", "analysis_id": "fixture-v2-pipeline",
+            "baseline_sha256": _digest(_analysis_payload()), "center_year": CENTER_YEAR,
             "timing_context": {"annual_theme_activation": annual, "turning_points": []},
         }
         result = build_signals_from_core(pack)
@@ -184,14 +202,7 @@ class FreeCardV2PipelineTest(unittest.TestCase):
                 encoding="utf-8",
             )
             analysis_path.write_text(
-                json.dumps({
-                    "analysis_meta": {
-                        "status": "complete",
-                        "analysis_id": "fixture-v2-pipeline",
-                        "core_version": "0.2.0",
-                        "analysis_as_of": "2026-08-20",
-                    }
-                }, ensure_ascii=False, indent=2),
+                json.dumps(_analysis_payload(), ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
             content_path.write_text(

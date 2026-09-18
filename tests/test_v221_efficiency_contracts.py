@@ -54,7 +54,7 @@ class V221EfficiencyContractsTest(unittest.TestCase):
         before = copy.deepcopy(source)
         view = compact_view(source)
         self.assertEqual(source, before)
-        self.assertEqual(view["schema_version"], "1.4.0")
+        self.assertEqual(view["schema_version"], "1.5.0")
         self.assertIn("judgment_matrix", view)
         self.assertNotIn("method_summaries", view)
         self.assertNotIn("interpretation", view["evidence_index"][0])

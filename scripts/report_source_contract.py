@@ -35,9 +35,12 @@ SPECIAL_COVERAGE = {
     ),
 }
 DELIVERY_RULES = {
-    "normal": {"minimum_claims": 6, "minimum_specific": 4, "paragraphs": (2, 4), "cjk": (500, 700)},
-    "shortened": {"minimum_claims": 4, "minimum_specific": 3, "paragraphs": (2, 3), "cjk": (320, 500)},
-    "minimal": {"minimum_claims": 2, "minimum_specific": 1, "paragraphs": (1, 2), "cjk": (180, 320)},
+    # Delivery mode follows usable explanation coverage, not a demand to collect
+    # six near-synonymous claims. Four well-supported claims may jointly cover
+    # several reality axes and therefore support a normal chapter.
+    "normal": {"minimum_claims": 4, "minimum_specific": 3, "paragraphs": (2, 4), "cjk": (500, 700)},
+    "shortened": {"minimum_claims": 2, "minimum_specific": 2, "paragraphs": (2, 3), "cjk": (320, 500)},
+    "minimal": {"minimum_claims": 1, "minimum_specific": 1, "paragraphs": (1, 2), "cjk": (180, 320)},
     "evidence_gap": {"minimum_claims": 0, "minimum_specific": 0, "paragraphs": (1, 1), "cjk": (60, 180)},
 }
 MANDATORY_CANDIDATE_MAX = 2
@@ -228,11 +231,17 @@ def required_coverage(domain: str | None) -> tuple[str, ...]:
 
 
 def delivery_mode(available_count: int, missing_coverage: list[str]) -> str:
-    if available_count >= 6 and not missing_coverage:
+    """Choose prose depth from usable evidence and explanation coverage.
+
+    Claim count is only a sparse-evidence guardrail. It is not a writing quota:
+    four diverse claims with complete coverage are enough for a full chapter,
+    while any missing required axis keeps the section explicitly shortened.
+    """
+    if available_count >= 4 and not missing_coverage:
         return "normal"
-    if available_count >= 4:
-        return "shortened"
     if available_count >= 2:
+        return "shortened"
+    if available_count >= 1:
         return "minimal"
     return "evidence_gap"
 

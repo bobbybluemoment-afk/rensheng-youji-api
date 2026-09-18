@@ -151,7 +151,7 @@ python scripts/run_in_env.py scripts/prepare_core_synthesis.py work/core-input.j
 
 该脚本必须实际生成 `core-synthesis-input.json`；不得让模型手工复制方法、证据或方法执行审计。AI看到的是按六领域排列的 `judgment_matrix`、精简技术索引和精简证据索引；完整方法包保存在 `core-compiler-source.json`，继续用于确定性组装、来源回查和审计，不交给AI重复搬运。若汇总器报告非法领域、无效引用或跨方法重复编号，只返修错误点名的方法包并重新校验、汇总。若只报告 `source_coverage_audit.status=ready_with_gaps`，不得停止；没有来源的领域进入证据缺口并在报告中降级。
 
-11. AI只读取 `work/core-synthesis-input.json`，生成 `work/core-semantic-analysis.json`。只允许生成其中 `semantic_output_contract.required_sections` 列出的语义区块；不得输出或改写排盘事实、方法包、证据、方法状态、校准状态或报告来源。
+11. AI只读取 `work/core-synthesis-input.json`，生成 `work/core-semantic-analysis.json`。只允许生成其中 `semantic_output_contract.required_sections` 列出的语义区块，并严格遵守同一对象内由正式Core Schema自动投影的 `semantic_output_contract.schema`。`compiler_owned_fields` 中列出的来源、方法、证据、状态和派生字段必须省略，由确定性编译器统一补齐；不得输出或改写排盘事实、方法包、方法状态、校准状态或报告来源。
 
 12. 运行语义综合校验：
 
@@ -161,7 +161,7 @@ python scripts/run_in_env.py scripts/validate_core_synthesis.py \
   --compiler-source work/core-compiler-source.json
 ```
 
-失败时最多三轮局部修复：依次处理结构与引用、方法独立性与判断角色、人物覆盖与领域映射。每轮必须用 `prepare_semantic_repair.py --stage core_synthesis --targets <被点名区块>` 生成最小返修请求，再用 `apply_semantic_repair.py` 合并；不得把完整 `core-semantic-analysis.json` 交给AI重写。此时方法集合已经冻结，不得重新运行方法包。第三轮仍失败才停止完整Core综合，并报告真实错误。
+失败时最多三轮局部修复：依次处理结构与引用、方法独立性与判断角色、人物覆盖与领域映射。每轮把验证结果传给 `prepare_semantic_repair.py --stage core_synthesis --errors <验证结果>`；脚本必须从错误路径自动提取实际失败区块，并在返修包中附带这些区块的 `target_schema`。不得手工扩大目标、不得把完整 `core-semantic-analysis.json` 交给AI重写。再用 `apply_semantic_repair.py` 合并。返修后若错误数量增加，不得覆盖上一轮较好的语义文件；保留本轮失败补丁并从上一轮重新准备更小请求。此时方法集合已经冻结，不得重新运行方法包。第三轮仍失败才停止完整Core综合，并报告真实错误。
 
 13. 校验通过后，由程序确定性组装完整Core并自动生成报告来源：
 
@@ -295,9 +295,9 @@ python scripts/run_in_env.py scripts/resolve_report_sources.py \
 3. 完整读取 `internal/rensheng-youji-report-content-brief/SKILL.md`。`materialize_content_brief.py` 直接从校准后Core与 `resolved-report-sources.json` 生成实体化 `report-content-brief.json`；不再调用AI做第二次选材，也不生成 `report-content-selection.json`。
 4. 完整读取 `internal/rensheng-youji-report-writer/SKILL.md`。先由 `build_report_writing_pack.py` 按“主要表现与行为→形成经历与现实条件→重复挑战、阶段变化与应对”的叙事顺序分组，不得把判断轮流塞入段落。写作包只保留AI写正文真正需要的字段，来源、哈希和技术机制继续由程序保管。AI只返回正文和摘要、阶段、年度、行动等语义文字，不填写来源编号、段落映射、哈希或审计字段。再由 `compile_report_draft.py` 确定性补齐 `source_claim_ids`、`paragraph_claim_map`、`claim_realization_map` 和重点句映射。
 5. 完整读取 `internal/rensheng-youji-chinese-editor/SKILL.md` 和其中的《人生有迹自然中文写作标准》。Draft从源头按该标准生成，扫描器再检查AI造词、防御句式、抽象名词、长句多动作、六领域语言错位、“你/您”、残句、重复标点和逐年模板化。没有发现问题时不调用编辑AI，直接生成编辑记录；发现问题时只把被点名的小块交给AI修订。不新增固定的全文通读AI调用，也不得要求编辑层为了证明工作发生而强制修改若干章节。
-6. 正式报告使用 `schema_version=2.14.0`、`document_mode=full_calibrated`。Core使用0.17.0、事实提纲和初稿使用1.6.0、中文编辑使用2.5.0、校准题使用3.0.0。Core综合把判断分为主要判断、独立补充、条件判断、阶段判断、待校准判断和证据较弱候选；不设置每领域必须或最多几条。证据较弱候选仅内部保留，待校准判断在现实确认前不直接进入报告。报告章节再按真实可用证据决定正常、缩短、最小或证据缺口模式。
+6. 正式报告使用 `schema_version=2.15.0`、`document_mode=full_calibrated`。Core使用0.17.0、事实提纲和初稿使用1.6.0、中文编辑使用2.6.0、校准题使用3.0.0。Core综合把判断分为主要判断、独立补充、条件判断、阶段判断、待校准判断和证据较弱候选；不设置每领域必须或最多几条。证据较弱候选仅内部保留，待校准判断在现实确认前不直接进入报告。报告章节按真实可用证据和解释覆盖决定正常、缩短、最小或证据缺口模式：四条多样判断已经覆盖关键解释角度时必须按正常模式展开，不得仅因未达到六条而缩短。
 7. 时间分析继续使用“大运交代阶段主题，流年负责激活和执行”，说明上一阶段、近几年、当前年与未来两三年的连续关系，同时概括更长阶段。
-8. 卡片没有独立校准流程。`build_card_content.py` 从冻结Core、校准后选材和用户资料确定性提取卡面文字；`build_card_visual_pack.py` 只提取Baseline结构化逐年资料，`build_visual_signals_from_core.py` 再按固定映射生成20年视觉信号，不调用AI、不读取五题答案，也不从自然语言关键词猜分。完整报告内卡片可以继承报告已确定的可见候选主次，但命理结构、人生K线语义和原始判断仍来自校准前冻结的同一Core。报告与卡片的分析编号、Core版本、Baseline哈希和明显关系机会年份必须一致。
+8. 卡片没有独立校准流程，也没有“报告版算法”。免费版与完整报告都调用 `build_card_visual_pack.py → build_visual_signals_from_core.py → build_visual_series.py → assemble_free_card.py` 这一条共享确定性链，算法版本固定为2.0.0。`build_card_content.py` 从冻结Core、校准后选材和用户资料确定性提取卡面文字；视觉链只读取Baseline结构化逐年资料，不调用AI、不读取五题答案，也不从自然语言关键词猜分。完整报告内卡片可以继承报告已确定的可见候选主次，但命理结构、人生K线语义和原始判断仍来自校准前冻结的同一Core。报告与卡片的分析编号、Core版本、Baseline哈希、算法版本、趋势哈希和明显关系机会年份必须一致。
 9. 卡片与编辑结果都完成后，由程序确定性编译正式 `report.json`。这里必须使用编辑后的正文和编辑后的语义文件：
 
 ```bash
@@ -394,7 +394,7 @@ python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/generate_f
 - 不包含“初始角色、核心配置、主线任务、人物小传”等旧卡片字段；
 - 六个领域均有实质内容或明确写证据不足，不能把事业段落换词复制到其他领域；
 - 正常领域写成2—4个连贯自然段并完整覆盖行为模式、形成经历、现实条件、重复挑战、阶段变化与应对；降级领域严格按照选材状态缩短并记录缺失覆盖项；
-- 正常领域和完整人生主线为500—700个汉字；`shortened` 为320—500字，`minimal` 为180—320字，`evidence_gap` 为60—180字；不得为了统一篇幅重复判断；
+- 正常领域和完整人生主线为500—700个汉字；`shortened` 为320—500字，`minimal` 为180—320字，`evidence_gap` 为60—180字。交付模式先看关键解释角度是否完整，再用判断数量识别稀疏证据；四条多样判断覆盖完整时属于正常模式，不得为了数量重复判断；
 - 最终正文没有“现实落点、核对点、判断等级、校准后的现实线索”等内部栏目，也没有固定“好处—代价”句式；
 - 已执行确定性事实提纲、正文语义补丁、程序化来源映射和按需中文编辑；没有语言问题时编辑AI调用次数为零，编辑记录仍真实存在且没有新增判断；
 - 正常和缩短章节每个自然段至少映射两个实体化Core判断，最小章节每段至少一个，证据缺口章节允许不引用判断但只能说明可靠边界；完整人生主线和六领域至少八成来源为命盘或时运基线；
@@ -405,7 +405,7 @@ python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/generate_f
 - 完整人生主线与能力形成部分至少覆盖六个现实领域，不能围绕用户关注方向集中取材；
 - 用户关注方向只在第4页、逐年回应与行动优先级中加重，不改变其他领域篇幅与基础结论；
 - 用户可见正文不得出现命盘、命局、原局、四柱名称、日主、十神、天干地支、透干、身强身弱、大运流年等内部命理术语，也不得出现“组织化过劳型、先扎根后显声、表达窗口、物质与经营底色”等生造或压缩表达；发现术语必须整句退回中文编辑，不得词语级替换；
-- 逐年字段 `theme`、`carry_in`、`real_world_signal`、`seed_for_next` 必须是字符串；K线保留完整20年，长文按阶段组织并只单独展开显著年份；用户可见正文不得出现Python数组、JSON对象、AI造词标题、孤立残字或未完成连接语；
+- 冻结Core与卡片保留完整20年连续数据；用户长文只输出3—6个连续阶段和3—8个确定性选出的重点年份。阶段边界与重点年份由程序提供，AI只能解释，不能自行增删；用户可见正文不得出现Python数组、JSON对象、抽象词拼接标题、孤立残字或未完成连接语；
 - “现在最值得做的三件事”、当前重点与未来方向不得把过去年份写成尚待执行的建议；
 - 报告明显关系机会年份与卡片桃花年份完全一致；百分号等常用符号渲染后不得出现缺字方框；
 - 校准答案选择了哪个现实候选，相关章节就引用哪个候选或用户补充事实，不得只提高置信度；

@@ -9,7 +9,7 @@ from typing import Any
 
 
 CORE_VERSION = "0.17.0"
-SYNTHESIS_INPUT_SCHEMA_VERSION = "1.4.0"
+SYNTHESIS_INPUT_SCHEMA_VERSION = "1.5.0"
 PRIMARY_METHODS = {
     "pattern_structure",
     "momentum_configuration",

@@ -744,6 +744,34 @@ def validate(data: Any) -> list[str]:
                 missing = sorted(set(range(start, end + 1)) - set(years))
                 if missing:
                     errors.append(f"annual_theme_activation 缺少目标年份：{missing}")
+        # Detect template collapse without demanding artificial volatility. A
+        # domain may be quiet for years, but if it is mentioned across most of
+        # the 20-year window it cannot keep exactly the same direction,
+        # intensity and mechanism in every year. Likewise, human action and
+        # continuity language must respond when annual mechanisms change.
+        domain_signatures: dict[str, list[tuple[str, str, str]]] = {}
+        for annual in annuals:
+            if not isinstance(annual, dict):
+                continue
+            for impact in annual.get("domain_impacts") or []:
+                if isinstance(impact, dict) and impact.get("domain"):
+                    domain_signatures.setdefault(str(impact["domain"]), []).append((
+                        str(impact.get("direction", "")),
+                        str(impact.get("intensity", "")),
+                        str(impact.get("mechanism", "")),
+                    ))
+        for domain, signatures in domain_signatures.items():
+            if len(signatures) >= 10 and len(set(signatures)) == 1:
+                errors.append(f"annual_theme_activation中{domain}跨多年完全复制同一方向、强度和机制")
+        mechanism_signatures = {
+            tuple(item.get("activation_mechanisms") or [])
+            for item in annuals if isinstance(item, dict)
+        }
+        if len(mechanism_signatures) > 1:
+            for field in ("human_actions", "social_feedback", "carry_out", "seed_for_next"):
+                values = [tuple(item.get(field) or []) for item in annuals if isinstance(item, dict)]
+                if values and len(set(values)) == 1:
+                    errors.append(f"annual_theme_activation.{field}未随年度激活机制变化，疑似模板复制")
 
     claims = data.get("report_claim_ledger")
     claim_ids: set[str] = set()

@@ -24,6 +24,7 @@ from core_synthesis_contract import (  # noqa: E402
     canonical_digest,
 )
 from validate_analysis_output import SCHEMA_PATH, load_json, validate as validate_core  # noqa: E402
+from core_semantic_contract import build_ai_schema, compile_bookkeeping  # noqa: E402
 
 
 def _chart_facts(source: dict[str, Any]) -> dict[str, Any]:
@@ -102,9 +103,14 @@ def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any], compiler
         errors.append(f"Core语义综合包含禁止或未知区块：{extra}")
     if errors:
         return {}, errors
+    ai_schema = synthesis_input.get("semantic_output_contract", {}).get("schema")
+    if not isinstance(ai_schema, dict):
+        ai_schema = build_ai_schema(SEMANTIC_SECTIONS)
+    ai_errors = validate_schema_instance(semantic, ai_schema)
+    if ai_errors:
+        return {}, ai_errors
     audit = source_bundle["method_execution_audit"]
     request = source["request"]
-    candidates = semantic.get("reality_candidate_pool") or []
     detail_registry = _reality_detail_registry(source_bundle["independent_method_analyses"])
     compact_detail_registry = synthesis_input.get("detail_atom_index")
     # Direct library callers may pass the full compiler source as both inputs;
@@ -112,17 +118,14 @@ def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any], compiler
     if compact_detail_registry is not None and compact_detail_registry != detail_registry:
         errors.append("detail_atom_index与冻结方法候选中的可观察表现不一致")
     detail_by_id = {item["detail_atom_id"]: item for item in detail_registry}
-    role_by_class = {
-        "primary_judgment": "primary",
-        "independent_supplement": "supplemental",
-        "conditional_judgment": "supplemental",
-        "stage_judgment": "supplemental",
-        "calibration_pending": "to_verify",
-        "weak_candidate": "to_verify",
-    }
+    semantic = compile_bookkeeping(
+        semantic,
+        source_bundle["independent_method_analyses"],
+        source_bundle["evidence_registry"],
+        detail_registry,
+    )
+    candidates = semantic.get("reality_candidate_pool") or []
     for claim in semantic.get("report_claim_ledger") or []:
-        if isinstance(claim, dict) and claim.get("claim_class") in role_by_class:
-            claim["report_role"] = role_by_class[claim["claim_class"]]
         if not isinstance(claim, dict):
             continue
         detail_ids = claim.get("source_detail_atom_ids") or []
@@ -133,13 +136,7 @@ def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any], compiler
         ]
         if invalid:
             errors.append(f"{claim.get('claim_id', '<unknown>')}.source_detail_atom_ids包含不属于本判断来源的现实细节：{invalid}")
-        scenes = list(dict.fromkeys(
-            detail_by_id[item]["text"] for item in detail_ids if item in detail_by_id
-        ))
-        claim["observable_scenes"] = scenes
-        # Downstream examples come from frozen method observations.  The AI may
-        # select the atoms, but cannot replace them with generic audit wording.
-        claim["allowed_examples"] = scenes
+        # Downstream examples are restored by compile_bookkeeping from frozen atoms.
     candidate_ids = [str(item.get("candidate_id")) for item in candidates if isinstance(item, dict)]
     result: dict[str, Any] = {
         "analysis_meta": {
