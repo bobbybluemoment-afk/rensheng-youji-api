@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "internal/rensheng-youji-mingli-core/scripts"))
 from _jsonschema_subset import validate_schema_instance  # noqa: E402
 from core_synthesis_contract import canonical_digest  # noqa: E402
+from prepare_semantic_repair import _target_parts  # noqa: E402
 
 SCHEMA = ROOT / "internal/rensheng-youji-mingli-core/schemas/semantic-repair-patch.schema.json"
 
@@ -39,7 +40,14 @@ def apply(source: dict[str, Any], request: dict[str, Any], patch: dict[str, Any]
         raise ValueError("返修补丁必须且只能覆盖请求点名的全部字段")
     result = copy.deepcopy(source)
     for item in replacements:
-        result[item["target"]] = item["value"]
+        top, index = _target_parts(item["target"])
+        if index is None:
+            result[top] = item["value"]
+        else:
+            values = result.get(top)
+            if not isinstance(values, list) or index >= len(values):
+                raise ValueError(f"返修目标不存在：{item['target']}")
+            values[index] = item["value"]
     return result
 
 

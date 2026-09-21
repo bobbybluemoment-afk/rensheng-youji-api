@@ -25,6 +25,8 @@ from core_synthesis_contract import (  # noqa: E402
 )
 from validate_analysis_output import SCHEMA_PATH, load_json, validate as validate_core  # noqa: E402
 from core_semantic_contract import build_ai_schema, compile_bookkeeping  # noqa: E402
+from prepare_calibration_probes import build as build_calibration_probe_input  # noqa: E402
+from validate_calibration_probe_patch import load_validated as load_calibration_probes  # noqa: E402
 
 
 def _chart_facts(source: dict[str, Any]) -> dict[str, Any]:
@@ -74,7 +76,12 @@ def _reality_detail_registry(methods: list[dict[str, Any]]) -> list[dict[str, An
     return atoms
 
 
-def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any], compiler_source: dict[str, Any] | None = None) -> tuple[dict[str, Any], list[str]]:
+def assemble(
+    synthesis_input: dict[str, Any],
+    semantic: dict[str, Any],
+    compiler_source: dict[str, Any] | None = None,
+    calibration_probe_patch: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], list[str]]:
     errors: list[str] = []
     source_bundle = compiler_source or synthesis_input
     if synthesis_input.get("schema_version") != SYNTHESIS_INPUT_SCHEMA_VERSION:
@@ -111,6 +118,14 @@ def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any], compiler
         return {}, ai_errors
     audit = source_bundle["method_execution_audit"]
     request = source["request"]
+    analysis_year = int(str(request.get("analysis_as_of", "0000"))[:4])
+    calibration_probes: dict[str, dict[str, str]] = {}
+    if calibration_probe_patch is not None:
+        try:
+            probe_input = build_calibration_probe_input(semantic, analysis_year)
+            calibration_probes = load_calibration_probes(probe_input, calibration_probe_patch)
+        except ValueError as exc:
+            return {}, errors + [str(exc)]
     detail_registry = _reality_detail_registry(source_bundle["independent_method_analyses"])
     compact_detail_registry = synthesis_input.get("detail_atom_index")
     # Direct library callers may pass the full compiler source as both inputs;
@@ -123,6 +138,8 @@ def assemble(synthesis_input: dict[str, Any], semantic: dict[str, Any], compiler
         source_bundle["independent_method_analyses"],
         source_bundle["evidence_registry"],
         detail_registry,
+        analysis_year,
+        calibration_probes,
     )
     candidates = semantic.get("reality_candidate_pool") or []
     for claim in semantic.get("report_claim_ledger") or []:
@@ -182,13 +199,15 @@ def main() -> int:
     parser.add_argument("synthesis_input", type=Path)
     parser.add_argument("semantic_output", type=Path)
     parser.add_argument("--compiler-source", type=Path)
+    parser.add_argument("--calibration-probe-patch", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
         synthesis_input = json.loads(args.synthesis_input.read_text(encoding="utf-8"))
         semantic = json.loads(args.semantic_output.read_text(encoding="utf-8"))
         compiler_source = load_json(args.compiler_source) if args.compiler_source else None
-        result, errors = assemble(synthesis_input, semantic, compiler_source)
+        calibration_probe_patch = load_json(args.calibration_probe_patch) if args.calibration_probe_patch else None
+        result, errors = assemble(synthesis_input, semantic, compiler_source, calibration_probe_patch)
         if errors:
             print(json.dumps({"status": "validation_error", "errors": errors}, ensure_ascii=False, indent=2))
             return 2

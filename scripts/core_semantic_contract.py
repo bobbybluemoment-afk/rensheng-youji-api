@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -19,9 +20,13 @@ COMPILER_OWNED_FIELDS: dict[str, tuple[str, ...]] = {
     "methodSynthesisCluster": ("supporting_method_ids", "independence_groups"),
     "reportClaim": (
         "evidence_ids", "supporting_methods", "report_role",
-        "observable_scenes", "allowed_examples",
+        "observable_scenes", "allowed_examples", "new_information",
     ),
-    "realityCandidate": ("source_layers", "evidence_ids", "relation_ids", "status"),
+    "realityCandidate": (
+        "source_layers", "evidence_ids", "relation_ids", "status",
+        "validation_question", "answerable_time_scope",
+        "answerable_observation", "answerable_alternative",
+    ),
     "candidateRelation": ("evidence_ids",),
 }
 
@@ -85,6 +90,8 @@ def compile_bookkeeping(
     method_analyses: list[dict[str, Any]],
     evidence_registry: list[dict[str, Any]],
     detail_registry: list[dict[str, Any]],
+    analysis_year: int | None = None,
+    calibration_probes: dict[str, dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Fill provenance bookkeeping deterministically without changing AI judgments."""
     result = copy.deepcopy(semantic)
@@ -144,6 +151,10 @@ def compile_bookkeeping(
         })
         if claim.get("claim_class") in role_by_class:
             claim["report_role"] = role_by_class[claim["claim_class"]]
+        claim["new_information"] = "｜".join(filter(None, (
+            str(claim.get("claim_family", "")).strip(),
+            str(claim.get("reality_dimension", "")).strip(),
+        ))) or str(claim.get("claim_id", "未命名判断"))
         detail_ids = [str(item) for item in claim.get("source_detail_atom_ids") or []]
         scenes = list(dict.fromkeys(
             str(detail_by_id[item]["text"]) for item in detail_ids if item in detail_by_id
@@ -186,6 +197,30 @@ def compile_bookkeeping(
         candidate["source_layers"] = sorted(layers)
         candidate["status"] = "unverified"
         candidate["relation_ids"] = []
+        # Calibration wording is a derived use of a Core judgment, not part of
+        # the judgment itself.  Keep it out of the AI synthesis payload and
+        # compile a conservative probe from the candidate's existing reality
+        # statement.  The calibration selector will admit only probes that pass
+        # the shared past/current, single-axis and domain-language contract.
+        kind = str(candidate.get("candidate_kind", "stable_pattern"))
+        candidate["validation_question"] = {
+            "timed_event": "回看这段已经发生的时间，哪种情况更接近你的实际经历？",
+            "current_stage": "就你现在的情况来说，哪种描述更接近你？",
+            "objective_state": "回看过去几年的实际经历，哪种情况更接近你？",
+        }.get(kind, "遇到类似情况时，你通常更接近哪一种？")
+        source_scope = str(candidate.get("time_scope", "长期表现"))
+        if kind == "timed_event" and analysis_year:
+            years = [int(item) for item in re.findall(r"(?<!\d)(20\d{2})(?!\d)", source_scope)]
+            past_starts = [year for year in years if year <= analysis_year]
+            if past_starts:
+                start = max(min(past_starts), analysis_year - 5)
+                source_scope = f"{start}年至{analysis_year}年"
+        candidate["answerable_time_scope"] = source_scope
+        candidate["answerable_observation"] = str(candidate.get("statement", ""))
+        candidate["answerable_alternative"] = str(candidate.get("alternative_statement", ""))
+        probe = (calibration_probes or {}).get(str(candidate.get("candidate_id")))
+        if probe:
+            candidate.update(probe)
         candidate_by_id[str(candidate.get("candidate_id"))] = candidate
 
     for relation in result.get("candidate_relation_map") or []:

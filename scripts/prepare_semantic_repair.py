@@ -23,16 +23,37 @@ METHOD_TARGETS = {
 }
 
 
+TARGET_RE = re.compile(r"^\$?\.?([A-Za-z0-9_]+)(?:\[([0-9]+)\])?")
+
+
+def _target_parts(target: str) -> tuple[str, int | None]:
+    match = TARGET_RE.fullmatch(target)
+    if not match:
+        raise ValueError(f"返修目标路径无效：{target}")
+    return match.group(1), int(match.group(2)) if match.group(2) is not None else None
+
+
+def _fragment(source: dict[str, Any], target: str) -> Any:
+    top, index = _target_parts(target)
+    value = source[top]
+    if index is None:
+        return value
+    if not isinstance(value, list) or index >= len(value):
+        raise ValueError(f"返修目标不存在：{target}")
+    return value[index]
+
+
 def targets_from_errors(errors: list[str], allowed: set[str]) -> list[str]:
-    """Extract only the top-level sections actually named by validation errors."""
+    """Extract the smallest addressable AI-owned sections named by errors."""
     targets: set[str] = set()
     for error in errors:
-        match = re.match(r"^\$\.([A-Za-z0-9_]+)|^([A-Za-z0-9_]+)(?:\.|\[|\s)", error)
+        match = TARGET_RE.match(error)
         if not match:
             continue
-        target = match.group(1) or match.group(2)
-        if target in allowed:
-            targets.add(target)
+        top = match.group(1)
+        if top in allowed:
+            index = match.group(2)
+            targets.add(f"{top}[{index}]" if index is not None else top)
     return sorted(targets)
 
 
@@ -41,8 +62,9 @@ def build(source: dict[str, Any], stage: str, targets: list[str], errors: list[s
     target_set = set(targets)
     if not targets or len(targets) != len(target_set):
         raise ValueError("返修目标不能为空或重复")
-    invalid = sorted(target_set - allowed)
-    missing = sorted(target_set - set(source))
+    top_targets = {_target_parts(target)[0] for target in targets}
+    invalid = sorted(top_targets - allowed)
+    missing = sorted(top_targets - set(source))
     if invalid or missing:
         raise ValueError(f"返修目标无效；非法={invalid}；源文件缺少={missing}")
     request = {
@@ -52,11 +74,21 @@ def build(source: dict[str, Any], stage: str, targets: list[str], errors: list[s
         "allowed_targets": targets,
         "validation_errors": errors,
         "locked_rule": "只返回allowed_targets对应的replacements；不得重写其他已经通过的内容。",
-        "fragments": {target: source[target] for target in targets},
+        "fragments": {target: _fragment(source, target) for target in targets},
     }
     if stage == "core_synthesis":
-        request["target_schema"] = build_ai_schema(SEMANTIC_SECTIONS, target_set)
-        request["schema_rule"] = "replacements中的value必须符合target_schema对应字段；不得猜测字段名、类型或枚举值。"
+        projected = build_ai_schema(SEMANTIC_SECTIONS, top_targets)
+        schemas: dict[str, Any] = {}
+        for target in targets:
+            top, index = _target_parts(target)
+            field_schema = projected["properties"][top]
+            schemas[target] = field_schema.get("items", {}) if index is not None else field_schema
+        request["target_schema"] = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "target_schemas": schemas,
+            "$defs": projected.get("$defs", {}),
+        }
+        request["schema_rule"] = "每个replacement.value必须符合target_schema.target_schemas中同名目标；数组下标目标只返回该单项，不得返回或重写整个数组。"
     request["repair_request_sha256"] = canonical_digest(request)
     return request
 

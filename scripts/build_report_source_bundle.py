@@ -31,6 +31,42 @@ def _priority(claim: dict[str, Any]) -> tuple[int, int, str]:
     return role_rank, confidence_rank, str(claim.get("claim_id", ""))
 
 
+def _novelty(claim: dict[str, Any], selected: list[dict[str, Any]]) -> tuple[int, int, int, int]:
+    """Prefer distinct domains, mechanisms and reality axes before synonyms."""
+    domains = {str(item.get("domain", "")) for item in selected}
+    mechanisms = {str(item.get("mechanism_family", "")) for item in selected}
+    families = {str(item.get("claim_family", "")) for item in selected}
+    axes = {str(item.get("reality_dimension", "")) for item in selected}
+    return (
+        int(str(claim.get("domain", "")) not in domains),
+        int(str(claim.get("mechanism_family", "")) not in mechanisms),
+        int(str(claim.get("claim_family", "")) not in families),
+        int(str(claim.get("reality_dimension", "")) not in axes),
+    )
+
+
+def _select_diverse(claims: list[dict[str, Any]], limit: int = 6) -> list[dict[str, Any]]:
+    """Select a small source set that can satisfy the downstream diversity gate.
+
+    If the available pool contains only one mechanism, four same-mechanism
+    claims would be rejected by the canonical diversity contract.  In that
+    case the source is deliberately kept sparse instead of manufacturing a
+    second mechanism or producing an object that its own validator rejects.
+    """
+    remaining = sorted(claims, key=_priority)
+    selected: list[dict[str, Any]] = []
+    while remaining and len(selected) < limit:
+        remaining.sort(key=lambda item: tuple(-value for value in _novelty(item, selected)) + _priority(item))
+        selected.append(remaining.pop(0))
+    mechanisms = {str(item.get("mechanism_family", "")) for item in selected if item.get("mechanism_family")}
+    available_mechanisms = {
+        str(item.get("mechanism_family", "")) for item in claims if item.get("mechanism_family")
+    }
+    if len(selected) >= 4 and len(mechanisms) < 2 and len(available_mechanisms) < 2:
+        selected = selected[:3]
+    return selected
+
+
 def _chain_ids(items: list[dict[str, Any]], field: str, domain: str | None) -> list[str]:
     result: list[str] = []
     for item in items:
@@ -58,21 +94,7 @@ def _source(
         and item.get("calibration_status") != "reject"
         and (domain is None or item.get("domain") == domain)
     ]
-    eligible.sort(key=_priority)
-    if domain is None:
-        selected: list[dict[str, Any]] = []
-        for name in DIMENSIONS:
-            match = next((item for item in eligible if item.get("domain") == name), None)
-            if match is not None:
-                selected.append(match)
-        for item in eligible:
-            if len(selected) >= 6:
-                break
-            if item not in selected:
-                selected.append(item)
-        eligible = selected
-    else:
-        eligible = eligible[:6]
+    eligible = _select_diverse(eligible, 6)
 
     claim_ids = [str(item["claim_id"]) for item in eligible]
     coverage_map: dict[str, list[str]] = {}

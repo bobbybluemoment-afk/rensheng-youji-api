@@ -27,7 +27,6 @@ from report_source_contract import (  # noqa: E402
     required_coverage,
 )
 from core_synthesis_contract import LOVE_PARTNER_ANCHORS, build_source_coverage_audit  # noqa: E402
-from calibration_question_contract import quality_errors as calibration_question_quality_errors  # noqa: E402
 from calibration_selection_contract import feasibility_errors as calibration_feasibility_errors  # noqa: E402
 from calibration_state_contract import calibrated_claim_update_errors  # noqa: E402
 from user_language_contract import unnatural_realization_phrases  # noqa: E402
@@ -1114,9 +1113,12 @@ def validate(data: Any) -> list[str]:
                     value = str(candidate.get(visible_key, ""))
                     if "是否当前" in value or "是否的" in value or value.rstrip().endswith(("以及", "并且", "另一面是")):
                         errors.append(f"{path}.{visible_key} 不是完整自然的中文")
-                analysis_year = int(str(meta.get("analysis_as_of", "0000"))[:4]) if isinstance(meta, dict) else 0
-                for reason in calibration_question_quality_errors(candidate, analysis_year):
-                    errors.append(f"{path} 的校准专用内容不合格：{reason}")
+                # A Core candidate may be useful for the report, a future
+                # stage, or internal uncertainty without being suitable for a
+                # user-facing calibration question.  Question eligibility is
+                # therefore checked on the derived eligible subset below,
+                # instead of forcing every analytical candidate to become a
+                # valid A/B question.
                 visible_candidate = " ".join(str(candidate.get(key, "")) for key in ("statement", "alternative_statement", "validation_question", "answerable_observation", "answerable_alternative"))
                 bad_phrases = unnatural_realization_phrases(visible_candidate)
                 if bad_phrases:

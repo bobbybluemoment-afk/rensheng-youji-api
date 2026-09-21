@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rensheng-youji.local/schemas/calibration-probe-patch.schema.json",
+  "title": "人生有迹校准探针自然语言补丁",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source_sha256", "probes"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "source_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "probes": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_id", "answerable_time_scope", "answerable_observation", "answerable_alternative"],
+        "properties": {
+          "candidate_id": {"type": "string", "pattern": "^c[0-9]+$"},
+          "answerable_time_scope": {"type": "string", "minLength": 2},
+          "answerable_observation": {"type": "string", "minLength": 8},
+          "answerable_alternative": {"type": "string", "minLength": 8}
+        }
+      }
+    }
+  }
+}
