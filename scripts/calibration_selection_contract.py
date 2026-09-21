@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from collections import Counter
 from itertools import combinations
+import re
 from typing import Any
 
 from calibration_question_contract import quality_errors, years_in
@@ -67,18 +68,37 @@ def answerable(candidate: dict[str, Any], analysis_year: int) -> bool:
     return True
 
 
+def _normalize_visible_choice(value: Any) -> str:
+    """Normalize only presentation noise, not the meaning of a visible choice."""
+    return re.sub(r"[\W_]+", "", str(value or "").casefold(), flags=re.UNICODE)
+
+
+def visible_question_signature(candidate: dict[str, Any]) -> tuple[str, str]:
+    """Identify the real question seen by users, independent of label and time wrapper.
+
+    A timed candidate and a stable candidate are still duplicates when their visible
+    A/B observations ask the user to distinguish the same two situations.  Sorting
+    also prevents the same question with reversed A/B order from occupying two slots.
+    """
+    observation = candidate.get("answerable_observation", candidate.get("statement"))
+    alternative = candidate.get("answerable_alternative", candidate.get("alternative_statement"))
+    return tuple(sorted((_normalize_visible_choice(observation), _normalize_visible_choice(alternative))))
+
+
 def valid_question_set(items: tuple[dict[str, Any], ...]) -> bool:
     if len(items) != 5:
         return False
     counts = Counter(item["domain"] for item in items)
     kinds = [item["candidate_kind"] for item in items]
     axes = [(item.get("domain"), item.get("reality_dimension") or item.get("label")) for item in items]
+    visible_signatures = [visible_question_signature(item) for item in items]
     return (
         len(counts) >= 4
         and max(counts.values(), default=0) <= 2
         and "timed_event" in kinds
         and sum(kind in {"objective_state", "timed_event"} for kind in kinds) >= 2
         and len(set(axes)) == 5
+        and len(set(visible_signatures)) == 5
     )
 
 
@@ -135,6 +155,7 @@ def feasibility_errors(analysis: dict[str, Any], focus: str = "") -> list[str]:
     domains = Counter(item.get("domain") for item in eligible)
     kinds = Counter(item.get("candidate_kind") for item in eligible)
     axes = {(item.get("domain"), item.get("reality_dimension") or item.get("label")) for item in eligible}
+    visible_signatures = {visible_question_signature(item) for item in eligible}
     reasons: list[str] = []
     if len(domains) < 4:
         reasons.append(f"仅覆盖{len(domains)}个领域")
@@ -144,8 +165,10 @@ def feasibility_errors(analysis: dict[str, Any], focus: str = "") -> list[str]:
         reasons.append("objective_state与timed_event候选合计不足2条")
     if len(axes) < 5:
         reasons.append(f"不同现实问题轴不足5个：当前{len(axes)}个")
+    if len(visible_signatures) < 5:
+        reasons.append(f"用户可见的不同A/B题意不足5组：当前{len(visible_signatures)}组")
     if not reasons:
-        reasons.append("候选分布无法同时满足四领域、同领域最多两题和五个不同问题轴")
+        reasons.append("候选分布无法同时满足四领域、同领域最多两题、五个不同问题轴和五组不同的用户可见题意")
     return [
         "冻结前不存在合规五题组合："
         + "；".join(reasons)

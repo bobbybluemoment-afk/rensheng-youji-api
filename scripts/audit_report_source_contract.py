@@ -191,6 +191,12 @@ def audit(root: Path) -> list[str]:
         errors.append("Method compiler, METHOD GATE and semantic validator must share one important-structure contract")
     if "feasible_sets" not in selection_contract_text or "valid_question_set" not in selection_contract_text:
         errors.append("The shared calibration selector does not expose one deterministic feasibility rule")
+    calibration_validator_text = (root / "skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py").read_text(encoding="utf-8")
+    calibration_reference_text = (root / "skills/rensheng-youji-growth-map/references/calibration.md").read_text(encoding="utf-8")
+    if not all("visible_question_signature" in text for text in (selection_contract_text, calibration_validator_text)):
+        errors.append("Calibration selection and final validation do not share the visible A/B deduplication contract")
+    if "用户可见A/B题意必须各不相同" not in calibration_reference_text:
+        errors.append("Calibration reference does not document visible A/B deduplication")
     writing_pack_text = (root / "internal/rensheng-youji-report-writer/scripts/build_report_writing_pack.py").read_text(encoding="utf-8")
     draft_validator_text = (root / "internal/rensheng-youji-report-writer/scripts/validate_report_draft.py").read_text(encoding="utf-8")
     if "narrative_role" not in writing_pack_text or "index % count" in writing_pack_text:
@@ -209,7 +215,6 @@ def audit(root: Path) -> list[str]:
     calibration_contract_text = (root / "scripts/calibration_question_contract.py").read_text(encoding="utf-8")
     if not all(field in calibration_text for field in ("answerable_time_scope", "answerable_observation", "answerable_alternative")) or "year > analysis_year" not in calibration_contract_text:
         errors.append("Calibration generator can still ask users to verify future events")
-    calibration_validator_text = (root / "skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py").read_text(encoding="utf-8")
     if "calibration_question_contract" not in calibration_text or "calibration_question_contract" not in calibration_validator_text or "calibration_question_contract" not in core_validator_text:
         errors.append("Core, calibration selection and calibration validation must share one answerability contract")
     final_compiler_text = (root / "skills/rensheng-youji-growth-map/scripts/compile_final_report.py").read_text(encoding="utf-8")

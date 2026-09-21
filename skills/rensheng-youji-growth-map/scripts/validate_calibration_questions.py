@@ -15,6 +15,7 @@ from build_calibration_questions import DOMAINS, digest, expected_display
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 from calibration_question_contract import quality_errors  # noqa: E402
+from calibration_selection_contract import visible_question_signature  # noqa: E402
 
 
 VISIBLE_BANNED = {"日主", "身强", "身弱", "印旺", "比肩", "劫财", "食神", "伤官", "正印", "偏印", "正财", "偏财", "正官", "七杀", "格局", "喜用", "忌神", "天干", "地支", "藏干", "大运", "流年", "刑冲合害", "根苗花果", "候选编号", "置信度"}
@@ -44,6 +45,7 @@ def validate(data: Any, analysis: Any) -> list[str]:
     domains: list[str] = []
     kinds: list[str] = []
     axes: list[tuple[str, str]] = []
+    visible_signatures: list[tuple[str, str]] = []
     for index, question in enumerate(questions, 1):
         display, audit = question.get("display"), question.get("audit")
         ids = audit.get("candidate_ids") if isinstance(audit, dict) else None
@@ -66,6 +68,7 @@ def validate(data: Any, analysis: Any) -> list[str]:
             domains.append(domain)
         kinds.append(str(kind))
         axes.append((str(domain), str(candidate.get("reality_dimension") or candidate.get("label"))))
+        visible_signatures.append(visible_question_signature(candidate))
         if audit.get("related_claim_ids") != candidate.get("related_claim_ids") or any(item not in claims for item in audit.get("related_claim_ids") or []):
             errors.append(f"第{index}题关联判断不是冻结Core中的真实判断")
         expected_effects = {
@@ -88,6 +91,8 @@ def validate(data: Any, analysis: Any) -> list[str]:
         errors.append("五道题至少包含两道客观状态或时间事件题")
     if len(set(axes)) != 5:
         errors.append("五道题不得重复核对同一现实问题轴")
+    if len(set(visible_signatures)) != 5:
+        errors.append("五道题的用户可见A/B题意不得重复，即使时间范围或内部问题轴不同")
     return errors
 
 

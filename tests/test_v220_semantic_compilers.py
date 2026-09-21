@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT / "internal/rensheng-youji-chinese-editor/scripts"))
 sys.path.insert(0, str(ROOT / "internal/rensheng-youji-report-writer/scripts"))
 
 from build_calibration_questions import build as build_questions  # noqa: E402
+from validate_calibration_questions import validate as validate_questions  # noqa: E402
 from build_report_writing_pack import _narrative_buckets  # noqa: E402
 from compile_calibration_delta import compile_delta  # noqa: E402
 from compile_final_report import compile_report, digest as report_digest, paragraph_digest  # noqa: E402
@@ -133,6 +134,56 @@ class V220SemanticCompilerTest(unittest.TestCase):
         self.assertTrue(errors)
         self.assertTrue(any("不足5条" in item or "timed_event" in item for item in errors))
 
+    def test_freeze_precheck_rejects_distinct_internal_axes_with_duplicate_visible_choices(self) -> None:
+        baseline = calibration_baseline()
+        duplicate = baseline["reality_candidate_pool"][1]
+        source = baseline["reality_candidate_pool"][0]
+        duplicate["domain"] = source["domain"]
+        duplicate["answerable_observation"] = source["answerable_observation"]
+        duplicate["answerable_alternative"] = source["answerable_alternative"]
+
+        errors = feasibility_errors(baseline)
+
+        self.assertTrue(errors)
+        self.assertTrue(any("用户可见" in item for item in errors))
+
+    def test_selector_uses_a_lower_ranked_candidate_instead_of_repeating_visible_question(self) -> None:
+        baseline = calibration_baseline()
+        duplicate = baseline["reality_candidate_pool"][1]
+        source = baseline["reality_candidate_pool"][0]
+        duplicate["answerable_observation"] = source["answerable_observation"]
+        duplicate["answerable_alternative"] = source["answerable_alternative"]
+        replacement = copy.deepcopy(baseline["reality_candidate_pool"][1])
+        replacement.update({
+            "candidate_id": "c6",
+            "domain": "self_growth",
+            "reality_dimension": "axis_6",
+            "related_claim_ids": ["claim_c6"],
+            "confidence": "to_verify",
+            "answerable_observation": CALIBRATION_CHOICES["self_growth"][0],
+            "answerable_alternative": CALIBRATION_CHOICES["self_growth"][1],
+        })
+        baseline["reality_candidate_pool"].append(replacement)
+        baseline["report_claim_ledger"].append({"claim_id": "claim_c6", "claim_class": "primary_judgment"})
+
+        questions = build_questions(baseline)
+        chosen = {item["audit"]["candidate_ids"][0] for item in questions["questions"]}
+
+        self.assertIn("c6", chosen)
+        self.assertFalse({"c1", "c2"}.issubset(chosen))
+
+    def test_question_validator_rejects_duplicate_visible_choices_even_when_axes_differ(self) -> None:
+        baseline = calibration_baseline()
+        questions = build_questions(baseline)
+        duplicate = baseline["reality_candidate_pool"][1]
+        source = baseline["reality_candidate_pool"][0]
+        duplicate["answerable_observation"] = source["answerable_observation"]
+        duplicate["answerable_alternative"] = source["answerable_alternative"]
+
+        errors = validate_questions(questions, baseline)
+
+        self.assertTrue(any("用户可见A/B题意不得重复" in item for item in errors))
+
     def test_calibration_never_asks_the_user_to_verify_future_years(self) -> None:
         baseline = calibration_baseline()
         future = copy.deepcopy(baseline["reality_candidate_pool"][0])
@@ -195,8 +246,8 @@ class V220SemanticCompilerTest(unittest.TestCase):
                 "reality_dimension": f"pool_axis_{index}", "related_claim_ids": [f"pool_claim_{index:02d}"],
                 "confidence": "high" if index < 19 else "to_verify",
                 "answerable_time_scope": "过去五年" if kind == "timed_event" else "当前及过去",
-                "answerable_observation": CALIBRATION_CHOICES[domain][0],
-                "answerable_alternative": CALIBRATION_CHOICES[domain][1],
+                "answerable_observation": CALIBRATION_CHOICES[domain][0].rstrip("。") + f"，对应情形{index}。",
+                "answerable_alternative": CALIBRATION_CHOICES[domain][1].rstrip("。") + f"，对应情形{index}。",
             })
             candidates.append(candidate)
             claims.append({
