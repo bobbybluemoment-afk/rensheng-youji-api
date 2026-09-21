@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from validate_method_packet import validate as validate_method_packet  # noqa: E402
 from validate_method_semantic_patch import validate as validate_method_semantic_patch  # noqa: E402
 from core_baseline import validate_quality_audit  # noqa: E402
+from validate_calibration_probe_patch import validate as validate_calibration_probe_patch  # noqa: E402
 STAGES = [
     ("core_input", "deterministic", ("core-input.json", "profile.json"), "scripts/prepare_core_input.py"),
     ("time_preflight", "deterministic", ("report-preflight.json",), "skills/rensheng-youji-growth-map/scripts/preflight_report.py"),
@@ -26,6 +27,8 @@ STAGES = [
     ("method_packet_compile", "deterministic", ("method-packets", "method-gate.json"), "scripts/compile_method_packets.py"),
     ("synthesis_input", "deterministic", ("core-synthesis-input.json", "core-compiler-source.json"), "scripts/prepare_core_synthesis.py"),
     ("semantic_synthesis", "ai_constrained", ("core-semantic-analysis.json",), "internal/rensheng-youji-mingli-core/references/core-production-bridge.md"),
+    ("calibration_probe_input", "deterministic", ("calibration-probe-input.json",), "scripts/prepare_calibration_probes.py"),
+    ("calibration_probe_wording", "ai_constrained", ("calibration-probe-patch.json",), "dynamic:calibration-probe-input.json#rules"),
     ("initial_core", "deterministic", ("analysis-output-initial.json",), "scripts/finalize_core_analysis.py"),
     ("core_quality_audit", "deterministic", ("core-quality-audit.json",), "scripts/audit_claim_diversity.py"),
     ("baseline_freeze", "deterministic", ("analysis-baseline.json", "analysis-baseline-lock.json"), "scripts/core_baseline.py"),
@@ -108,6 +111,19 @@ def status(run_dir: Path) -> dict[str, object]:
                         "contract_or_script": contract,
                         "validation_errors": packet_errors,
                     }
+        elif stage_id == "calibration_probe_wording" and complete:
+            try:
+                probe_input = json.loads((run_dir / "calibration-probe-input.json").read_text(encoding="utf-8"))
+                probe_patch = json.loads(path.read_text(encoding="utf-8"))
+                probe_errors = validate_calibration_probe_patch(probe_input, probe_patch)
+            except (OSError, json.JSONDecodeError, ValueError) as exc:
+                probe_errors = [str(exc)]
+            if probe_errors:
+                return {
+                    "status": "in_progress", "run_id": state["run_id"], "next_stage": stage_id,
+                    "producer": producer, "required_artifacts": [str(item) for item in paths],
+                    "contract_or_script": contract, "validation_errors": probe_errors,
+                }
         elif stage_id == "core_quality_audit" and complete:
             try:
                 validate_quality_audit(run_dir / "analysis-output-initial.json", path)

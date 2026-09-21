@@ -1980,7 +1980,7 @@
         },
         "validation_question": {
           "type": "string",
-          "minLength": 1
+          "description": "由校准措辞阶段登记；空字符串表示保留在Core中但不进入本次五题候选池"
         },
         "answerable_time_scope": {"type": "string", "minLength": 2, "description": "只写过去或当前可回想范围；明确起止年份跨度不超过六年"},
         "answerable_observation": {"type": "string", "minLength": 8, "description": "A项：只写本领域一个已发生或当前可观察的事实轴，不写建议、效果测试或多个阶段的组合"},

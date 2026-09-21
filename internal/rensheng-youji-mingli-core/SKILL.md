@@ -177,7 +177,7 @@ python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/adapter
 
 - `claim_family`：它回答的是该领域哪一类问题；
 - `mechanism_family`：主要来自哪条结构或时运路径；
-- `new_information`：相对同领域其他判断新增了什么；
+- `new_information`：由确定性编译器根据判断家族与现实问题轴生成，AI不得填写；
 - `plain_claim`：不含命理术语、可以原句进入报告的完整判断句。
 - `human_explanation`：解释为什么会这样，不能只换词重复结论；
 - `source_detail_atom_ids`：来自九方法现实候选的具体表现编号；
@@ -192,7 +192,7 @@ python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/adapter
 
 ### 15. 输出完整语义，不直接画图
 
-为每年输出主题、激活机制、变化强度、结果方向、领域影响和连续性语义。不要直接生成 K 线 OHLC、事业台阶高度、财富元宝数量或桃花朵数；这些数值和视觉映射由下游统一算法完成。
+为每年输出主题、激活机制、变化强度、结果方向、领域影响和连续性语义。这些是内部紧凑信号，不是用户可见标题；自然中文标题由报告阶段按阶段差异生成。不要直接生成 K 线 OHLC、事业台阶高度、财富元宝数量或桃花朵数；这些数值和视觉映射由下游统一算法完成。
 
 ### 16. 生成人物画像，不制造人物
 

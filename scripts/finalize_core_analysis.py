@@ -24,7 +24,7 @@ from core_synthesis_contract import (  # noqa: E402
     canonical_digest,
 )
 from validate_analysis_output import SCHEMA_PATH, load_json, validate as validate_core  # noqa: E402
-from core_semantic_contract import build_ai_schema, compile_bookkeeping  # noqa: E402
+from core_semantic_contract import ai_semantic_view, build_ai_schema, compile_bookkeeping  # noqa: E402
 from prepare_calibration_probes import build as build_calibration_probe_input  # noqa: E402
 from validate_calibration_probe_patch import load_validated as load_calibration_probes  # noqa: E402
 
@@ -81,6 +81,7 @@ def assemble(
     semantic: dict[str, Any],
     compiler_source: dict[str, Any] | None = None,
     calibration_probe_patch: dict[str, Any] | None = None,
+    require_calibration_feasibility: bool = True,
 ) -> tuple[dict[str, Any], list[str]]:
     errors: list[str] = []
     source_bundle = compiler_source or synthesis_input
@@ -110,16 +111,14 @@ def assemble(
         errors.append(f"Core语义综合包含禁止或未知区块：{extra}")
     if errors:
         return {}, errors
-    ai_schema = synthesis_input.get("semantic_output_contract", {}).get("schema")
-    if not isinstance(ai_schema, dict):
-        ai_schema = build_ai_schema(SEMANTIC_SECTIONS)
-    ai_errors = validate_schema_instance(semantic, ai_schema)
+    ai_schema = build_ai_schema(SEMANTIC_SECTIONS)
+    ai_errors = validate_schema_instance(ai_semantic_view(semantic), ai_schema)
     if ai_errors:
         return {}, ai_errors
     audit = source_bundle["method_execution_audit"]
     request = source["request"]
     analysis_year = int(str(request.get("analysis_as_of", "0000"))[:4])
-    calibration_probes: dict[str, dict[str, str]] = {}
+    calibration_probes: dict[str, dict[str, str]] | None = None
     if calibration_probe_patch is not None:
         try:
             probe_input = build_calibration_probe_input(semantic, analysis_year)
@@ -190,7 +189,7 @@ def assemble(
     result["report_source_bundle"] = build_report_sources(result)
     schema = load_json(SCHEMA_PATH)
     errors.extend(validate_schema_instance(result, schema))
-    errors.extend(validate_core(result))
+    errors.extend(validate_core(result, require_calibration_feasibility=require_calibration_feasibility))
     return result, errors
 
 

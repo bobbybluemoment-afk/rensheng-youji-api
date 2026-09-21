@@ -151,7 +151,7 @@ python scripts/run_in_env.py scripts/prepare_core_synthesis.py work/core-input.j
 
 该脚本必须实际生成 `core-synthesis-input.json`；不得让模型手工复制方法、证据或方法执行审计。AI看到的是按六领域排列的 `judgment_matrix`、精简技术索引和精简证据索引；完整方法包保存在 `core-compiler-source.json`，继续用于确定性组装、来源回查和审计，不交给AI重复搬运。若汇总器报告非法领域、无效引用或跨方法重复编号，只返修错误点名的方法包并重新校验、汇总。若只报告 `source_coverage_audit.status=ready_with_gaps`，不得停止；没有来源的领域进入证据缺口并在报告中降级。
 
-11. AI只读取 `work/core-synthesis-input.json`，生成 `work/core-semantic-analysis.json`。只允许生成其中 `semantic_output_contract.required_sections` 列出的语义区块，并严格遵守同一对象内由正式Core Schema自动投影的 `semantic_output_contract.schema`。`compiler_owned_fields` 中列出的来源、方法、证据、状态和派生字段必须省略，由确定性编译器统一补齐；不得输出或改写排盘事实、方法包、方法状态、校准状态或报告来源。
+11. AI只读取 `work/core-synthesis-input.json`，生成 `work/core-semantic-analysis.json`。只允许生成其中 `semantic_output_contract.required_sections` 列出的语义区块，并严格遵守同一对象内由正式Core Schema自动投影的 `semantic_output_contract.schema`。`compiler_owned_fields` 中列出的来源、方法、证据、状态和派生字段必须省略，由确定性编译器统一补齐；不得输出或改写排盘事实、方法包、方法状态、校准状态或报告来源。Core综合只负责判断、人物形成链、跨领域人生主线和阶段语义；不得同时承担五题自然语言措辞、来源记账或用户可见逐年标题。
 
 12. 运行语义综合校验：
 
@@ -163,12 +163,35 @@ python scripts/run_in_env.py scripts/validate_core_synthesis.py \
 
 失败时最多三轮局部修复：依次处理结构与引用、方法独立性与判断角色、人物覆盖与领域映射。每轮把验证结果传给 `prepare_semantic_repair.py --stage core_synthesis --errors <验证结果>`；脚本必须从错误路径自动提取实际失败区块，并在返修包中附带这些区块的 `target_schema`。不得手工扩大目标、不得把完整 `core-semantic-analysis.json` 交给AI重写。再用 `apply_semantic_repair.py` 合并。返修后若错误数量增加，不得覆盖上一轮较好的语义文件；保留本轮失败补丁并从上一轮重新准备更小请求。此时方法集合已经冻结，不得重新运行方法包。第三轮仍失败才停止完整Core综合，并报告真实错误。
 
-13. 校验通过后，由程序确定性组装完整Core并自动生成报告来源：
+13. 校验通过后，程序先从全部Core候选中按领域、问题轴和已发生时间范围筛出最多10条校准探针。AI只读取这个小包，把候选改写成过去或当前可观察的单一问题，不重新推命、不读取完整Core，也不改变候选含义：
+
+```bash
+python scripts/run_in_env.py scripts/prepare_calibration_probes.py \
+  --semantic work/core-semantic-analysis.json \
+  --analysis-year <当前分析年份> \
+  --output work/calibration-probe-input.json
+```
+
+AI按照 `calibration-probe-input.json#rules` 生成 `work/calibration-probe-patch.json`，随后运行：
+
+```bash
+python scripts/run_in_env.py scripts/validate_calibration_probe_patch.py \
+  work/calibration-probe-input.json work/calibration-probe-patch.json
+python scripts/run_in_env.py scripts/validate_core_synthesis.py \
+  work/core-synthesis-input.json work/core-semantic-analysis.json \
+  --compiler-source work/core-compiler-source.json \
+  --calibration-probe-patch work/calibration-probe-patch.json
+```
+
+措辞不合格时只返修这个小补丁一次。未来阶段、复合判断或不适合向用户提问的候选继续保留在Core和报告素材中，其 `validation_question` 为空，不得为凑五题删除或改写分析判断。
+
+14. 校验通过后，由程序确定性组装完整Core并自动生成报告来源：
 
 ```bash
 python scripts/run_in_env.py scripts/finalize_core_analysis.py \
   work/core-synthesis-input.json work/core-semantic-analysis.json \
   --compiler-source work/core-compiler-source.json \
+  --calibration-probe-patch work/calibration-probe-patch.json \
   --output work/analysis-output-initial.json
 ```
 
@@ -181,7 +204,7 @@ python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validat
 
 不得要求模型自行创建 `analysis-output-before-sources.json`；不得手工拼装 `report_source_bundle`。
 
-14. 在冻结初始Core之前运行判断多样性与报告来源审计，并生成绑定当前Core哈希的通过凭证：
+15. 在冻结初始Core之前运行判断多样性与报告来源审计，并生成绑定当前Core哈希的通过凭证：
 
 ```bash
 python scripts/run_in_env.py scripts/audit_claim_diversity.py \

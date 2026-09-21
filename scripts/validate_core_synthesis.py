@@ -22,7 +22,10 @@ def main() -> int:
         semantic = json.loads(args.semantic_output.read_text(encoding="utf-8"))
         compiler_source = json.loads(args.compiler_source.read_text(encoding="utf-8")) if args.compiler_source else None
         probe_patch = json.loads(args.calibration_probe_patch.read_text(encoding="utf-8")) if args.calibration_probe_patch else None
-        _, errors = assemble(synthesis_input, semantic, compiler_source, probe_patch)
+        _, errors = assemble(
+            synthesis_input, semantic, compiler_source, probe_patch,
+            require_calibration_feasibility=probe_patch is not None,
+        )
     except (OSError, KeyError, ValueError, json.JSONDecodeError) as exc:
         errors = [str(exc)]
     print(json.dumps({"status": "ok" if not errors else "error", "errors": errors}, ensure_ascii=False, indent=2))

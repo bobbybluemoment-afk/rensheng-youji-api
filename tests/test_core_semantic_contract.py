@@ -32,6 +32,8 @@ class CoreSemanticContractTest(unittest.TestCase):
         for definition, fields in COMPILER_OWNED_FIELDS.items():
             required = set(schema["$defs"][definition].get("required") or [])
             self.assertFalse(required & set(fields))
+            properties = set(schema["$defs"][definition].get("properties") or {})
+            self.assertFalse(properties & set(fields))
 
     def test_repair_targets_are_extracted_from_real_error_paths(self) -> None:
         errors = [
@@ -41,12 +43,12 @@ class CoreSemanticContractTest(unittest.TestCase):
         ]
         self.assertEqual(
             targets_from_errors(errors, SEMANTIC_SECTIONS),
-            ["reality_candidate_pool", "report_claim_ledger"],
+            ["reality_candidate_pool[2]", "report_claim_ledger[0]"],
         )
         source = {key: [] for key in SEMANTIC_SECTIONS}
         source["method_synthesis"] = {}
         request = build(source, "core_synthesis", ["report_claim_ledger"], errors)
-        self.assertEqual(set(request["target_schema"]["properties"]), {"report_claim_ledger"})
+        self.assertEqual(set(request["target_schema"]["target_schemas"]), {"report_claim_ledger"})
 
     def test_compiler_overwrites_bookkeeping_from_frozen_sources(self) -> None:
         semantic = {

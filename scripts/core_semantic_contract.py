@@ -68,9 +68,7 @@ def build_ai_schema(required_sections: set[str], targets: set[str] | None = None
             item for item in definition.get("required", []) if item not in fields
         ]
         for field in fields:
-            prop = definition.get("properties", {}).get(field)
-            if isinstance(prop, dict):
-                prop["description"] = "由确定性编译器计算；AI应省略，已有值也会被覆盖。"
+            definition.get("properties", {}).pop(field, None)
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -83,6 +81,23 @@ def build_ai_schema(required_sections: set[str], targets: set[str] | None = None
 
 def compiler_owned_contract() -> dict[str, list[str]]:
     return {key: list(value) for key, value in sorted(COMPILER_OWNED_FIELDS.items())}
+
+
+def ai_semantic_view(semantic: dict[str, Any]) -> dict[str, Any]:
+    """Remove compiler-owned fields before validating an AI semantic payload."""
+    result = copy.deepcopy(semantic)
+    groups = (
+        ((result.get("method_synthesis") or {}).get("clusters") or [], "methodSynthesisCluster"),
+        (result.get("report_claim_ledger") or [], "reportClaim"),
+        (result.get("reality_candidate_pool") or [], "realityCandidate"),
+        (result.get("candidate_relation_map") or [], "candidateRelation"),
+    )
+    for items, definition in groups:
+        for item in items:
+            if isinstance(item, dict):
+                for field in COMPILER_OWNED_FIELDS[definition]:
+                    item.pop(field, None)
+    return result
 
 
 def compile_bookkeeping(
@@ -203,11 +218,15 @@ def compile_bookkeeping(
         # statement.  The calibration selector will admit only probes that pass
         # the shared past/current, single-axis and domain-language contract.
         kind = str(candidate.get("candidate_kind", "stable_pattern"))
-        candidate["validation_question"] = {
-            "timed_event": "回看这段已经发生的时间，哪种情况更接近你的实际经历？",
-            "current_stage": "就你现在的情况来说，哪种描述更接近你？",
-            "objective_state": "回看过去几年的实际经历，哪种情况更接近你？",
-        }.get(kind, "遇到类似情况时，你通常更接近哪一种？")
+        legacy_mode = calibration_probes is None
+        if legacy_mode:
+            candidate["validation_question"] = str(candidate.get("validation_question") or {
+                "timed_event": "回看这段已经发生的时间，哪种情况更接近你的实际经历？",
+                "current_stage": "就你现在的情况来说，哪种描述更接近你？",
+                "objective_state": "回看过去几年的实际经历，哪种情况更接近你？",
+            }.get(kind, "遇到类似情况时，你通常更接近哪一种？"))
+        else:
+            candidate["validation_question"] = ""
         source_scope = str(candidate.get("time_scope", "长期表现"))
         if kind == "timed_event" and analysis_year:
             years = [int(item) for item in re.findall(r"(?<!\d)(20\d{2})(?!\d)", source_scope)]
@@ -215,11 +234,16 @@ def compile_bookkeeping(
             if past_starts:
                 start = max(min(past_starts), analysis_year - 5)
                 source_scope = f"{start}年至{analysis_year}年"
-        candidate["answerable_time_scope"] = source_scope
-        candidate["answerable_observation"] = str(candidate.get("statement", ""))
-        candidate["answerable_alternative"] = str(candidate.get("alternative_statement", ""))
+        candidate["answerable_time_scope"] = str(candidate.get("answerable_time_scope") or source_scope) if legacy_mode else source_scope
+        candidate["answerable_observation"] = str(candidate.get("answerable_observation") or candidate.get("statement", "")) if legacy_mode else str(candidate.get("statement", ""))
+        candidate["answerable_alternative"] = str(candidate.get("answerable_alternative") or candidate.get("alternative_statement", "")) if legacy_mode else str(candidate.get("alternative_statement", ""))
         probe = (calibration_probes or {}).get(str(candidate.get("candidate_id")))
         if probe:
+            candidate["validation_question"] = {
+                "timed_event": "回看这段已经发生的时间，哪种情况更接近你的实际经历？",
+                "current_stage": "就你现在的情况来说，哪种描述更接近你？",
+                "objective_state": "回看过去几年的实际经历，哪种情况更接近你？",
+            }.get(kind, "遇到类似情况时，你通常更接近哪一种？")
             candidate.update(probe)
         candidate_by_id[str(candidate.get("candidate_id"))] = candidate
 

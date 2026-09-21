@@ -78,6 +78,20 @@ def build(semantic: dict[str, Any], analysis_year: int) -> dict[str, Any]:
     selected = select_candidates(semantic, analysis_year)
     if len(selected) < 5:
         raise ValueError(f"可准备自然语言校准探针的Core候选不足5条：当前{len(selected)}条")
+    domains = {str(item.get("domain")) for item in selected}
+    kinds = [str(item.get("candidate_kind")) for item in selected]
+    axes = {(str(item.get("domain")), str(item.get("reality_dimension") or item.get("label"))) for item in selected}
+    errors = []
+    if len(domains) < 4:
+        errors.append("至少覆盖4个领域")
+    if "timed_event" not in kinds:
+        errors.append("至少包含1条已发生的时间事件")
+    if sum(item in {"timed_event", "objective_state"} for item in kinds) < 2:
+        errors.append("时间事件与客观事实合计至少2条")
+    if len(axes) < 5:
+        errors.append("至少包含5个不同现实问题轴")
+    if errors:
+        raise ValueError("校准探针候选结构不足：" + "；".join(errors))
     return {
         "schema_version": "1.0.0",
         "source_sha256": canonical_digest(semantic),

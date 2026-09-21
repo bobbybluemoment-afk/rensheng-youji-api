@@ -215,8 +215,12 @@ def audit(root: Path) -> list[str]:
     calibration_contract_text = (root / "scripts/calibration_question_contract.py").read_text(encoding="utf-8")
     if not all(field in calibration_text for field in ("answerable_time_scope", "answerable_observation", "answerable_alternative")) or "year > analysis_year" not in calibration_contract_text:
         errors.append("Calibration generator can still ask users to verify future events")
-    if "calibration_question_contract" not in calibration_text or "calibration_question_contract" not in calibration_validator_text or "calibration_question_contract" not in core_validator_text:
-        errors.append("Core, calibration selection and calibration validation must share one answerability contract")
+    probe_validator_text = (root / "scripts/validate_calibration_probe_patch.py").read_text(encoding="utf-8")
+    if "calibration_question_contract" not in calibration_text or "calibration_question_contract" not in calibration_validator_text or "calibration_question_contract" not in probe_validator_text:
+        errors.append("Calibration wording, selection and final validation must share one answerability contract")
+    synthesis_validator_text = (root / "scripts/validate_core_synthesis.py").read_text(encoding="utf-8")
+    if "require_calibration_feasibility" not in core_validator_text or "probe_patch is not None" not in synthesis_validator_text:
+        errors.append("Pre-probe and post-probe Core validation do not share the intended feasibility phase boundary")
     final_compiler_text = (root / "skills/rensheng-youji-growth-map/scripts/compile_final_report.py").read_text(encoding="utf-8")
     language_scanner_text = (root / "internal/rensheng-youji-chinese-editor/scripts/scan_report_language.py").read_text(encoding="utf-8")
     if "BODY_EMOTION_SAFETY_NOTE" not in final_compiler_text or "BODY_EMOTION_SAFETY_MARKERS" not in renderer_text:

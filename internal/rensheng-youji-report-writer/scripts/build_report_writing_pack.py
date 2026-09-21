@@ -132,7 +132,7 @@ def compact_claim(item: dict[str, Any]) -> dict[str, Any]:
     """Keep only fields the prose writer can act on."""
     keys = (
         "claim_id", "domain", "reality_dimension", "claim_family", "plain_claim",
-        "human_explanation", "new_information", "claim_class", "coverage_tags", "applicable_conditions",
+        "human_explanation", "claim_class", "coverage_tags", "applicable_conditions",
         "observable_scenes", "helpful_effects", "possible_costs", "allowed_examples",
         "counterevidence", "unsupported_extensions", "calibration_status",
     )

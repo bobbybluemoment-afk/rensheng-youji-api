@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.24.3",
+  "version": "2.25.0",
   "visibility": "internal",
   "stages": [
     {
@@ -48,5 +48,5 @@
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "2.24.3修正五题校准的可见题意去重契约：冻结前可行性检查、确定性选题和出题后校验共同使用A/B语义指纹；内部问题轴、候选类型或时间范围不同但用户可见A/B相同（含对调）时只能选择一道，并以真实重复题回归测试锁定上下游一致。其余沿用2.24.2的报告段落映射、共享卡片算法、阶段年份写作和年度差异审计；Core仍为0.17.0。"
+  "notes": "2.25.0拆分Core综合与校准措辞职责：Core AI只负责判断、人物解释和阶段语义，确定性编译器负责来源与派生字段；程序先筛出最多10条可校准候选，再由小型措辞阶段只改写过去或当前可观察的五题素材。冻结前后使用同一可行性契约，避免Core任务过重和上下游矛盾；Core仍为0.17.0。"
 }

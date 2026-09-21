@@ -38,7 +38,7 @@ python scripts/run_in_env.py scripts/prepare_core_synthesis.py analysis-input.js
 
 ## 第二段：受约束语义综合
 
-语言模型读取 `core-synthesis-input.json`，生成 `core-semantic-analysis.json`。默认按六领域判断矩阵做综合，不重复读取或搬运九份完整方法包；完整原件仍由哈希锁定在编译源中。生产桥已经确定性清空其中的 `questions`、`current_concerns` 和既有校准状态，但保留职业、家庭、关系等明确事实用于现实边界；因此完整人物Core不会围绕用户关注主题提前取材。这是必要的分析环节，不属于绕过或手工拼Schema。
+语言模型读取 `core-synthesis-input.json`，生成 `core-semantic-analysis.json`。默认按六领域判断矩阵做综合，不重复读取或搬运九份完整方法包；完整原件仍由哈希锁定在编译源中。Core综合只负责判断、形成链、跨领域主线和阶段语义，不负责五题措辞。生产桥已经确定性清空其中的 `questions`、`current_concerns` 和既有校准状态，但保留职业、家庭、关系等明确事实用于现实边界；因此完整人物Core不会围绕用户关注主题提前取材。这是必要的分析环节，不属于绕过或手工拼Schema。
 
 模型只能生成 `semantic_output_contract.required_sections` 中列出的区块，并按 `semantic_output_contract.schema` 填写准确字段、类型、枚举和数量。该工作Schema由正式Core Schema自动投影，不是第二套手写规则。`compiler_owned_fields` 中列出的来源、方法、证据、状态和派生字段必须省略，由确定性编译器从冻结方法包统一计算。不得输出或改写：
 
@@ -82,7 +82,7 @@ python scripts/run_in_env.py scripts/finalize_core_analysis.py \
   --output analysis-output-initial.json
 ```
 
-该脚本先确定性补齐综合簇的方法来源、独立家族，判断台账的证据、方法、报告角色与现实细节，现实候选的来源层、证据、关系和初始状态；再写入排盘事实、方法与证据、方法执行审计、校准初始状态，并自动生成 `report_source_bundle`。随后同时执行Schema和完整Core语义校验。成功输出可以直接进入Baseline冻结，不再需要模型创建 `analysis-output-before-sources.json`。
+正式组装前，`prepare_calibration_probes.py` 从语义候选中筛出最多10条，AI只读取这个小包生成哈希绑定的措辞补丁，`validate_calibration_probe_patch.py` 校验后交给编译器。组装脚本再确定性补齐综合簇的方法来源、独立家族，判断台账的证据、方法、报告角色、新信息标签与现实细节，现实候选的来源层、证据、关系和初始状态；随后写入排盘事实、方法与证据、方法执行审计、校准初始状态，并自动生成 `report_source_bundle`。成功输出可以直接进入Baseline冻结，不再需要模型创建 `analysis-output-before-sources.json`。
 
 ## 停止条件
 

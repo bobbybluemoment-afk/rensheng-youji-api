@@ -283,7 +283,7 @@ def method_delivery_decision(completed_methods: set[str]) -> tuple[str, bool, bo
     return decision, structural_anchor, reality_anchor, timing_anchor
 
 
-def validate(data: Any) -> list[str]:
+def validate(data: Any, *, require_calibration_feasibility: bool = True) -> list[str]:
     errors: list[str] = []
     require_keys(data, REQUIRED_SECTIONS, "$", errors)
     if not isinstance(data, dict):
@@ -1161,7 +1161,8 @@ def validate(data: Any) -> list[str]:
                 f"候选池缺少={missing_candidate_domains}；来源缺口={sorted(uncovered_source_domains)}"
             )
         if isinstance(meta, dict) and meta.get("core_version") == "0.17.0":
-            errors.extend(calibration_feasibility_errors(data))
+            if require_calibration_feasibility:
+                errors.extend(calibration_feasibility_errors(data))
 
     candidate_ids = {item.get("candidate_id") for item in candidates or [] if isinstance(item, dict)}
     errors.extend("九方法到Core证据保留不足：" + item for item in evidence_retention_gaps(data))

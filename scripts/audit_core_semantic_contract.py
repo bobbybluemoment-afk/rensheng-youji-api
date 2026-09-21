@@ -42,6 +42,8 @@ def audit(root: Path = ROOT) -> list[str]:
                 errors.append(f"{definition_name}.{field}不是正式Core必填字段")
             if field in ai_required:
                 errors.append(f"{definition_name}.{field}仍被AI工作Schema要求填写")
+            if field in (ai_definition.get("properties") or {}):
+                errors.append(f"{definition_name}.{field}仍暴露在AI工作Schema中")
     schema_layers = set(
         canonical["$defs"]["realityCandidate"]["properties"]["source_layers"]
         ["items"]["enum"]
@@ -51,7 +53,9 @@ def audit(root: Path = ROOT) -> list[str]:
         errors.append(f"主校验器允许但Core Schema拒绝的候选来源层：{missing_lenses}")
     required_files = {
         "scripts/prepare_core_synthesis.py": ("build_ai_schema", "compiler_owned_fields"),
-        "scripts/finalize_core_analysis.py": ("compile_bookkeeping", "build_ai_schema"),
+        "scripts/finalize_core_analysis.py": ("compile_bookkeeping", "ai_semantic_view", "require_calibration_feasibility"),
+        "scripts/prepare_calibration_probes.py": ("source_sha256", "candidates"),
+        "scripts/validate_calibration_probe_patch.py": ("source_sha256", "answerable_observation"),
         "scripts/prepare_semantic_repair.py": ("target_schema", "targets_from_errors"),
         "internal/rensheng-youji-mingli-core/references/core-production-bridge.md": ("target_schema", "确定性编译器"),
         "skills/rensheng-youji-growth-map/SKILL.md": ("compiler_owned_fields", "--errors"),
