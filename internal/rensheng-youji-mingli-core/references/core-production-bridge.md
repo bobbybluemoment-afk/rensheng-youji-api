@@ -63,7 +63,8 @@ python scripts/run_in_env.py scripts/prepare_core_synthesis.py analysis-input.js
 
 ```bash
 python scripts/run_in_env.py scripts/validate_core_synthesis.py \
-  core-synthesis-input.json core-semantic-analysis.json
+  core-synthesis-input.json core-semantic-analysis.json \
+  --compiler-source core-compiler-source.json
 ```
 
 失败时只修复语义综合输出。用 `prepare_semantic_repair.py --errors <验证结果>` 自动提取错误实际涉及的顶层区块，生成哈希绑定的小请求。请求必须同时携带这些区块的 `target_schema`，AI只返回这些区块，再由 `apply_semantic_repair.py` 合并；不得手工扩大目标或重写完整文件。返修后错误数量增加时保留上一轮较好的文件，不得让恶化结果覆盖它：
@@ -74,15 +75,28 @@ python scripts/run_in_env.py scripts/validate_core_synthesis.py \
 
 此时方法集合已经由 `method_packets_sha256` 冻结，不得重新运行方法包。第三轮仍失败时停止完整Core交付，返回实际错误，不得补占位内容。
 
-校验通过后运行：
+第一次语义校验通过后，先运行 `prepare_calibration_probes.py` 生成小型校准措辞包。AI只读取 `calibration-probe-input.json`，按照其中的 `rules` 生成 `calibration-probe-patch.json`，不重新推命；补丁文件生成后才继续运行其余命令：
 
 ```bash
+python scripts/run_in_env.py scripts/prepare_calibration_probes.py \
+  --semantic core-semantic-analysis.json \
+  --analysis-year <当前分析年份> \
+  --output calibration-probe-input.json
+python scripts/run_in_env.py scripts/validate_calibration_probe_patch.py \
+  --input calibration-probe-input.json \
+  --patch calibration-probe-patch.json
+python scripts/run_in_env.py scripts/validate_core_synthesis.py \
+  core-synthesis-input.json core-semantic-analysis.json \
+  --compiler-source core-compiler-source.json \
+  --calibration-probe-patch calibration-probe-patch.json
 python scripts/run_in_env.py scripts/finalize_core_analysis.py \
   core-synthesis-input.json core-semantic-analysis.json \
+  --compiler-source core-compiler-source.json \
+  --calibration-probe-patch calibration-probe-patch.json \
   --output analysis-output-initial.json
 ```
 
-正式组装前，`prepare_calibration_probes.py` 从语义候选中筛出最多10条，AI只读取这个小包生成哈希绑定的措辞补丁，`validate_calibration_probe_patch.py` 校验后交给编译器。组装脚本再确定性补齐综合簇的方法来源、独立家族，判断台账的证据、方法、报告角色、新信息标签与现实细节，现实候选的来源层、证据、关系和初始状态；随后写入排盘事实、方法与证据、方法执行审计、校准初始状态，并自动生成 `report_source_bundle`。成功输出可以直接进入Baseline冻结，不再需要模型创建 `analysis-output-before-sources.json`。
+`prepare_calibration_probes.py` 从语义候选中筛出最多10条，AI生成哈希绑定的措辞补丁，`validate_calibration_probe_patch.py` 校验后交给编译器。正式组装命令必须同时提供 `core-compiler-source.json` 和 `calibration-probe-patch.json`；缺少任一文件都必须停在当前阶段，不能静默进入旧兼容路线。组装脚本再确定性补齐综合簇的方法来源、独立家族，判断台账的证据、方法、报告角色、新信息标签与现实细节，现实候选的来源层、证据、关系和初始状态；随后写入排盘事实、方法与证据、方法执行审计、校准初始状态，并自动生成 `report_source_bundle`。成功输出可以直接进入Baseline冻结，不再需要模型创建 `analysis-output-before-sources.json`。
 
 ## 停止条件
 

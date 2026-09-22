@@ -11,7 +11,7 @@
     "probes": {
       "type": "array",
       "minItems": 5,
-      "maxItems": 12,
+      "maxItems": 10,
       "items": {
         "type": "object",
         "additionalProperties": false,

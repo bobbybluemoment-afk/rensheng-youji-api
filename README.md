@@ -143,7 +143,7 @@ Core先保留九方法中的现实细节，再形成“核心模式—原有能�
 
 本项目采用“人生有迹有限个人使用许可 1.0”：允许个人非商业使用，禁止未经授权的商业使用、公开镜像、搬运和重新发布。第三方组件仍适用其各自的许可证。
 
-版本：2.25.1
+版本：2.26.0
 
 ## 维护验收
 
@@ -162,7 +162,9 @@ python scripts/run_in_env.py -m unittest tests/test_report_source_contract.py
 python scripts/run_in_env.py -m unittest tests/test_runtime_entry.py
 python scripts/run_in_env.py -m unittest tests/test_persistent_run_workflow.py
 python scripts/run_in_env.py -m unittest tests/test_ai_stage_contracts.py
+python scripts/run_in_env.py -m unittest tests/test_documented_cli_contract.py
 python scripts/run_in_env.py scripts/audit_ai_stage_contracts.py .
+python scripts/run_in_env.py scripts/audit_documented_cli_contract.py .
 python scripts/run_in_env.py scripts/export_method_packet_schema.py --check
 python scripts/run_in_env.py scripts/check_env.py
 ```

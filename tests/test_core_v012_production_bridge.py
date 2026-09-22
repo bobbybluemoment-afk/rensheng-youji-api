@@ -253,6 +253,8 @@ class CoreV012ProductionBridgeTest(unittest.TestCase):
             synthesis_input = work / "core-synthesis-input.json"
             compiler_source = work / "core-compiler-source.json"
             semantic_output = work / "core-semantic-analysis.json"
+            probe_input = work / "calibration-probe-input.json"
+            probe_patch = work / "calibration-probe-patch.json"
             final_output = work / "analysis-output-initial.json"
             analysis_input.write_text(json.dumps(self.analysis_input, ensure_ascii=False), encoding="utf-8")
             semantic_output.write_text(json.dumps(self.semantic, ensure_ascii=False), encoding="utf-8")
@@ -261,18 +263,48 @@ class CoreV012ProductionBridgeTest(unittest.TestCase):
                 (packet_dir / f"{method_id}.json").write_text(
                     json.dumps(packet, ensure_ascii=False), encoding="utf-8"
                 )
-            commands = [
+            pre_probe_commands = [
                 [sys.executable, str(ROOT / "scripts/prepare_core_synthesis.py"), str(analysis_input), "--method-packet-dir", str(packet_dir), "--output", str(synthesis_input), "--compiler-source", str(compiler_source)],
                 [sys.executable, str(ROOT / "scripts/validate_core_synthesis.py"), str(synthesis_input), str(semantic_output), "--compiler-source", str(compiler_source)],
-                [sys.executable, str(ROOT / "scripts/finalize_core_analysis.py"), str(synthesis_input), str(semantic_output), "--compiler-source", str(compiler_source), "--output", str(final_output)],
+                [sys.executable, str(ROOT / "scripts/prepare_calibration_probes.py"), "--semantic", str(semantic_output), "--analysis-year", "2026", "--output", str(probe_input)],
             ]
-            for command in commands:
+            for command in pre_probe_commands:
+                result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, check=False)
+                self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+            probe_payload = json.loads(probe_input.read_text(encoding="utf-8"))
+            semantic_candidates = {
+                item["candidate_id"]: item for item in self.semantic["reality_candidate_pool"]
+            }
+            probe_patch.write_text(json.dumps({
+                "schema_version": "1.0.0",
+                "source_sha256": probe_payload["source_sha256"],
+                "probes": [{
+                    "candidate_id": item["candidate_id"],
+                    "answerable_time_scope": semantic_candidates[item["candidate_id"]]["answerable_time_scope"],
+                    "answerable_observation": semantic_candidates[item["candidate_id"]]["answerable_observation"],
+                    "answerable_alternative": semantic_candidates[item["candidate_id"]]["answerable_alternative"],
+                } for item in probe_payload["candidates"]],
+            }, ensure_ascii=False), encoding="utf-8")
+            post_probe_commands = [
+                [sys.executable, str(ROOT / "scripts/validate_calibration_probe_patch.py"), "--input", str(probe_input), "--patch", str(probe_patch)],
+                [sys.executable, str(ROOT / "scripts/validate_core_synthesis.py"), str(synthesis_input), str(semantic_output), "--compiler-source", str(compiler_source), "--calibration-probe-patch", str(probe_patch)],
+                [sys.executable, str(ROOT / "scripts/finalize_core_analysis.py"), str(synthesis_input), str(semantic_output), "--compiler-source", str(compiler_source), "--calibration-probe-patch", str(probe_patch), "--output", str(final_output)],
+            ]
+            for command in post_probe_commands:
                 result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, check=False)
                 self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
             final = json.loads(final_output.read_text(encoding="utf-8"))
             self.assertEqual(final["analysis_meta"]["status"], "complete")
             self.assertEqual(len(final["independent_method_analyses"]), 9)
             self.assertIn("report_source_bundle", final)
+
+    def test_production_finalizer_rejects_missing_probe_patch(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "scripts/finalize_core_analysis.py"), "input.json", "semantic.json", "--compiler-source", "source.json", "--output", "output.json"],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("--calibration-probe-patch", result.stderr)
 
 
 if __name__ == "__main__":

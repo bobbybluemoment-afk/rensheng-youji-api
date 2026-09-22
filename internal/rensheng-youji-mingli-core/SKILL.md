@@ -349,17 +349,32 @@ python scripts/run_in_env.py scripts/compile_method_packets.py \
   --gate-output method-gate.json
 ```
 
-九个方法完成或被合法归类后，按生产桥生成受约束综合输入。AI只读取六领域判断矩阵、精简技术索引、精简证据索引、方法限制和由正式Schema自动投影的工作Schema；完整方法包只留给确定性编译器和审计。AI只生成规定的语义综合区块，并省略 `compiler_owned_fields`，随后由程序补齐来源、方法、证据、状态和派生字段，组装完整Core并自动生成报告来源：
+九个方法完成或被合法归类后，按生产桥生成受约束综合输入。AI只读取六领域判断矩阵、精简技术索引、精简证据索引、方法限制和由正式Schema自动投影的工作Schema；完整方法包只留给确定性编译器和审计。AI只生成规定的语义综合区块，并省略 `compiler_owned_fields`。运行 `prepare_calibration_probes.py` 后，AI必须按照 `calibration-probe-input.json#rules` 生成 `calibration-probe-patch.json`，再继续执行探针校验、二次Core校验和正式组装；不得在补丁尚未生成时直接运行后续命令。随后由程序补齐来源、方法、证据、状态和派生字段，组装完整Core并自动生成报告来源：
 
 ```bash
 python scripts/run_in_env.py scripts/prepare_core_synthesis.py analysis-input.json \
   --method-packet-dir method-packets \
   --method-gate method-gate.json \
-  --output core-synthesis-input.json
+  --output core-synthesis-input.json \
+  --compiler-source core-compiler-source.json
 python scripts/run_in_env.py scripts/validate_core_synthesis.py \
-  core-synthesis-input.json core-semantic-analysis.json
+  core-synthesis-input.json core-semantic-analysis.json \
+  --compiler-source core-compiler-source.json
+python scripts/run_in_env.py scripts/prepare_calibration_probes.py \
+  --semantic core-semantic-analysis.json \
+  --analysis-year <当前分析年份> \
+  --output calibration-probe-input.json
+python scripts/run_in_env.py scripts/validate_calibration_probe_patch.py \
+  --input calibration-probe-input.json \
+  --patch calibration-probe-patch.json
+python scripts/run_in_env.py scripts/validate_core_synthesis.py \
+  core-synthesis-input.json core-semantic-analysis.json \
+  --compiler-source core-compiler-source.json \
+  --calibration-probe-patch calibration-probe-patch.json
 python scripts/run_in_env.py scripts/finalize_core_analysis.py \
   core-synthesis-input.json core-semantic-analysis.json \
+  --compiler-source core-compiler-source.json \
+  --calibration-probe-patch calibration-probe-patch.json \
   --output analysis-output-initial.json
 python scripts/run_in_env.py internal/rensheng-youji-mingli-core/scripts/validate_analysis_output.py analysis-output-initial.json
 python scripts/run_in_env.py scripts/audit_claim_diversity.py analysis-output-initial.json \

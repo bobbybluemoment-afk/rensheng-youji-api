@@ -197,15 +197,15 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("synthesis_input", type=Path)
     parser.add_argument("semantic_output", type=Path)
-    parser.add_argument("--compiler-source", type=Path)
-    parser.add_argument("--calibration-probe-patch", type=Path)
+    parser.add_argument("--compiler-source", type=Path, required=True)
+    parser.add_argument("--calibration-probe-patch", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
         synthesis_input = json.loads(args.synthesis_input.read_text(encoding="utf-8"))
         semantic = json.loads(args.semantic_output.read_text(encoding="utf-8"))
-        compiler_source = load_json(args.compiler_source) if args.compiler_source else None
-        calibration_probe_patch = load_json(args.calibration_probe_patch) if args.calibration_probe_patch else None
+        compiler_source = load_json(args.compiler_source)
+        calibration_probe_patch = load_json(args.calibration_probe_patch)
         result, errors = assemble(synthesis_input, semantic, compiler_source, calibration_probe_patch)
         if errors:
             print(json.dumps({"status": "validation_error", "errors": errors}, ensure_ascii=False, indent=2))

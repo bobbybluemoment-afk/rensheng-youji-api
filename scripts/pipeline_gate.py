@@ -20,6 +20,7 @@ from run_checkpoint import record as record_checkpoint  # noqa: E402
 from validate_method_packet import validate as validate_method_packet  # noqa: E402
 from validate_method_semantic_patch import validate as validate_method_semantic_patch  # noqa: E402
 from method_structure_contract import structure_summary  # noqa: E402
+from validate_calibration_probe_patch import validate as validate_calibration_probe_patch  # noqa: E402
 
 
 def load(path: Path) -> Any:
@@ -66,7 +67,7 @@ def method_gate(work: Path) -> tuple[list[str], list[Path], list[Path]]:
         errors.append("method-gate.json与当前九份语义答卷哈希不一致")
     if gate.get("structure_check_summary_by_method") != structure_summaries:
         errors.append("method-gate.json与当前九份重要结构检查结果不一致")
-    return errors, [work / "method-input.json", work / "method-semantic-patches"], [work / "method-packets", gate_path]
+    return errors, [work / "method-input.json", work / "method-prompt-packs", work / "method-semantic-patches"], [work / "method-packets", gate_path]
 
 
 def core_gate(work: Path) -> tuple[list[str], list[Path], list[Path]]:
@@ -77,15 +78,29 @@ def core_gate(work: Path) -> tuple[list[str], list[Path], list[Path]]:
         validate_quality_audit(analysis, audit)
     except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
         errors.append(str(exc))
-    outputs = [analysis, audit]
-    if (work / "analysis-baseline.json").is_file() or (work / "analysis-baseline-lock.json").is_file():
-        baseline, lock = work / "analysis-baseline.json", work / "analysis-baseline-lock.json"
+    try:
+        errors.extend(validate_calibration_probe_patch(
+            load(work / "calibration-probe-input.json"),
+            load(work / "calibration-probe-patch.json"),
+        ))
+    except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
+        errors.append(str(exc))
+    baseline, lock = work / "analysis-baseline.json", work / "analysis-baseline-lock.json"
+    outputs = [analysis, audit, baseline, lock]
+    try:
         if load(baseline) != load(analysis):
             errors.append("冻结Baseline与通过审计的初始Core不一致")
         if core_digest(load(baseline)) != load(lock).get("baseline_sha256"):
             errors.append("冻结Baseline与锁文件哈希不一致")
-        outputs.extend([baseline, lock])
-    return errors, [work / "core-synthesis-input.json", work / "core-compiler-source.json", work / "core-semantic-analysis.json"], outputs
+    except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
+        errors.append(str(exc))
+    return errors, [
+        work / "core-synthesis-input.json",
+        work / "core-compiler-source.json",
+        work / "core-semantic-analysis.json",
+        work / "calibration-probe-input.json",
+        work / "calibration-probe-patch.json",
+    ], outputs
 
 
 def calibration_gate(work: Path) -> tuple[list[str], list[Path], list[Path]]:
@@ -100,7 +115,17 @@ def calibration_gate(work: Path) -> tuple[list[str], list[Path], list[Path]]:
         "skills/rensheng-youji-growth-map/scripts/validate_calibration_questions.py",
         str(work / "calibration-questions.json"), "--analysis", str(baseline),
     ))
-    return errors, [baseline, lock, work / "calibration-answers.json", work / "calibration-delta.json"], [calibrated]
+    inputs = [
+        baseline,
+        lock,
+        work / "calibration-questions.json",
+        work / "calibration-answers.json",
+        work / "calibration-delta.json",
+    ]
+    free_text = work / "calibration-free-text-patch.json"
+    if free_text.is_file():
+        inputs.append(free_text)
+    return errors, inputs, [calibrated]
 
 
 def report_gate(work: Path) -> tuple[list[str], list[Path], list[Path]]:
@@ -126,7 +151,20 @@ def report_gate(work: Path) -> tuple[list[str], list[Path], list[Path]]:
         "skills/rensheng-youji-growth-map/scripts/render_report.py",
         str(report), "--out", str(work / "report-gate-preview.md"),
     ))
-    return errors, [analysis, resolved, brief, draft], [report, review, work / "free-card-output.json"]
+    inputs = [
+        analysis,
+        work / "profile.json",
+        resolved,
+        brief,
+        draft,
+        work / "edited-report-draft.json",
+        work / "edited-report-semantic.json",
+        work / "calibration-questions.json",
+        work / "calibration-delta.json",
+        work / "free-card-output.json",
+        work / "editorial-review.json",
+    ]
+    return errors, inputs, [report, review]
 
 
 def delivery_gate(work: Path) -> tuple[list[str], list[Path], list[Path]]:
@@ -142,7 +180,19 @@ def delivery_gate(work: Path) -> tuple[list[str], list[Path], list[Path]]:
             errors.append(f"交付文件不存在：{label}")
         else:
             outputs.append(path)
-    return errors, [work / "report.json", work / "free-card-output.json"], outputs
+    return errors, [
+        work / "analysis-output-calibrated.json",
+        work / "analysis-baseline.json",
+        work / "analysis-baseline-lock.json",
+        work / "calibration-delta.json",
+        work / "calibration-questions.json",
+        work / "resolved-report-sources.json",
+        work / "report-content-brief.json",
+        work / "report-draft.json",
+        work / "report.json",
+        work / "editorial-review-final.json",
+        work / "free-card-output.json",
+    ], outputs
 
 
 GATES = {

@@ -63,6 +63,20 @@ class PipelineContractTest(unittest.TestCase):
         self.assertEqual(stages["method_packet_compile"]["producer"], "deterministic")
         self.assertIn("method_gate", stages["synthesis_input"]["inputs"])
 
+    def test_gates_are_attached_to_the_artifacts_they_validate(self) -> None:
+        stages = {item["id"]: item for item in self.contract["stages"]}
+        self.assertEqual(stages["baseline_freeze"].get("gate"), "CORE_GATE")
+        self.assertNotIn("gate", stages["core_quality_audit"])
+        self.assertEqual(stages["calibrated_core"].get("gate"), "CALIBRATION_GATE")
+        self.assertNotIn("gate", stages["calibration_delta"])
+
+    def test_initial_core_requires_the_probe_patch_and_compiler_source(self) -> None:
+        stages = {item["id"]: item for item in self.contract["stages"]}
+        self.assertEqual(
+            set(stages["initial_core"]["inputs"]),
+            {"core_synthesis_input", "core_compiler_source", "core_semantic_analysis", "calibration_probe_patch"},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

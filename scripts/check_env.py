@@ -37,6 +37,14 @@ def main() -> int:
         print("FAILED: production instructions bypass the repository Python runtime")
         print(runtime_test.stdout or runtime_test.stderr)
         return 1
+    documented_cli_test = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/audit_documented_cli_contract.py"), str(ROOT)],
+        cwd=ROOT, text=True, capture_output=True, check=False,
+    )
+    if documented_cli_test.returncode:
+        print("FAILED: a documented production command disagrees with its argparse interface")
+        print(documented_cli_test.stdout or documented_cli_test.stderr)
+        return 1
     ai_contract_test = subprocess.run(
         [sys.executable, str(ROOT / "scripts/audit_ai_stage_contracts.py"), str(ROOT)],
         cwd=ROOT, text=True, capture_output=True, check=False,
@@ -115,6 +123,7 @@ def main() -> int:
         ROOT / "scripts/core_baseline.py",
         ROOT / "internal/pipeline-contract.json",
         ROOT / "scripts/audit_pipeline_contract.py",
+        ROOT / "scripts/audit_documented_cli_contract.py",
         ROOT / "scripts/core_synthesis_contract.py",
         ROOT / "scripts/core_semantic_contract.py",
         ROOT / "scripts/audit_core_semantic_contract.py",

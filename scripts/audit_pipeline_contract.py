@@ -69,6 +69,19 @@ def audit(root: Path, contract: dict[str, Any]) -> list[str]:
         value = contract.get(key)
         if not isinstance(value, str) or not (root / value).is_file():
             errors.append(f"pipeline contract缺少有效{key}")
+    expected_gate_stage = {
+        "METHOD_GATE": "method_packet_compile",
+        "CORE_GATE": "baseline_freeze",
+        "CALIBRATION_GATE": "calibrated_core",
+        "REPORT_GATE": "report_compile",
+        "DELIVERY_GATE": "delivery",
+    }
+    actual_gate_stage = {
+        str(stage.get("gate")): str(stage.get("id"))
+        for stage in stages if isinstance(stage, dict) and stage.get("gate")
+    }
+    if actual_gate_stage != expected_gate_stage:
+        errors.append(f"正式Gate阶段归属不一致：actual={actual_gate_stage} expected={expected_gate_stage}")
     return errors
 
 

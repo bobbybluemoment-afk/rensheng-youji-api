@@ -67,6 +67,25 @@ def status(run_dir: Path) -> dict[str, object]:
         paths = [run_dir / artifact for artifact in artifacts]
         path = paths[0]
         complete = all(item.is_file() for item in paths)
+        if complete:
+            malformed: list[str] = []
+            for item in paths:
+                if item.suffix != ".json":
+                    continue
+                try:
+                    json.loads(item.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError) as exc:
+                    malformed.append(f"{item.name}: {exc}")
+            if malformed:
+                return {
+                    "status": "in_progress",
+                    "run_id": state["run_id"],
+                    "next_stage": stage_id,
+                    "producer": producer,
+                    "required_artifacts": [str(item) for item in paths],
+                    "contract_or_script": contract,
+                    "validation_errors": malformed,
+                }
         if stage_id == "method_prompt_packs":
             complete = path.is_dir() and len(list(path.glob("*.prompt.md"))) == 9 and (path / "prompt-pack-manifest.json").is_file()
         elif stage_id == "independent_methods":

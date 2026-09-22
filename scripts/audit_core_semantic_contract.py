@@ -69,14 +69,67 @@ def audit(root: Path = ROOT) -> list[str]:
         for marker in markers:
             if marker not in text:
                 errors.append(f"{relative}缺少契约标记：{marker}")
-    growth_skill = (root / "skills/rensheng-youji-growth-map/SKILL.md").read_text(encoding="utf-8")
-    probe_command = (
-        "scripts/validate_calibration_probe_patch.py \\\n"
-        "  --input work/calibration-probe-input.json \\\n"
-        "  --patch work/calibration-probe-patch.json"
-    )
-    if probe_command not in growth_skill:
-        errors.append("校准探针校验命令必须使用脚本声明的--input与--patch参数")
+    maintained_workflows = {
+        "主报告Skill": root / "skills/rensheng-youji-growth-map/SKILL.md",
+        "内部Core Skill": root / "internal/rensheng-youji-mingli-core/SKILL.md",
+        "Core生产桥": root / "internal/rensheng-youji-mingli-core/references/core-production-bridge.md",
+    }
+    for label, path in maintained_workflows.items():
+        text = path.read_text(encoding="utf-8")
+        prepare_pos = text.find("scripts/prepare_calibration_probes.py")
+        probe_validator_pos = text.find("scripts/validate_calibration_probe_patch.py", prepare_pos + 1)
+        input_pos = text.find("--input", probe_validator_pos + 1)
+        patch_pos = text.find("--patch", input_pos + 1)
+        post_validator_pos = text.find("scripts/validate_core_synthesis.py", patch_pos + 1)
+        probe_option_pos = text.find("--calibration-probe-patch", post_validator_pos + 1)
+        finalizer_pos = text.find("scripts/finalize_core_analysis.py", probe_option_pos + 1)
+        ordered = {
+            "scripts/prepare_calibration_probes.py": prepare_pos,
+            "scripts/validate_calibration_probe_patch.py": probe_validator_pos,
+            "--input": input_pos,
+            "--patch": patch_pos,
+            "二次scripts/validate_core_synthesis.py": post_validator_pos,
+            "--calibration-probe-patch": probe_option_pos,
+            "scripts/finalize_core_analysis.py": finalizer_pos,
+        }
+        if any(position < 0 for position in ordered.values()):
+            missing = [marker for marker, position in ordered.items() if position < 0]
+            errors.append(f"{label}缺少正式Core阶段或参数：{missing}")
+        finalizer = finalizer_pos
+        finalizer_block = text[finalizer:finalizer + 500] if finalizer >= 0 else ""
+        for option in ("--compiler-source", "--calibration-probe-patch", "--output"):
+            if option not in finalizer_block:
+                errors.append(f"{label}的正式Core组装命令缺少{option}")
+
+    finalizer_text = (root / "scripts/finalize_core_analysis.py").read_text(encoding="utf-8")
+    validator_text = (root / "scripts/validate_core_synthesis.py").read_text(encoding="utf-8")
+    for option in ("--compiler-source", "--calibration-probe-patch"):
+        declaration = f'parser.add_argument("{option}", type=Path, required=True)'
+        if declaration not in finalizer_text:
+            errors.append(f"正式Core组装器必须强制要求{option}")
+    if 'parser.add_argument("--compiler-source", type=Path, required=True)' not in validator_text:
+        errors.append("Core语义校验器必须强制要求--compiler-source")
+
+    probe_schema = json.loads((root / "internal/rensheng-youji-mingli-core/schemas/calibration-probe-patch.schema.json").read_text(encoding="utf-8"))
+    if probe_schema["properties"]["probes"].get("maxItems") != 10:
+        errors.append("校准探针Schema必须与准备器共享最多10条的数量契约")
+
+    pipeline = json.loads((root / "internal/pipeline-contract.json").read_text(encoding="utf-8"))
+    stages = {item["id"]: item for item in pipeline.get("stages") or [] if isinstance(item, dict) and item.get("id")}
+    required_initial_inputs = {
+        "core_synthesis_input", "core_compiler_source", "core_semantic_analysis", "calibration_probe_patch",
+    }
+    if set(stages.get("initial_core", {}).get("inputs") or []) != required_initial_inputs:
+        errors.append("initial_core没有严格消费综合输入、编译来源、语义答卷和校准探针补丁")
+    if stages.get("baseline_freeze", {}).get("gate") != "CORE_GATE":
+        errors.append("CORE_GATE必须在质量审计通过并冻结Baseline后执行")
+    if stages.get("calibrated_core", {}).get("gate") != "CALIBRATION_GATE":
+        errors.append("CALIBRATION_GATE必须在校准后Core生成后执行")
+
+    gate_text = (root / "scripts/pipeline_gate.py").read_text(encoding="utf-8")
+    for artifact in ("calibration-probe-input.json", "calibration-probe-patch.json"):
+        if artifact not in gate_text:
+            errors.append(f"CORE_GATE检查点没有绑定{artifact}")
     return errors
 
 

@@ -34,6 +34,24 @@ class CoreSemanticContractTest(unittest.TestCase):
             text,
         )
 
+    def test_every_core_workflow_documents_the_strict_probe_sequence(self) -> None:
+        self.assertEqual(audit(ROOT), [])
+        for relative in (
+            "skills/rensheng-youji-growth-map/SKILL.md",
+            "internal/rensheng-youji-mingli-core/SKILL.md",
+            "internal/rensheng-youji-mingli-core/references/core-production-bridge.md",
+        ):
+            text = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertIn("scripts/prepare_calibration_probes.py", text)
+            self.assertIn("scripts/validate_calibration_probe_patch.py", text)
+            finalizer = text[text.index("scripts/finalize_core_analysis.py"):]
+            self.assertIn("--compiler-source", finalizer[:500])
+            self.assertIn("--calibration-probe-patch", finalizer[:500])
+
+    def test_probe_patch_schema_matches_the_ten_candidate_preparer_limit(self) -> None:
+        schema = json.loads((ROOT / "internal/rensheng-youji-mingli-core/schemas/calibration-probe-patch.schema.json").read_text(encoding="utf-8"))
+        self.assertEqual(schema["properties"]["probes"]["maxItems"], 10)
+
     def test_ai_schema_comes_from_all_semantic_sections(self) -> None:
         schema = build_ai_schema(SEMANTIC_SECTIONS)
         self.assertEqual(set(schema["properties"]), SEMANTIC_SECTIONS)
