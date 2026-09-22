@@ -69,6 +69,14 @@ def audit(root: Path = ROOT) -> list[str]:
         for marker in markers:
             if marker not in text:
                 errors.append(f"{relative}缺少契约标记：{marker}")
+    growth_skill = (root / "skills/rensheng-youji-growth-map/SKILL.md").read_text(encoding="utf-8")
+    probe_command = (
+        "scripts/validate_calibration_probe_patch.py \\\n"
+        "  --input work/calibration-probe-input.json \\\n"
+        "  --patch work/calibration-probe-patch.json"
+    )
+    if probe_command not in growth_skill:
+        errors.append("校准探针校验命令必须使用脚本声明的--input与--patch参数")
     return errors
 
 

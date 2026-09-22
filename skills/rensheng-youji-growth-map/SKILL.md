@@ -176,7 +176,8 @@ AI按照 `calibration-probe-input.json#rules` 生成 `work/calibration-probe-pat
 
 ```bash
 python scripts/run_in_env.py scripts/validate_calibration_probe_patch.py \
-  work/calibration-probe-input.json work/calibration-probe-patch.json
+  --input work/calibration-probe-input.json \
+  --patch work/calibration-probe-patch.json
 python scripts/run_in_env.py scripts/validate_core_synthesis.py \
   work/core-synthesis-input.json work/core-semantic-analysis.json \
   --compiler-source work/core-compiler-source.json \

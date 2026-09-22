@@ -25,6 +25,15 @@ class CoreSemanticContractTest(unittest.TestCase):
     def test_contract_audit_passes(self) -> None:
         self.assertEqual(audit(ROOT), [])
 
+    def test_growth_skill_uses_real_calibration_probe_cli(self) -> None:
+        text = (ROOT / "skills/rensheng-youji-growth-map/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "scripts/validate_calibration_probe_patch.py \\\n"
+            "  --input work/calibration-probe-input.json \\\n"
+            "  --patch work/calibration-probe-patch.json",
+            text,
+        )
+
     def test_ai_schema_comes_from_all_semantic_sections(self) -> None:
         schema = build_ai_schema(SEMANTIC_SECTIONS)
         self.assertEqual(set(schema["properties"]), SEMANTIC_SECTIONS)
