@@ -11,11 +11,14 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "internal/rensheng-youji-mingli-core/scripts"))
 sys.path.insert(0, str(ROOT / "internal/rensheng-youji-report-content-brief/scripts"))
 sys.path.insert(0, str(ROOT / "internal/rensheng-youji-report-writer/scripts"))
+sys.path.insert(0, str(ROOT / "internal/rensheng-youji-free-card-output/scripts"))
 
 from apply_calibration_delta import apply_patch  # noqa: E402
 from core_baseline import digest, protected_projection  # noqa: E402
 from materialize_content_brief import materialize  # noqa: E402
 from resolve_report_sources import resolve  # noqa: E402
+from build_report_writing_pack import compact_core_context, section_slots  # noqa: E402
+from build_card_content import build as build_card_content  # noqa: E402
 from validate_analysis_output import self_test_fixture, validate as validate_analysis  # noqa: E402
 from validate_content_brief import report_prose_text, validate as validate_brief  # noqa: E402
 from validate_report_draft import check_section  # noqa: E402
@@ -218,6 +221,81 @@ class ReportV213PostCalibrationSelectionTest(unittest.TestCase):
         self.assertNotIn("claim_self_33", body["claim_ids"])
         self.assertEqual(body["delivery_mode"], "normal")
         self.assertEqual(validate_brief(brief, analysis, resolved), [])
+
+    def test_empty_evidence_gap_section_passes_brief_validation_and_does_not_survive(self) -> None:
+        analysis = self_test_fixture()
+        for claim in analysis["report_claim_ledger"]:
+            if claim.get("domain") == "love_partner":
+                claim["calibration_status"] = "weakened"
+        resolved = resolve(analysis)
+        love_source = resolved["dimensions"]["love_partner"]
+        self.assertEqual(love_source["delivery_mode"], "evidence_gap")
+        self.assertEqual(love_source["claim_ids"], [])
+        self.assertFalse(love_source["survives_without_mainline"])
+
+        brief = materialize(selection_fixture(), analysis, resolved)
+        self.assertEqual(validate_brief(brief, analysis, resolved), [])
+
+    def test_evidence_gap_writer_slot_carries_only_boundaries(self) -> None:
+        slots = section_slots({
+            "id": "love_partner",
+            "delivery_mode": "evidence_gap",
+            "claim_ids": [],
+            "mandatory_claim_ids": [],
+            "selected_claims": [],
+            "evidence_gaps": ["当前没有足够可靠的关系判断。"],
+            "prohibited_claims": ["不得推断具体对象或关系经历。"],
+        })
+        self.assertEqual(len(slots), 1)
+        self.assertEqual(slots[0]["claim_ids"], [])
+        self.assertEqual(slots[0]["evidence_gaps"], ["当前没有足够可靠的关系判断。"])
+        self.assertIn("不得补写具体互动", slots[0]["section_guidance"])
+        self.assertNotIn("必须出现具体互动", slots[0]["section_guidance"])
+
+    def test_writer_core_context_removes_excluded_claims_and_manifestations(self) -> None:
+        analysis = {
+            "report_claim_ledger": [
+                {"claim_id": "claim_good", "domain": "career", "calibration_status": "unverified"},
+                {"claim_id": "claim_bad", "domain": "love_partner", "calibration_status": "weakened"},
+            ],
+            "portrait_thesis": {"summary": "保留整体人物主线。"},
+            "interpretive_spine": {
+                "summary": "综合人物解释。",
+                "core_patterns": [{
+                    "pattern_id": "pattern_1",
+                    "claim_ids": ["claim_good", "claim_bad"],
+                    "domain_manifestations": {
+                        "career": ["用工作成果确认方向"],
+                        "love_partner": ["用持续回应判断可靠"],
+                    },
+                }],
+                "card_copy": {"structure_text": "卡片专用文字"},
+            },
+        }
+        context = compact_core_context(analysis, {"claim_good", "claim_bad"})
+        pattern = context["interpretive_spine"]["core_patterns"][0]
+        self.assertEqual(pattern["claim_ids"], ["claim_good"])
+        self.assertEqual(set(pattern["domain_manifestations"]), {"career"})
+        self.assertNotIn("card_copy", context["interpretive_spine"])
+        self.assertEqual(compact_core_context(analysis, set())["interpretive_spine"]["core_patterns"], [])
+
+    def test_card_does_not_fallback_to_weakened_claim_when_resolved_section_is_empty(self) -> None:
+        baseline = self_test_fixture()
+        calibrated = copy.deepcopy(baseline)
+        for claim in calibrated["report_claim_ledger"]:
+            if claim.get("claim_class") not in {"weak_candidate", "calibration_pending"}:
+                claim["calibration_status"] = "weakened"
+        profile = {
+            "name": "测试用户", "gender": "男", "birthplace": "测试地点",
+            "time": {"input_local_time": "1999-01-01 12:00", "note": "测试口径"},
+            "bazi": {"pillars": ["甲子", "乙丑", "丙寅", "丁卯"]},
+        }
+        card = build_card_content(
+            profile, baseline, calibrated,
+            {"current_question": {"claim_ids": [], "mandatory_claim_ids": []}},
+        )
+        self.assertEqual(card["current_issue"]["basis"], ["baseline-current-stage"])
+        self.assertIn("当前最值得观察", card["current_issue"]["body"])
 
     def test_tampered_resolved_sources_are_rejected(self) -> None:
         analysis = self_test_fixture()

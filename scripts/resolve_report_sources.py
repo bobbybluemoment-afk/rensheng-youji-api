@@ -73,6 +73,11 @@ def _resolve_section(
     def add(claim_id: str) -> bool:
         if claim_id not in available or claim_id in selected:
             return False
+        if claim_id in mainline_pool:
+            future_count = len(selected) + 1
+            future_mainline = len([item for item in selected if item in mainline_pool]) + 1
+            if future_mainline / future_count > 0.30:
+                return False
         selected.append(claim_id)
         return True
 
@@ -113,7 +118,10 @@ def _resolve_section(
 
     achieved = [tag for tag in required if set(coverage_map.get(tag) or []) & set(selected)]
     missing = [tag for tag in required if tag not in achieved]
-    mode = delivery_mode(len(available), missing)
+    # Delivery depth follows material that can actually satisfy the section
+    # contract.  Cross-domain mainline claims cannot create a chapter by
+    # themselves or push its mainline share above 30%.
+    mode = delivery_mode(len(selected), missing)
     rule = delivery_rule(mode)
     target_minimum = rule["minimum_claims"]
     if len(selected) < target_minimum:
@@ -154,7 +162,9 @@ def _resolve_section(
         "mandatory_claim_ids": mandatory,
         "emphasis_claim_ids": emphasis,
         "domain_mechanisms": mechanisms,
-        "survives_without_mainline": len([item for item in selected if item not in mainline_pool]) >= rule["minimum_claims"],
+        # Empty evidence-gap sections do not "survive" without the mainline;
+        # they explicitly record that no reportable claim remains.
+        "survives_without_mainline": bool(selected) and len([item for item in selected if item not in mainline_pool]) >= rule["minimum_claims"],
         "formation_chain_ids": source.get("formation_chain_ids") or [],
         "linkage_chain_ids": source.get("linkage_chain_ids") or [],
         "coverage": achieved,

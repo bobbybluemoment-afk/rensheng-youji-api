@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import re
@@ -50,7 +51,10 @@ def _pick(value: Any, keys: tuple[str, ...]) -> Any:
     return value
 
 
-def compact_core_context(analysis: dict[str, Any]) -> dict[str, Any]:
+EXCLUDED_CALIBRATION_STATUSES = {"reject", "weakened", "uncertain"}
+
+
+def compact_core_context(analysis: dict[str, Any], allowed_claim_ids: set[str] | None = None) -> dict[str, Any]:
     """Remove traceability and technical fields already enforced upstream."""
     portrait_keys = ("summary", "primary_traits", "complementary_traits", "internal_tensions", "observable_patterns", "current_shift", "boundaries")
     stage_keys = ("label", "start_age", "end_age", "theme", "social_context", "continuity")
@@ -60,9 +64,43 @@ def compact_core_context(analysis: dict[str, Any]) -> dict[str, Any]:
         "domain_impacts", "domain_connections", "human_actions", "social_feedback",
         "carry_in", "carry_out", "seed_for_next", "confidence",
     )
+    ledger = {
+        str(item.get("claim_id")): item
+        for item in analysis.get("report_claim_ledger") or []
+        if isinstance(item, dict) and item.get("claim_id")
+    }
+    allowed = set(ledger) if allowed_claim_ids is None else set(allowed_claim_ids)
+    allowed = {
+        claim_id for claim_id in allowed
+        if ledger.get(claim_id, {}).get("calibration_status") not in EXCLUDED_CALIBRATION_STATUSES
+    }
+    spine = copy.deepcopy(analysis.get("interpretive_spine") or {})
+    filtered_patterns = []
+    for pattern in spine.get("core_patterns") or []:
+        if not isinstance(pattern, dict):
+            continue
+        retained_claims = [claim_id for claim_id in pattern.get("claim_ids") or [] if claim_id in allowed]
+        if not retained_claims:
+            continue
+        retained_domains = {
+            str(ledger[claim_id].get("domain"))
+            for claim_id in retained_claims
+            if claim_id in ledger and ledger[claim_id].get("domain")
+        }
+        item = copy.deepcopy(pattern)
+        item["claim_ids"] = retained_claims
+        item["domain_manifestations"] = {
+            domain: value
+            for domain, value in (item.get("domain_manifestations") or {}).items()
+            if domain in retained_domains
+        }
+        filtered_patterns.append(item)
+    if isinstance(spine, dict):
+        spine["core_patterns"] = filtered_patterns
+        spine.pop("card_copy", None)
     return {
         "portrait_thesis": _pick(analysis.get("portrait_thesis"), portrait_keys),
-        "interpretive_spine": analysis.get("interpretive_spine"),
+        "interpretive_spine": spine,
         "life_stages": [_pick(item, stage_keys) for item in analysis.get("life_stages") or []],
         "turning_points": [_pick(item, turning_keys) for item in analysis.get("turning_points") or []],
         "annual_theme_activation": [_pick(item, annual_keys) for item in analysis.get("annual_theme_activation") or []],
@@ -175,6 +213,8 @@ def section_slots(section: dict[str, Any]) -> list[dict[str, Any]]:
     section_id = str(section["id"])
     domain = section.get("domain") or (section_id if section_id in DOMAIN_VOICE else None)
     section_guidance = (
+        "只说明当前缺少足够可靠信息，明确本节暂不判断的范围，并提示可用哪些真实经历继续核对；不得补写具体互动、对象特质、事件或常见模板。"
+        if mode == "evidence_gap" else
         "先借助interpretive_spine解释能力、后来形成的做法、当前代价和发展方向，再说明同一个人怎样进入不同生活场景；不能写成工作方式总览。"
         if section_id == "life_overview" else
         "直接回答当前问题，只写当前阶段、需要权衡的条件和下一步动作；不得重复对应领域的完整能力画像。"
@@ -186,6 +226,8 @@ def section_slots(section: dict[str, Any]) -> list[dict[str, Any]]:
         "delivery_mode": mode, "narrative_role": roles[index], "claim_ids": bucket,
         "claims": [compact_claim(claim_index[item]) for item in bucket if item in claim_index],
         "must_include_exact": [claim_index[item]["plain_claim"] for item in mandatory if item in bucket and item in claim_index],
+        "evidence_gaps": list(section.get("evidence_gaps") or []) if mode == "evidence_gap" else [],
+        "prohibited_claims": list(section.get("prohibited_claims") or []),
         "section_guidance": section_guidance,
     } for index, bucket in enumerate(buckets)]
 
@@ -193,6 +235,11 @@ def section_slots(section: dict[str, Any]) -> list[dict[str, Any]]:
 def build(brief: dict[str, Any], analysis: dict[str, Any] | None = None) -> dict[str, Any]:
     sections = [brief["life_overview"], *brief["dimensions"], brief["current_question"]]
     slots = [slot for section in sections for slot in section_slots(section)]
+    allowed_claim_ids = {
+        str(claim_id)
+        for section in sections
+        for claim_id in section.get("claim_ids") or []
+    }
     return {
         "schema_version": "1.1.0", "brief_id": brief["brief_id"], "brief_sha256": digest(brief),
         "rules": {
@@ -216,7 +263,7 @@ def build(brief: dict[str, Any], analysis: dict[str, Any] | None = None) -> dict
             "action_guide": "写三条优先行动、一个减少项和两条传统偏好建议。每条必须直接回应前文已经说明的问题，并给一个用户能执行的动作。",
             "open_questions": "只保留仍值得用户继续观察的问题。",
         },
-        "core_context": compact_core_context(analysis or {}),
+        "core_context": compact_core_context(analysis or {}, allowed_claim_ids),
         "yearly_writing_plan": yearly_writing_plan(analysis or {}),
     }
 

@@ -154,7 +154,10 @@ def validate(data: Any, analysis: Any | None = None, resolved: Any | None = None
                 expected = {"baseline_count": baseline, "calibrated_refinement_count": calibrated, "baseline_ratio": expected_ratio, "method_layers": methods}
                 if balance != expected:
                     errors.append(f"第{index + 1}个内容区的来源比例审计与实体判断不一致")
-                if index != 1 and (expected_ratio < 0.8 or calibrated > 1):
+                # An evidence-gap section intentionally has no selected claims,
+                # so its baseline ratio is 0 by construction.  The ratio rule
+                # applies only when the section contains reportable material.
+                if index != 1 and section.get("delivery_mode") != "evidence_gap" and (expected_ratio < 0.8 or calibrated > 1):
                     errors.append(f"第{index + 1}个内容区必须至少八成来自命盘/时运基线，且校准修正最多一条")
         if is_v13 or is_v14 or is_v15:
             emphasis = section.get("emphasis_claim_ids")

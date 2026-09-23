@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.26.4",
+  "version": "2.26.5",
   "visibility": "internal",
   "stages": [
     {
@@ -48,5 +48,5 @@
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "2.26.4统一冻结前与冻结后的文字职责：Core在冻结前拒绝无法由下游改写的防御式必进原句；校准后选材排除weakened、reject和uncertain；当前问题压缩为不超过3条阶段判断；初稿、编辑与终稿共同拦截问卷及校准过程语言，并补齐AABBA组合回归。Core仍为0.17.0。"
+  "notes": "2.26.5修复校准后领域证据被清空时的上下游契约：evidence_gap空章节不再触发来源比例错误，跨领域主线不得单独填充领域章节，写作包过滤weakened、reject和uncertain内容并携带证据缺口，卡片不再回退使用已削弱判断；新增空领域与AABBA相关回归测试。Core仍为0.17.0。"
 }

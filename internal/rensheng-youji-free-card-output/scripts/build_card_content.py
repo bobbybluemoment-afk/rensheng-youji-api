@@ -18,6 +18,8 @@ DOMAIN_MAP = {
     "family_growth": ("family", "家庭责任怎样分清"),
 }
 
+EXCLUDED_CALIBRATION_STATUSES = {"reject", "weakened", "uncertain"}
+
 
 def _pillars(profile: dict[str, Any], baseline: dict[str, Any]) -> list[str]:
     values = profile.get("bazi", {}).get("pillars")
@@ -41,11 +43,23 @@ def build(profile: dict[str, Any], baseline: dict[str, Any], calibrated: dict[st
     if baseline_meta.get("analysis_id") != calibrated_meta.get("analysis_id"):
         raise ValueError("卡片内容的Baseline与校准后Core不是同一次分析")
     ledger = {item["claim_id"]: item for item in calibrated.get("report_claim_ledger") or [] if isinstance(item, dict)}
-    source = (resolved or {}).get("current_question") or calibrated.get("report_source_bundle", {}).get("current_stage_source", {})
+    has_resolved_sources = resolved is not None
+    source = (resolved or {}).get("current_question") if has_resolved_sources else calibrated.get("report_source_bundle", {}).get("current_stage_source", {})
+    source = source or {}
     claim_ids = source.get("mandatory_claim_ids") or source.get("claim_ids") or []
-    claims = [ledger[item] for item in claim_ids if item in ledger and ledger[item].get("calibration_status") != "reject"]
-    if not claims:
-        claims = [item for item in ledger.values() if item.get("claim_class") not in {"weak_candidate", "calibration_pending"} and item.get("calibration_status") != "reject"][:2]
+    claims = [
+        ledger[item] for item in claim_ids
+        if item in ledger and ledger[item].get("calibration_status") not in EXCLUDED_CALIBRATION_STATUSES
+    ]
+    # Once deterministic post-calibration sources were supplied, an empty
+    # focused section is meaningful and must not be replaced by unrelated or
+    # explicitly weakened claims from the global ledger.
+    if not claims and not has_resolved_sources:
+        claims = [
+            item for item in ledger.values()
+            if item.get("claim_class") not in {"weak_candidate", "calibration_pending"}
+            and item.get("calibration_status") not in EXCLUDED_CALIBRATION_STATUSES
+        ][:2]
     primary = claims[0] if claims else {}
     domain = str(primary.get("domain") or "self_growth")
     card_domain, title = DOMAIN_MAP.get(domain, DOMAIN_MAP["self_growth"])
