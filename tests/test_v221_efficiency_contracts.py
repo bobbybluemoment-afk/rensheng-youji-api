@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT / "internal/rensheng-youji-mingli-core/scripts"))
 from apply_semantic_repair import apply as apply_repair  # noqa: E402
 from core_synthesis_contract import canonical_digest  # noqa: E402
 from prepare_core_synthesis import compact_view  # noqa: E402
-from prepare_semantic_repair import build as build_repair  # noqa: E402
+from prepare_semantic_repair import build as build_repair, targets_from_errors  # noqa: E402
 from record_ai_usage import cost  # noqa: E402
 from run_checkpoint import record, verify  # noqa: E402
 
@@ -76,6 +76,44 @@ class V221EfficiencyContractsTest(unittest.TestCase):
         bad["replacements"] = [{"target": "reality_hypotheses", "value": []}]
         with self.assertRaisesRegex(ValueError, "只能覆盖"):
             apply_repair(source, request, bad)
+
+    def test_core_repair_patch_is_checked_against_its_target_schema(self) -> None:
+        source = {
+            "safety_boundaries": {
+                "disclaimer": "本分析用于文化体验和自我观察。",
+                "health": "不作医学诊断。",
+                "finance": "不构成投资建议。",
+                "legal": "不替代法律意见。",
+                "relationships": "不保证关系结果。",
+                "high_risk_flags": [],
+            }
+        }
+        request = build_repair(source, "core_synthesis", ["safety_boundaries"], ["字段错误"])
+        patch = {
+            "schema_version": "1.0.0", "stage": "core_synthesis",
+            "source_sha256": canonical_digest(source),
+            "repair_request_sha256": request["repair_request_sha256"],
+            "replacements": [{"target": "safety_boundaries", "value": {"disclaimer": ""}}],
+        }
+        with self.assertRaisesRegex(ValueError, "目标Schema"):
+            apply_repair(source, request, patch)
+
+    def test_natural_language_semantic_errors_expand_to_deterministic_targets(self) -> None:
+        allowed = {
+            "blind_school_cross_analysis", "candidate_relation_map",
+            "report_claim_ledger", "portrait_balance_audit", "reality_candidate_pool",
+        }
+        errors = [
+            "$.reality_candidate_pool[13].relation_ids 至少需要 1 项",
+            "盲派现实取象必须分别包含行业和岗位职能候选",
+            "reality_candidate_pool[13].relation_ids 至少引用一条候选关系",
+            "九方法到Core证据保留不足：body_emotion需要拆分现实信息轴",
+            "portrait_balance_audit 未覆盖或标弱的领域：['career']",
+        ]
+        self.assertEqual(targets_from_errors(errors, allowed), [
+            "blind_school_cross_analysis", "candidate_relation_map",
+            "portrait_balance_audit", "reality_candidate_pool[13]", "report_claim_ledger",
+        ])
 
     def test_checkpoint_detects_changed_output(self) -> None:
         run_root = ROOT / "work/runs"

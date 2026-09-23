@@ -13,6 +13,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 from report_source_contract import BASE_COVERAGE, DIMENSIONS, delivery_rule, required_coverage  # noqa: E402
+from user_language_contract import calibration_meta_language_issues  # noqa: E402
 BANNED = {"组织化过劳型", "先扎根后显声", "表达窗口", "能力输出", "可见度", "物质与经营底色", "资源伴随期待", "表达被规训", "经营责任", "经营基础", "进入经营期", "经营底色", "经营扩张", "输出与经营"}
 THIRD_PERSON = {"这个人", "命主", "本人"}
 MINGLI_TERMS = {"命盘", "命局", "原局", "年柱", "月柱", "日柱", "时柱", "天干", "地支", "干支", "日主", "身强", "身弱", "比肩", "劫财", "食神", "伤官", "食伤", "正印", "偏印", "正财", "偏财", "正官", "七杀", "格局", "调候", "喜用", "忌神", "大运", "流年", "藏干", "透干", "根苗花果", "根气", "冲根", "引动"}
@@ -177,7 +178,7 @@ def validate(data: Any, brief: Any | None = None) -> list[str]:
         errors.append("用户可见初稿必须统一使用第二人称“你”，禁止出现：" + "、".join(third_person_found))
     if "您" in visible:
         errors.append("用户可见初稿称呼必须统一为‘你’，不得出现‘您’")
-    if "校准后的现实线索" in visible or "校准确认" in visible:
+    if calibration_meta_language_issues(visible):
         errors.append("初稿不得展示校准过程")
     if visible.count("经营") > 2:
         errors.append("初稿中“经营”出现过多；仅在真实经商、创业或利润责任语境使用")

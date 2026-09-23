@@ -28,6 +28,7 @@ def _resolve_section(
     emphasis_limit: int = 1,
     promote_confirmed_pending: bool = False,
     strict_domain: bool = False,
+    compact_answer: bool = False,
 ) -> dict[str, Any]:
     priority = list(source.get("claim_priority") or source.get("claim_ids") or [])
     pool = set(source.get("claim_ids") or [])
@@ -45,7 +46,8 @@ def _resolve_section(
         # pre-calibration shortlist where an eight-item writing cap can hide it.
         priority = _ordered_unique(promoted_pending + priority)
         pool.update(promoted_pending)
-    rejected = [claim_id for claim_id in priority if ledger.get(claim_id, {}).get("calibration_status") == "reject"]
+    excluded_statuses = {"reject", "weakened", "uncertain"}
+    rejected = [claim_id for claim_id in priority if ledger.get(claim_id, {}).get("calibration_status") in excluded_statuses]
     reportable = {"primary_judgment", "independent_supplement", "conditional_judgment", "stage_judgment"}
     ineligible = [
         claim_id
@@ -121,11 +123,18 @@ def _resolve_section(
 
     selected_specific = [item for item in selected if item in specific_pool]
     selected_mainline = [item for item in selected if item in mainline_pool]
-    mandatory_candidates = source.get("mandatory_candidate_ids") or []
+    mandatory_candidates = [
+        item for item in source.get("mandatory_candidate_ids") or []
+        if ledger.get(item, {}).get("calibration_status") not in excluded_statuses
+    ]
     mandatory_limit = 2 if mode == "normal" else 1
     mandatory = [item for item in mandatory_candidates if item in selected][:mandatory_limit]
     if not mandatory and selected:
-        mandatory = (selected_specific or selected)[:1]
+        lockable = [
+            item for item in (selected_specific or selected)
+            if ledger.get(item, {}).get("calibration_status") not in excluded_statuses
+        ]
+        mandatory = lockable[:1]
     emphasis = [item for item in source.get("emphasis_candidate_ids") or [] if item in selected][:emphasis_limit]
     mechanisms = _ordered_unique([
         str(ledger[item].get("mechanism_family"))
@@ -155,7 +164,7 @@ def _resolve_section(
         "ineligible_claim_ids": ineligible,
         "promoted_calibration_pending_claim_ids": promoted_pending,
         "replacement_log": replacements,
-        "evidence_gaps": _ordered_unique((source.get("evidence_gaps") or []) + (["仍有关键解释角度缺少可用证据，章节按现有内容缩短。"] if mode != "normal" else [])),
+        "evidence_gaps": _ordered_unique((source.get("evidence_gaps") or []) + (["仍有关键解释角度缺少可用证据，章节按现有内容缩短。"] if mode != "normal" and not compact_answer else [])),
     }
 
 
@@ -168,7 +177,19 @@ def _focused_current_source(
     dimension = (source_bundle.get("dimensions") or {}).get(domain) or {}
     current_ids = [item for item in current.get("claim_priority") or current.get("claim_ids") or [] if ledger.get(item, {}).get("domain") == domain]
     dimension_ids = [item for item in dimension.get("claim_priority") or dimension.get("claim_ids") or [] if ledger.get(item, {}).get("domain") == domain]
-    ordered = _ordered_unique(current_ids + dimension_ids)
+    def current_score(claim_id: str) -> tuple[int, int, int]:
+        claim = ledger.get(claim_id, {})
+        tags = set(claim.get("coverage_tags") or [])
+        return (
+            0 if claim_id in current_ids else 1,
+            0 if claim.get("claim_class") == "stage_judgment" else 1,
+            0 if tags & {"current_change", "response", "challenge"} else 1,
+        )
+
+    # The current answer is intentionally a compact decision section, not a
+    # second copy of the complete domain chapter.  Three claims are enough to
+    # cover the current stage, trade-off and next action.
+    ordered = sorted(_ordered_unique(current_ids + dimension_ids), key=current_score)[:3]
     coverage_map: dict[str, list[str]] = {}
     for claim_id in ordered:
         for tag in ledger.get(claim_id, {}).get("coverage_tags") or []:
@@ -227,7 +248,7 @@ def resolve(analysis: dict[str, Any], focus: str = "") -> dict[str, Any]:
         replacement = _ordered_unique(preferred + fallback)
         if replacement:
             section["mandatory_claim_ids"] = replacement[:1]
-    resolved_current = _resolve_section(focused_current, ledger, selected_domain, 1, False, True)
+    resolved_current = _resolve_section(focused_current, ledger, selected_domain, 1, False, True, True)
     # The focused answer sits next to the full domain chapter in the final
     # report.  When two eligible mandatory candidates exist, do not lock the
     # same sentence into both sections: keep the domain's primary sentence and

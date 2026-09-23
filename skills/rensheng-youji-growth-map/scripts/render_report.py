@@ -19,6 +19,7 @@ from user_language_contract import (  # noqa: E402
     BODY_EMOTION_SAFETY_NOTE,
     BODY_EMOTION_SAFETY_MARKERS,
     UNNATURAL_REALIZATION_PHRASES,
+    calibration_meta_language_issues,
 )
 
 DIMENSION_IDS = ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]
@@ -49,7 +50,7 @@ FOCUS_EXCLUDED_SECTIONS = [
     "executive_summary.formation", "stage_story.previous_foundation", "stage_story.long_range",
     "dimensions",
 ]
-FIXED_REPORT_INTRO = "这份报告根据你的出生信息、整体分析和现实校准生成。它会从性格、家庭、事业、财务、亲密关系与人生阶段之间的联系，梳理你反复出现的能力、选择和课题。请结合自己的真实经历阅读；如果之后还有想继续了解的问题，可以在报告末页找到联系方式。"
+FIXED_REPORT_INTRO = "这份报告根据你的出生信息、整体分析和现实经历生成。它会从性格、家庭、事业、财务、亲密关系与人生阶段之间的联系，梳理你反复出现的能力、选择和课题。请结合自己的真实经历阅读；如果之后还有想继续了解的问题，可以在报告末页找到联系方式。"
 FOCUS_TERMS = {
     "relationship": ("感情", "情感", "恋爱", "伴侣", "婚姻", "对象", "亲密关系"),
     "career": ("事业", "工作", "职业", "岗位", "职位", "职场"),
@@ -456,6 +457,8 @@ def _validate_v26(data: dict[str, Any]) -> None:
     editorial_terms = sorted(term for term in EDITORIAL_BANNED if term in visible)
     if editorial_terms:
         raise ValueError("用户可见正文含有生硬模板词，请改成自然中文：" + "、".join(editorial_terms))
+    if calibration_meta_language_issues(visible):
+        raise ValueError("用户可见正文不得展示问卷确认或校准操作过程")
     copied_calibration = sorted({
         response["selected_text"] for response in responses
         if response["choice"] != "D" and len(response["selected_text"]) >= 8 and response["selected_text"] in visible

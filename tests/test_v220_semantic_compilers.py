@@ -24,6 +24,7 @@ from apply_editorial_patch import apply as apply_editorial, apply_all as apply_a
 from validate_calibration_free_text import validate as validate_free_text  # noqa: E402
 from calibration_question_contract import quality_errors  # noqa: E402
 from calibration_selection_contract import feasibility_errors  # noqa: E402
+from prepare_calibration_probes import build as build_probe_input  # noqa: E402
 
 
 DOMAINS = ["self_growth", "love_partner", "career", "finance_resources", "body_emotion", "family_growth"]
@@ -121,6 +122,35 @@ class V220SemanticCompilerTest(unittest.TestCase):
         tampered["source"]["baseline_sha256"] = "0" * 64
         with self.assertRaisesRegex(ValueError, "校准题没有绑定"):
             compile_delta(baseline, lock, tampered, answers)
+
+    def test_aabba_keeps_negative_answers_out_of_visible_claim_statuses(self) -> None:
+        baseline = calibration_baseline()
+        questions = build_questions(baseline, "事业")
+        lock = {"analysis_id": "v220-calibration", "baseline_sha256": digest(baseline)}
+        answers = {
+            "responses": [
+                {"question_number": number, "choice": choice}
+                for number, choice in enumerate("AABBA", 1)
+            ],
+        }
+
+        delta = compile_delta(baseline, lock, questions, answers)
+        status_by_question = {
+            response["question_number"]: response["candidate_updates"][0]["status"]
+            for response in delta["responses"]
+        }
+        claim_status_by_question = {
+            next(
+                response["question_number"]
+                for response in delta["responses"]
+                if update["claim_id"].removeprefix("claim_")
+                in {item["candidate_id"] for item in response["candidate_updates"]}
+            ): update["after_status"]
+            for update in delta["claim_updates"]
+        }
+
+        self.assertEqual(status_by_question, {1: "match", 2: "match", 3: "reject", 4: "reject", 5: "match"})
+        self.assertEqual(claim_status_by_question, {1: "match", 2: "match", 3: "weakened", 4: "weakened", 5: "match"})
 
     def test_freeze_precheck_uses_the_same_five_question_contract(self) -> None:
         baseline = calibration_baseline()
@@ -232,6 +262,20 @@ class V220SemanticCompilerTest(unittest.TestCase):
         self.assertTrue(any("多个" in reason for reason in reasons[1]))
         self.assertTrue(any("六年" in reason for reason in reasons[2]))
         self.assertTrue(any("本领域" in reason for reason in reasons[3]))
+
+    def test_probe_guidance_matches_natural_family_language_and_warns_against_new_axes(self) -> None:
+        family = {
+            "domain": "family_growth", "answerable_time_scope": "当前",
+            "answerable_observation": "家里采光较好时，你的作息更规律。",
+            "answerable_alternative": "家里采光变化对你的作息没有明显影响。",
+        }
+        self.assertFalse(any("本领域" in reason for reason in quality_errors(family, 2026)))
+
+        semantic = calibration_baseline()
+        probe_input = build_probe_input(semantic, 2026)
+        rules = "".join(probe_input["rules"])
+        self.assertIn("不新增第二个动作、阶段或结果", rules)
+        self.assertIn("家庭使用父母、家人", rules)
 
     def test_question_selector_does_not_hide_a_needed_lower_ranked_domain(self) -> None:
         baseline = calibration_baseline()
@@ -358,6 +402,44 @@ class V220SemanticCompilerTest(unittest.TestCase):
         self.assertEqual(edited_draft, draft)
         self.assertNotEqual(edited_semantic, semantic)
         self.assertEqual(review["semantic_final_sha256"], scan(draft, edited_semantic)["semantic_sha256"])
+
+    def test_editor_allows_short_semantic_titles_but_rejects_short_paragraphs(self) -> None:
+        draft = editorial_draft()
+        semantic = {
+            "summary": {"capabilities_resources": ["你能把复杂信息整理成清楚步骤。", "你能持续完成需要耐心的任务。"]},
+            "stage_story": {
+                "previous_foundation": "你已经积累了可以继续使用的经验。",
+                "recent_development": "你正在把经验带进新的现实任务。",
+                "present_task": "你正在练习把判断变成具体行动。",
+                "next_direction": "你可以先完成小范围尝试，再观察反馈。",
+                "long_range": "你会逐步形成更稳定的选择方法。",
+            },
+            "yearly_outlook": {
+                "summary": "未来的变化需要结合真实选择持续观察，也需要保留可以核对的工作与生活记录。",
+                "stages": [{"title": "责任检验与输出", "narrative": "这一阶段需要持续观察现实变化。", "real_world_signals": []}],
+                "key_years": [],
+            },
+            "action_guide": {"priority_actions": [], "reduce": "减少同时准备过多方案。", "traditional_preferences": []},
+            "open_questions": ["目前最重要的现实条件是什么？", "哪些经验值得继续保留？"],
+        }
+        combined_scan = scan(draft, semantic)
+        title_issue = next(item for item in combined_scan["issues"] if item["slot_id"].endswith("stages.0.title"))
+        self.assertIn("抽象词拼接", "".join(title_issue["reasons"]))
+        patch = {
+            "schema_version": "1.0.0", "draft_id": draft["draft_id"],
+            "repairs": [{"slot_id": title_issue["slot_id"], "text": "工作成果持续增加"}],
+        }
+        _, edited_semantic, _ = apply_all_editorial(draft, semantic, combined_scan, patch)
+        self.assertEqual(edited_semantic["yearly_outlook"]["stages"][0]["title"], "工作成果持续增加")
+
+        draft["dimensions"][0]["paragraphs"][0] = "你不是没有行动力，而是在等条件。"
+        paragraph_scan = scan(draft)
+        short_patch = {
+            "schema_version": "1.0.0", "draft_id": draft["draft_id"],
+            "repairs": [{"slot_id": "self_growth:1", "text": "已经改好。"}],
+        }
+        with self.assertRaisesRegex(ValueError, "长度不能小于20"):
+            apply_editorial(draft, paragraph_scan, short_patch)
 
     def test_final_report_uses_only_the_semantic_text_bound_by_editor(self) -> None:
         analysis = {

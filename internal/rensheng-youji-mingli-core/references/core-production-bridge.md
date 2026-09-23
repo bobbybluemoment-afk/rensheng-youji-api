@@ -75,6 +75,8 @@ python scripts/run_in_env.py scripts/validate_core_synthesis.py \
 
 此时方法集合已经由 `method_packets_sha256` 冻结，不得重新运行方法包。第三轮仍失败时停止完整Core交付，返回实际错误，不得补占位内容。
 
+合并器必须在写文件前按返修请求携带的 `target_schema` 校验每个 `replacement.value`，不合格补丁直接拒绝，不能先覆盖较好版本再等待完整Core校验发现问题。没有JSON路径的跨区块语义错误由准备器维护确定性错误词到区块的映射，AI不得自行扩大返修目标。
+
 第一次语义校验通过后，先运行 `prepare_calibration_probes.py` 生成小型校准措辞包。AI只读取 `calibration-probe-input.json`，按照其中的 `rules` 生成 `calibration-probe-patch.json`，不重新推命；补丁文件生成后才继续运行其余命令：
 
 ```bash
@@ -97,6 +99,8 @@ python scripts/run_in_env.py scripts/finalize_core_analysis.py \
 ```
 
 `prepare_calibration_probes.py` 从语义候选中筛出最多10条，AI生成哈希绑定的措辞补丁，`validate_calibration_probe_patch.py` 校验后交给编译器。正式组装命令必须同时提供 `core-compiler-source.json` 和 `calibration-probe-patch.json`；缺少任一文件都必须停在当前阶段，不能静默进入旧兼容路线。组装脚本再确定性补齐综合簇的方法来源、独立家族，判断台账的证据、方法、报告角色、新信息标签与现实细节，现实候选的来源层、证据、关系和初始状态；随后写入排盘事实、方法与证据、方法执行审计、校准初始状态，并自动生成 `report_source_bundle`。成功输出可以直接进入Baseline冻结，不再需要模型创建 `analysis-output-before-sources.json`。
+
+准备包中的领域语言提示必须与确定性校验器共享同一现实词义范围，并接受“家里、家中”等自然家庭说法。AI修正领域语言时只能替换场景词或名词，不能额外增加一个行为或阶段来满足关键词检查。
 
 ## 停止条件
 

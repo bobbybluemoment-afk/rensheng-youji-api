@@ -13,7 +13,7 @@
         "type": "object",
         "additionalProperties": false,
         "required": ["slot_id", "text"],
-        "properties": {"slot_id": {"type": "string"}, "text": {"type": "string", "minLength": 20}}
+        "properties": {"slot_id": {"type": "string"}, "text": {"type": "string", "minLength": 1}}
       }
     }
   }

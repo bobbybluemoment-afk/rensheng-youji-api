@@ -205,6 +205,8 @@ def audit(root: Path) -> list[str]:
         errors.append("Writing pack does not carry the complete Core explanation contract downstream")
     if 'minimum_mapped = 1 if not rule or mode != "evidence_gap" else 0' not in draft_validator_text:
         errors.append("Draft validator must accept one real Core claim per non-gap paragraph")
+    if "calibration_visibility" not in writing_pack_text or "section_separation" not in writing_pack_text:
+        errors.append("Writing pack must hide calibration operations and separate the direct answer from the full domain chapter")
     brief_materializer_text = (root / "internal/rensheng-youji-report-content-brief/scripts/materialize_content_brief.py").read_text(encoding="utf-8")
     brief_validator_text = (root / "internal/rensheng-youji-report-content-brief/scripts/validate_content_brief.py").read_text(encoding="utf-8")
     explanation_fields = ("human_explanation", "source_detail_atom_ids", "observable_scenes", "helpful_effects", "possible_costs")
@@ -223,10 +225,17 @@ def audit(root: Path) -> list[str]:
         errors.append("Pre-probe and post-probe Core validation do not share the intended feasibility phase boundary")
     final_compiler_text = (root / "skills/rensheng-youji-growth-map/scripts/compile_final_report.py").read_text(encoding="utf-8")
     language_scanner_text = (root / "internal/rensheng-youji-chinese-editor/scripts/scan_report_language.py").read_text(encoding="utf-8")
+    editorial_validator_text = (root / "internal/rensheng-youji-chinese-editor/scripts/validate_editorial_review.py").read_text(encoding="utf-8")
     if "BODY_EMOTION_SAFETY_NOTE" not in final_compiler_text or "BODY_EMOTION_SAFETY_MARKERS" not in renderer_text:
         errors.append("The deterministic final compiler must produce the body-emotion safety note checked by the renderer")
-    if "user_language_contract" not in core_validator_text or "user_language_contract" not in language_scanner_text or "user_language_contract" not in renderer_text:
+    if not all("user_language_contract" in text for text in (core_validator_text, language_scanner_text, draft_validator_text, editorial_validator_text, renderer_text)):
         errors.append("Core, editor and final report must share the user-language phrase contract")
+    if "locked_claim_language_issues" not in core_validator_text:
+        errors.append("Core must reject uneditable defensive wording before plain_claim is frozen")
+    if not all("calibration_meta_language_issues" in text for text in (language_scanner_text, draft_validator_text, editorial_validator_text, renderer_text)):
+        errors.append("Draft, editor and renderer must share one calibration-visibility contract")
+    if not all(token in resolver_text for token in ('"reject", "weakened", "uncertain"', "[:3]", "compact_answer")):
+        errors.append("Post-calibration selection must exclude weakened claims and keep the direct answer compact")
     if 'AI_JARGON = {"卡点", "卡住", "换轨", "兑现"' in renderer_text:
         errors.append("The renderer must not ban the natural phrase 兑现承诺 through a bare-word rule")
     natural_text = (root / "internal/rensheng-youji-chinese-editor/references/natural-chinese.md").read_text(encoding="utf-8")

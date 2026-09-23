@@ -25,6 +25,16 @@ METHOD_TARGETS = {
 
 TARGET_RE = re.compile(r"^\$?\.?([A-Za-z0-9_]+)(?:\[([0-9]+)\])?")
 
+# Some cross-section semantic audits describe the problem in natural Chinese
+# instead of beginning with a JSON path.  Keep their repair ownership
+# deterministic so an AI never has to guess or manually widen targets.
+CORE_SEMANTIC_ERROR_TARGET_HINTS = (
+    ("盲派现实取象", ("blind_school_cross_analysis",)),
+    ("候选关系", ("candidate_relation_map",)),
+    ("九方法到Core证据保留不足", ("report_claim_ledger",)),
+    ("画像审计", ("portrait_balance_audit",)),
+)
+
 
 def _target_parts(target: str) -> tuple[str, int | None]:
     match = TARGET_RE.fullmatch(target)
@@ -47,6 +57,9 @@ def targets_from_errors(errors: list[str], allowed: set[str]) -> list[str]:
     """Extract the smallest addressable AI-owned sections named by errors."""
     targets: set[str] = set()
     for error in errors:
+        for phrase, hinted_targets in CORE_SEMANTIC_ERROR_TARGET_HINTS:
+            if phrase in error:
+                targets.update(target for target in hinted_targets if target in allowed)
         match = TARGET_RE.match(error)
         if not match:
             continue

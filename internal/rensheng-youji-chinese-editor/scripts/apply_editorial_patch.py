@@ -19,6 +19,37 @@ from scan_report_language import digest as semantic_digest, scan as scan_languag
 PATCH_SCHEMA = Path(__file__).resolve().parent.parent / "schemas/editorial-repair-patch.schema.json"
 
 
+def validate_repair_text_length(slot_id: str, value: str) -> None:
+    """Keep paragraph and semantic field lengths compatible with their source schemas."""
+    if not slot_id.startswith("semantic."):
+        if len(value) < 20:
+            raise ValueError(f"{slot_id}局部修订长度不能小于20")
+        return
+    if slot_id.endswith(".title"):
+        minimum, maximum = 4, 18
+    elif ".real_world_signals." in slot_id:
+        minimum, maximum = 4, 24
+    elif slot_id.endswith(".what_changes"):
+        minimum, maximum = 24, 80
+    elif slot_id.endswith(".what_to_notice"):
+        minimum, maximum = 16, 50
+    elif ".summary.capabilities_resources." in slot_id:
+        minimum, maximum = 16, None
+    elif ".stage_story." in slot_id:
+        minimum, maximum = 20, None
+    elif slot_id == "semantic.yearly_outlook.summary":
+        minimum, maximum = 40, None
+    elif ".action_guide.priority_actions." in slot_id or slot_id == "semantic.action_guide.reduce" or ".action_guide.traditional_preferences." in slot_id:
+        minimum, maximum = 16, None
+    elif ".open_questions." in slot_id:
+        minimum, maximum = 8, None
+    else:
+        minimum, maximum = 1, None
+    if len(value) < minimum or (maximum is not None and len(value) > maximum):
+        limit = f"{minimum}—{maximum}" if maximum is not None else f"不少于{minimum}"
+        raise ValueError(f"{slot_id}局部修订长度必须为{limit}")
+
+
 def digest(items: list[str]) -> str:
     return hashlib.sha256("\n".join(items).encode()).hexdigest()
 
@@ -68,6 +99,8 @@ def apply_all(
         raise ValueError("语言扫描已通过时不得生成无意义的编辑补丁")
     if patch and (patch.get("schema_version") != "1.0.0" or patch.get("draft_id") != draft.get("draft_id") or not set(repairs).issubset(allowed)):
         raise ValueError("局部修订只能修改扫描点名的段落")
+    for slot_id, value in repairs.items():
+        validate_repair_text_length(slot_id, value)
     result = json.loads(json.dumps(draft, ensure_ascii=False))
     semantic_result = json.loads(json.dumps(semantic, ensure_ascii=False)) if semantic is not None else None
     by_id = section_map(result)

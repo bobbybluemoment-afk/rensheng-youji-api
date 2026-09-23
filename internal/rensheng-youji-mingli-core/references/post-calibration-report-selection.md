@@ -17,13 +17,15 @@ python scripts/run_in_env.py scripts/resolve_report_sources.py \
   --output work/resolved-report-sources.json
 ```
 
-该程序排除 `reject`，按冻结优先级和覆盖映射选择剩余判断，再确定正式 `mandatory_claim_ids` 与 `emphasis_claim_ids`。关注方向会确定“当前问题”的直接判断领域；其他领域不能越过该筛选变成独立回答。任何模型不得手工编辑选材结果。
+该程序从用户可见选材中排除 `reject`、`weakened` 和 `uncertain`，按冻结优先级和覆盖映射选择剩余判断，再确定正式 `mandatory_claim_ids` 与 `emphasis_claim_ids`。这些状态仍留在校准后Core和增量记录中供审计，不等于删除原候选。关注方向会确定“当前问题”的直接判断领域；其他领域不能越过该筛选变成独立回答。任何模型不得手工编辑选材结果。
 
 章节按校准后可用证据进入四种模式：
 
-- `normal`：至少6条，完整覆盖；
-- `shortened`：至少4条，缩短表达并列出缺口；
-- `minimal`：至少2条，只写可靠结论；
-- `evidence_gap`：0—1条，明确暂不下结论。
+- `normal`：至少4条且关键解释角度完整；
+- `shortened`：至少2条，或仍有覆盖缺口，缩短表达；
+- `minimal`：仅1条，只写可靠结论；
+- `evidence_gap`：0条，只说明可靠边界。
+
+“当前问题”不是第二篇领域综述：优先选择当前阶段、现实挑战和应对方向，最多保留3条聚焦判断；有可靠判断时按压缩回答组织，没有判断时才进入证据缺口。
 
 单章降级不得阻塞其他可靠章节。只有确定性排盘、Core完整性、Baseline哈希或来源一致性失败，才停止整份交付。

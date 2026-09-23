@@ -351,6 +351,10 @@ python scripts/run_in_env.py scripts/compile_method_packets.py \
 
 九个方法完成或被合法归类后，按生产桥生成受约束综合输入。AI只读取六领域判断矩阵、精简技术索引、精简证据索引、方法限制和由正式Schema自动投影的工作Schema；完整方法包只留给确定性编译器和审计。AI只生成规定的语义综合区块，并省略 `compiler_owned_fields`。运行 `prepare_calibration_probes.py` 后，AI必须按照 `calibration-probe-input.json#rules` 生成 `calibration-probe-patch.json`，再继续执行探针校验、二次Core校验和正式组装；不得在补丁尚未生成时直接运行后续命令。随后由程序补齐来源、方法、证据、状态和派生字段，组装完整Core并自动生成报告来源：
 
+校准探针准备包必须同步给出确定性校验器实际使用的六领域生活用词。AI为了体现所属领域时只替换场景词或名词，不得新增第二个动作、阶段或结果；“家里、家中”按家庭领域自然语言处理。
+
+Core局部返修合并前，程序必须用请求中的 `target_schema` 校验每个替换值；不合格补丁不能写入语义文件。没有JSON路径的跨区块语义错误由准备器确定性映射到目标区块，AI不得手工扩大 `allowed_targets`。
+
 ```bash
 python scripts/run_in_env.py scripts/prepare_core_synthesis.py analysis-input.json \
   --method-packet-dir method-packets \

@@ -213,6 +213,7 @@ def compact_view(source: dict[str, Any]) -> dict[str, Any]:
             "annual_differentiation_rule": "20年年度语义必须逐年读取timing_continuity及大运流年结构，不能用‘普通年一个模板、重点年一个模板’填满。只要年度激活机制发生变化，受影响领域、人的行动、外部反馈、承上启下内容中至少一项也要相应变化；同一领域不得20年保持完全相同的方向、强度和机制。无明显变化的年份可以平稳，但要说明当年具体在延续什么。",
             "annual_compact_rule": "annual_theme_activation只保存阶段与卡片需要的简短结构信号，不写用户可见年度标题或长段落。自然中文解释、3—6个连续阶段和3—8个重点年份由下游写作包确定性选出后再生成，Core不得为每一年创造概念性标题。",
             "natural_chinese_rule": "所有用户表达使用自然、成熟、可保存的中文：直接判断、现实场景、形成解释。一句只承担一个主要意思，不用抽象名词替代生活中实际发生的动作。",
+            "locked_claim_language_rule": "plain_claim会被下游逐字锁定，必须直接陈述判断。不得使用‘不是没有……而是……’‘并非……；真正……’‘不只是……’或‘突破点……而不是……’等先否定后解释模板；这类问题必须在Core冻结前修复。",
             "user_address_rule": "plain_claim、现实候选陈述、可观察例子与validation_question统一使用第二人称‘你’，不得使用‘您’。",
         },
     }

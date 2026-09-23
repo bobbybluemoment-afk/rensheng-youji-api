@@ -1,6 +1,6 @@
 {
   "name": "rensheng-youji-free-pipelines",
-  "version": "2.26.0",
+  "version": "2.26.4",
   "visibility": "internal",
   "stages": [
     {
@@ -48,5 +48,5 @@
     "asset_manifest": "../assets/asset-manifest.json",
     "cover_logo": "../assets/rensheng-youji-logo.png"
   },
-  "notes": "2.26.0统一主报告Skill、内部Core Skill、生产桥、脚本CLI、Pipeline与Gate的校准探针接口。正式Core组装强制消费编译来源和探针补丁，探针数量统一为最多10条，检查点绑定完整输入，并增加真实命令链与阶段归属回归测试；Core仍为0.17.0。"
+  "notes": "2.26.4统一冻结前与冻结后的文字职责：Core在冻结前拒绝无法由下游改写的防御式必进原句；校准后选材排除weakened、reject和uncertain；当前问题压缩为不超过3条阶段判断；初稿、编辑与终稿共同拦截问卷及校准过程语言，并补齐AABBA组合回归。Core仍为0.17.0。"
 }

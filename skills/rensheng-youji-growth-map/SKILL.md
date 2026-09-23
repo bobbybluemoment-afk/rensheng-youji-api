@@ -163,6 +163,8 @@ python scripts/run_in_env.py scripts/validate_core_synthesis.py \
 
 失败时最多三轮局部修复：依次处理结构与引用、方法独立性与判断角色、人物覆盖与领域映射。每轮把验证结果传给 `prepare_semantic_repair.py --stage core_synthesis --errors <验证结果>`；脚本必须从错误路径自动提取实际失败区块，并在返修包中附带这些区块的 `target_schema`。不得手工扩大目标、不得把完整 `core-semantic-analysis.json` 交给AI重写。再用 `apply_semantic_repair.py` 合并。返修后若错误数量增加，不得覆盖上一轮较好的语义文件；保留本轮失败补丁并从上一轮重新准备更小请求。此时方法集合已经冻结，不得重新运行方法包。第三轮仍失败才停止完整Core综合，并报告真实错误。
 
+`apply_semantic_repair.py` 必须在写入前按请求携带的 `target_schema` 校验每个替换值；不合格补丁不得生成合并结果。没有JSON路径的跨区块语义错误由 `prepare_semantic_repair.py` 的确定性映射补全目标，运行AI不得手工扩大 `allowed_targets`。
+
 13. 校验通过后，程序先从全部Core候选中按领域、问题轴和已发生时间范围筛出最多10条校准探针。AI只读取这个小包，把候选改写成过去或当前可观察的单一问题，不重新推命、不读取完整Core，也不改变候选含义：
 
 ```bash
@@ -173,6 +175,8 @@ python scripts/run_in_env.py scripts/prepare_calibration_probes.py \
 ```
 
 AI按照 `calibration-probe-input.json#rules` 生成 `work/calibration-probe-patch.json`，随后运行：
+
+准备包会直接给出六个领域可识别的生活用词，并明确要求修正领域语言时只能替换场景词或名词，不能为了加入领域词再增加第二个动作、阶段或结果。家庭领域中的“家里、家中”属于正常自然中文，不得因未写成“家庭”而误判。
 
 ```bash
 python scripts/run_in_env.py scripts/validate_calibration_probe_patch.py \
@@ -294,7 +298,7 @@ python scripts/run_in_env.py scripts/pipeline_gate.py --gate CALIBRATION_GATE --
 
 冻结前与校准后使用同一份状态契约但承担不同职责：`core_baseline.py freeze` 强制待校准判断保持 `unverified|uncertain`；校准后的通用Core校验允许 `match|partial|weakened|reject` 等合法结果，但每个改变都必须与 `calibration_delta.claim_updates` 一一对应。不得用冻结前规则拒绝已经合法完成的校准，也不得让没有增量记录的状态变化进入报告。
 
-每道已回答问题必须改变对应候选状态；字母答案只能调整原有候选主次，不能产生新职业、家庭、关系、身体或收入判断。未选候选继续按关系图保留；只有事实明确否定且真正互斥时才标记为 `reject`。
+每道已回答问题必须改变对应候选状态；字母答案只能调整原有候选主次，不能产生新职业、家庭、关系、身体或收入判断。未选候选继续按关系图保留；只有事实明确否定且真正互斥时才标记为 `reject`。`weakened`、`reject`、`uncertain` 都保留在校准后Core供追溯，但不进入用户可见报告或必进判断。
 9. 用户跳过任何一条时，`document_mode` 必须为 `preliminary_uncalibrated`，标题必须为“人生有迹｜初步分析”，只交付初步 Markdown 和新版卡片；不得生成或称为正式完整PDF。
 
 ## 报告事实整理、写作与输出
@@ -308,7 +312,7 @@ python scripts/run_in_env.py scripts/pipeline_gate.py --gate CALIBRATION_GATE --
    - [prosperity-guide.md](references/prosperity-guide.md)：现实行动建议；
    - [brand-and-conversion.md](references/brand-and-conversion.md)：免费使用与人工服务入口；
    - [safety-language.md](references/safety-language.md)：健康、财务、关系和隐私边界。
-2. 校准完成后先运行 `scripts/resolve_report_sources.py`，从冻结候选池排除 `reject`，并把本次关注方向显式传给程序。当前问题只允许直接使用关注领域的判断；其他领域只能在后续正文中作为已有联动链支持的影响因素，不能替代当前问题。不得手工编辑该文件，也不得直接沿用校准前的最终报告名单：
+2. 校准完成后先运行 `scripts/resolve_report_sources.py`，从用户可见选材中排除 `weakened`、`reject`、`uncertain`，并把本次关注方向显式传给程序。当前问题只允许直接使用关注领域的判断，优先使用当前阶段、现实挑战和应对方向且最多保留3条；其他领域只能在后续正文中作为已有联动链支持的影响因素，不能替代当前问题。不得手工编辑该文件，也不得直接沿用校准前的最终报告名单：
 
 ```bash
 python scripts/run_in_env.py scripts/resolve_report_sources.py \
@@ -419,7 +423,9 @@ python scripts/run_in_env.py skills/rensheng-youji-growth-map/scripts/generate_f
 - 六个领域均有实质内容或明确写证据不足，不能把事业段落换词复制到其他领域；
 - 正常领域写成2—4个连贯自然段并完整覆盖行为模式、形成经历、现实条件、重复挑战、阶段变化与应对；降级领域严格按照选材状态缩短并记录缺失覆盖项；
 - 正常领域和完整人生主线为500—700个汉字；`shortened` 为320—500字，`minimal` 为180—320字，`evidence_gap` 为60—180字。交付模式先看关键解释角度是否完整，再用判断数量识别稀疏证据；四条多样判断覆盖完整时属于正常模式，不得为了数量重复判断；
+- 当前问题只回答当前阶段、现实取舍和下一步动作，最多使用3条聚焦判断，通常按缩短模式写320—500字，不重复对应领域的完整人物画像；
 - 最终正文没有“现实落点、核对点、判断等级、校准后的现实线索”等内部栏目，也没有固定“好处—代价”句式；
+- 用户可见正文不出现“你已经确认”“你没有确认”“校准结果”“选择A/B/C/D”“因此报告不会”等问卷操作或校准过程语言；
 - 已执行确定性事实提纲、正文语义补丁、程序化来源映射和按需中文编辑；没有语言问题时编辑AI调用次数为零，编辑记录仍真实存在且没有新增判断；
 - 正常、缩短和最小章节的每个自然段至少映射一条实体化Core判断；章节整体必须覆盖全部必进判断，不得为了凑映射让同一判断在多个自然段重复充数。证据缺口章节允许不引用判断，但只能说明可靠边界；完整人生主线和六领域至少八成来源为命盘或时运基线；
 - 盲派象法与技法只作交叉验证，高置信判断同时有非盲派方法支持，不向用户显示内部盲派术语；

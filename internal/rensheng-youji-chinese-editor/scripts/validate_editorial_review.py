@@ -7,8 +7,13 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from user_language_contract import calibration_meta_language_issues  # noqa: E402
 
 BANNED = {"组织化过劳型", "先扎根后显声", "表达窗口", "能力输出", "可见度", "物质与经营底色", "资源伴随期待", "表达被规训", "花不显", "现实落点", "核对点", "经营责任", "经营基础", "进入经营期", "经营底色", "经营扩张", "输出与经营"}
 MINGLI_TERMS = {"命盘", "命局", "原局", "年柱", "月柱", "日柱", "时柱", "天干", "地支", "干支", "日主", "身强", "身弱", "比肩", "劫财", "食神", "伤官", "食伤", "正印", "偏印", "正财", "偏财", "正官", "七杀", "格局", "调候", "喜用", "忌神", "大运", "流年", "藏干", "透干", "根苗花果", "根气", "冲根", "引动"}
@@ -114,7 +119,7 @@ def validate(review: Any, draft: Any, report: Any) -> list[str]:
     mingli_found = sorted(term for term in MINGLI_TERMS if term in visible)
     if mingli_found:
         errors.append("终稿仍含用户不可见的内部命理术语：" + "、".join(mingli_found))
-    if re.search(r"校准后的现实线索|校准确认|符合.+判断", visible):
+    if calibration_meta_language_issues(visible):
         errors.append("终稿不得展示校准过程")
     third_person = [term for term in ("这个人", "命主", "本人") if term in visible]
     if re.search(r"(?<!其)[他她](?:会|更|通常|可能|容易|需要|倾向|在|的|也|并|则|不|是|有|能|要|把|与|从|对|遇|面对)", visible):

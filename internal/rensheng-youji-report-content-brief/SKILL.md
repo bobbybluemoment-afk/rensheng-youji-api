@@ -9,7 +9,7 @@ description: 人生有迹内部报告事实整理层。接收已冻结并以校�
 
 1. 读取校准后的 Core 母稿，确认 `core_version=0.17.0`、`method_execution_audit.delivery_decision` 不是 `preliminary_only`，并确认它已通过Baseline冻结校验。解释主线、现实细节编号和报告判断必须原样可追溯，不得压缩成几个抽象主题词。
 2. 读取 [content-brief.md](references/content-brief.md)。
-3. 优先选择 `match`，同时保留能够共存的 `supported_unselected`、明确场景的 `conditional`、降低优先的 `weakened`，以及确有多方法支持的 `unverified`；禁止使用 `reject`。
+3. 报告选材优先使用 `match`，同时保留能够共存的 `supported_unselected`、明确场景的 `conditional`，以及确有多方法支持的 `unverified`；`weakened`、`reject`、`uncertain` 继续留在校准后Core供追溯，但不得进入用户可见报告选材或必进判断。
 4. 分别为完整人生主线、六个现实领域和当前问题准备材料。
 5. 用户关注方向只进入当前阶段、问题回应、相关年份与行动建议，不改变完整人生主线和六领域基础内容。
 6. 先运行校准后确定性选材程序。不得由模型手工删除、补充或替换判断：

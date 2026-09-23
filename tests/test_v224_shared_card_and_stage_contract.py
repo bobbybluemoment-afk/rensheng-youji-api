@@ -56,6 +56,12 @@ def twenty_year_fixture() -> dict:
 
 
 class V224SharedCardAndStageContractTest(unittest.TestCase):
+    def test_core_rejects_uneditable_defensive_plain_claim_before_freeze(self) -> None:
+        data = self_test_fixture()
+        data["report_claim_ledger"][0]["plain_claim"] = "你的成长突破点是先交出成果，而不是继续准备。"
+        errors = validate(data)
+        self.assertTrue(any("Core冻结前" in item for item in errors), errors)
+
     def test_four_complete_claims_support_normal_delivery(self) -> None:
         self.assertEqual(delivery_mode(4, []), "normal")
         self.assertEqual(delivery_mode(4, ["formation"]), "shortened")

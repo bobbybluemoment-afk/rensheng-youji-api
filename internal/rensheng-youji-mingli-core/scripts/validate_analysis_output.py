@@ -29,7 +29,7 @@ from report_source_contract import (  # noqa: E402
 from core_synthesis_contract import LOVE_PARTNER_ANCHORS, build_source_coverage_audit  # noqa: E402
 from calibration_selection_contract import feasibility_errors as calibration_feasibility_errors  # noqa: E402
 from calibration_state_contract import calibrated_claim_update_errors  # noqa: E402
-from user_language_contract import unnatural_realization_phrases  # noqa: E402
+from user_language_contract import locked_claim_language_issues, unnatural_realization_phrases  # noqa: E402
 
 SCHEMA_PATH = ROOT / "schemas" / "analysis-output.schema.json"
 REQUIRED_SECTIONS = {
@@ -800,6 +800,9 @@ def validate(data: Any, *, require_calibration_feasibility: bool = True) -> list
                 errors.append(f"{path}.plain_claim 必须是带句末标点的完整判断句")
             if isinstance(claim.get("plain_claim"), str) and "您" in claim["plain_claim"]:
                 errors.append(f"{path}.plain_claim 必须统一使用第二人称‘你’，不得使用‘您’")
+            locked_language_issues = locked_claim_language_issues(str(claim.get("plain_claim", "")))
+            if locked_language_issues:
+                errors.append(f"{path}.plain_claim 含冻结后无法修复的先否定后解释句式，必须在Core冻结前改成直接判断")
             visible_claim = " ".join(str(claim.get(key, "")) for key in ("plain_claim", "human_explanation"))
             bad_phrases = unnatural_realization_phrases(visible_claim)
             if bad_phrases:

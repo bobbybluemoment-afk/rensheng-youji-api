@@ -13,7 +13,11 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
-from user_language_contract import UNNATURAL_REALIZATION_PHRASES  # noqa: E402
+from user_language_contract import (  # noqa: E402
+    LOCKED_CLAIM_DEFENSIVE_PATTERNS,
+    UNNATURAL_REALIZATION_PHRASES,
+    calibration_meta_language_issues,
+)
 
 BANNED = {
     "换轨", "能量场", "底层逻辑", "现实落点", "核对点", "组织化过劳型", "先扎根后显声",
@@ -27,7 +31,7 @@ DEFENSIVE_PATTERNS = (
     r"不是没有[^。！？]{0,24}而是", r"真正[^。！？]{0,20}不是[^。！？]{0,30}而是",
     r"不只是[^。！？]{0,30}(?:而是|更是|还在于)", r"解决办法不是[^。！？]{0,30}而是",
     r"优势不只在于", r"与其[^。！？]{0,30}(?:不如|更应该)",
-)
+) + LOCKED_CLAIM_DEFENSIVE_PATTERNS
 DANGLING_ENDINGS = ("与此同时", "因为", "但", "但是", "而", "并且", "以及", "另一面是", "例如", "比如")
 ABSTRACT_TITLE_TERMS = {"评价", "结算", "定型", "归档", "承接", "检验", "配置", "转换", "重整", "输出", "责任", "路径"}
 CONCRETE_TITLE_TERMS = {"工作", "岗位", "项目", "收入", "工资", "合同", "学习", "考试", "家庭", "住房", "关系", "休息", "睡眠", "客户", "领导", "同事", "存钱", "消费"}
@@ -47,6 +51,7 @@ def reasons_for(text: str) -> list[str]:
     if any(term in text for term in BANNED): reasons.append("AI黑话或生造表达")
     if any(term in text for term in MINGLI): reasons.append("用户不可见命理术语")
     if any(re.search(pattern, text) for pattern in DEFENSIVE_PATTERNS): reasons.append("高频防御性或先否定后解释句式")
+    if calibration_meta_language_issues(text): reasons.append("暴露了问卷确认或校准操作过程")
     if "命主" in text or "这个人" in text: reasons.append("未使用第二人称")
     if "您" in text: reasons.append("称呼必须统一为‘你’")
     if re.search(r"[。！？]\s*[。！？]", text): reasons.append("重复标点或空句")

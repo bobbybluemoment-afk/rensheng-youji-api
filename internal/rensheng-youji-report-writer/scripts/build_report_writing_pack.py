@@ -176,7 +176,10 @@ def section_slots(section: dict[str, Any]) -> list[dict[str, Any]]:
     domain = section.get("domain") or (section_id if section_id in DOMAIN_VOICE else None)
     section_guidance = (
         "先借助interpretive_spine解释能力、后来形成的做法、当前代价和发展方向，再说明同一个人怎样进入不同生活场景；不能写成工作方式总览。"
-        if section_id == "life_overview" else DOMAIN_VOICE.get(str(domain), "直接回应当前问题，不得漂移到其他领域。")
+        if section_id == "life_overview" else
+        "直接回答当前问题，只写当前阶段、需要权衡的条件和下一步动作；不得重复对应领域的完整能力画像。"
+        if section_id == "current_question" else
+        DOMAIN_VOICE.get(str(domain), "直接回应当前问题，不得漂移到其他领域。")
     )
     return [{
         "slot_id": f"{section['id']}:{index + 1}", "section_id": section["id"], "paragraph_index": index,
@@ -199,6 +202,8 @@ def build(brief: dict[str, Any], analysis: dict[str, Any] | None = None) -> dict
             "continuity": "严格按照narrative_role组织同一条解释链；一句只承担一个主要判断。先写现实中怎样发生，再解释形成原因、帮助或代价。相邻句必须有因果、递进或转折关系，不得把判断并排改写。",
             "abstract_language": "不用抽象词代替现实情况。遇到责任、成果、边界、归属、流程、标准、评价、路径、稳定、资源时，必须说明具体指谁做什么、发生什么或用户怎样感受。",
             "contrast": "不是、并非、不只是、真正重要的不是等对比句只在确有误解需要纠正时使用，不能作为习惯起句。",
+            "calibration_visibility": "calibration_status只用于决定语气和选材，不得在用户正文中写‘你已经确认’‘你没有确认’‘校准结果’‘选择A/B/C/D’或‘因此报告不会’。match直接写成现实表现；conditional或partial写清适用条件；weakened、reject和uncertain已由上游排除，不得补回。",
+            "section_separation": "六领域解释长期模式，current_question只回答当前阶段、现实取舍和下一步动作；不得把同一能力画像在两节各写一遍。",
             "high_risk_language": HIGH_RISK_LANGUAGE,
             "domain_voice": DOMAIN_VOICE,
             "paragraph_test": ["不懂命理的人第一次能否读懂", "能否立即想到生活中的一个例子", "念给朋友听是否像正常中文"],

@@ -131,6 +131,16 @@ class ReportV213PostCalibrationSelectionTest(unittest.TestCase):
         self.assertTrue(resolved["dimensions"]["body_emotion"]["missing_coverage"])
         self.assertEqual(resolved["dimensions"]["career"]["delivery_mode"], "normal")
 
+    def test_weakened_or_uncertain_claim_never_enters_report_or_mandatory_lock(self) -> None:
+        for status in ("weakened", "uncertain"):
+            analysis = self_test_fixture()
+            target = analysis["report_source_bundle"]["dimensions"]["career"]["mandatory_candidate_ids"][0]
+            next(item for item in analysis["report_claim_ledger"] if item["claim_id"] == target)["calibration_status"] = status
+            resolved = resolve(analysis, "事业发展")
+            for section in (resolved["dimensions"]["career"], resolved["current_question"]):
+                self.assertNotIn(target, section["claim_ids"])
+                self.assertNotIn(target, section["mandatory_claim_ids"])
+
     def test_confirmed_pending_claim_enters_only_its_domain_after_calibration(self) -> None:
         analysis = self_test_fixture()
         pending = copy.deepcopy(analysis["report_claim_ledger"][0])
@@ -183,6 +193,9 @@ class ReportV213PostCalibrationSelectionTest(unittest.TestCase):
         self.assertTrue(career_locked)
         self.assertTrue(focus_locked)
         self.assertFalse(career_locked & focus_locked)
+        self.assertLessEqual(len(resolved["current_question"]["claim_ids"]), 3)
+        self.assertIn(resolved["current_question"]["delivery_mode"], {"shortened", "minimal", "evidence_gap"})
+        self.assertNotIn("仍有关键解释角度缺少可用证据", "".join(resolved["current_question"]["evidence_gaps"]))
 
     def test_life_overview_and_domain_chapter_do_not_lock_the_same_sentence(self) -> None:
         analysis = self_test_fixture()

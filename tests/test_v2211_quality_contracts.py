@@ -103,6 +103,19 @@ class V2211QualityContractsTest(unittest.TestCase):
         self.assertTrue(any("称呼" in reason for item in result["issues"] for reason in item["reasons"]))
         self.assertTrue(any("模板" in reason for item in result["issues"] for reason in item["reasons"]))
 
+    def test_language_scan_hides_calibration_operations_but_allows_normal_confirmation(self) -> None:
+        draft = {
+            "draft_id": "draft-calibration-language",
+            "life_overview": {"id": "life_overview", "paragraphs": ["你已经确认近几年负责范围扩大。"]},
+            "dimensions": [],
+            "current_question": {"id": "current_question", "paragraphs": ["提交前确认要求，会让返工更少。"]},
+        }
+        result = scan(draft)
+        self.assertEqual(result["status"], "repair_required")
+        self.assertTrue(any("校准操作" in reason for item in result["issues"] for reason in item["reasons"]))
+        current_issue = [item for item in result["issues"] if item.get("section_id") == "current_question"]
+        self.assertFalse(current_issue)
+
     def test_year_story_removes_fixed_labels_and_duplicate_punctuation(self) -> None:
         item = {
             "carry_in": "已有经验。",
